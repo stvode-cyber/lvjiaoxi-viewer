@@ -1,0 +1,89 @@
+{
+  "settings": {
+    "general": {
+      "openLastFolder": false,
+      "closeBehavior": "exit",
+      "minimizeToTray": false,
+      "autoStart": false
+    },
+    "view": {
+      "wallpaperMode": "tile"
+    },
+    "slideshow": {
+      "interval": 5,
+      "transition": "fade",
+      "order": "forward"
+    },
+    "files": {
+      "recursive": true,
+      "menuText": "用绿角犀看图打开"
+    },
+    "advanced": {
+      "preloadSize": 20,
+      "autoUpdate": true,
+      "cloudApiBase": "",
+      "cvUrl": "",
+      "aiModelUrl": ""
+    }
+  },
+  "keymap": {
+    "prev": [
+      "arrowleft",
+      "pageup"
+    ],
+    "next": [
+      "arrowright",
+      "pagedown"
+    ],
+    "home": [
+      "home"
+    ],
+    "end": [
+      "end"
+    ],
+    "zoomIn": [
+      "="
+    ],
+    "zoomOut": [
+      "-"
+    ],
+    "rotateL": [
+      "l"
+    ],
+    "rotateR": [
+      "r"
+    ],
+    "flipH": [
+      "h"
+    ],
+    "flipV": [
+      "v"
+    ],
+    "info": [
+      "i"
+    ],
+    "slideshow": [
+      "s"
+    ],
+    "fullscreen": [
+      "f"
+    ],
+    "toggleThumbs": [
+      "tab"
+    ],
+    "copy": [
+      "ctrl+c",
+      "meta+c"
+    ],
+    "edit": [
+      "e"
+    ],
+    "jump": [
+      "g"
+    ],
+    "closeInfo": [
+      "escape"
+    ]
+  },
+  "updatedAt": 1788236478
+}

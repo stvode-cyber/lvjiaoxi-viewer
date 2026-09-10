@@ -1,0 +1,39 @@
+[package]
+name = "lvjiaoxi-viewer"
+version = "0.1.0"
+description = "绿角犀看图桌面版"
+authors = ["LvJiaoXi"]
+edition = "2021"
+rust-version = "1.70"
+
+[lib]
+name = "lvjiaoxi_viewer_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri 核心；tray-icon 启用系统托盘，image-png 用于默认窗口图标
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+# 单实例：第二次启动把命令行参数转发给已运行实例（文件关联 / 右键菜单调用入口）
+tauri-plugin-single-instance = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# 位图解码：覆盖 jpg/png/gif/bmp/ico/tiff/tga/pnm/dds 等；WebView 原生支持 jpg/png/gif/webp/bmp/ico/svg/avif，无需解码
+image = { version = "0.25", features = ["jpeg", "png", "gif", "bmp", "ico", "tiff", "tga", "rayon"] }
+# EXIF 方向纠正（旋转/翻转烘焙）
+kamadak-exif = "0.6"
+# 系统剪贴板位图写入（替代 Web 的 ClipboardItem，支持 arboard）
+arboard = "3"
+# data URL 编码
+base64 = "0.22"
+# SVG 文本内联
+percent-encoding = "2"
+
+# ===== 扩展点（PRD 5.2 需后端解码的格式，按需解除注释并实现 decode_to_rgb 对应分支）=====
+# libheif-rs = "1"     # HEIC / HEIF
+# rawler = "1"         # RAW (CR2 / NEF / ARW / DNG ...)
+# psd = "0.3"          # PSD

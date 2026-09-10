@@ -1,0 +1,47 @@
+name: Build Windows Client
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install frontend deps
+        run: npm install
+
+      - name: Ensure icons exist
+        run: |
+          if (-not (Test-Path src-tauri/icons/icon.ico)) {
+            npm install @resvg/resvg-js --no-save
+            node scripts/gen-icons.cjs
+          }
+
+      - name: Build Tauri (NSIS + MSI)
+        run: npm run tauri build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-client
+          path: src-tauri/target/release/bundle/**
+          if-no-files-found: error

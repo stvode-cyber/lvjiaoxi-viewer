@@ -1,0 +1,7 @@
+{
+  "string": [
+    { "name": "app_name", "value": "绿角犀看图" },
+    { "name": "ability_desc", "value": "绿角犀看图主入口" },
+    { "name": "read_media_reason", "value": "浏览并显示您本机的图片" }
+  ]
+}

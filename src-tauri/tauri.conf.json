@@ -1,0 +1,63 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "绿角犀看图",
+  "version": "0.1.0",
+  "identifier": "com.lvjiaoxi.viewer",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:8080",
+    "beforeDevCommand": "node serve.js",
+    "beforeBuildCommand": "node scripts/sync-dist.cjs"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "绿角犀看图",
+        "width": 1100,
+        "height": 720,
+        "minWidth": 480,
+        "minHeight": 360,
+        "resizable": true,
+        "additionalBrowserArgs": "--disable-gpu-compositing --disable-gpu-rasterization --disable-backgrounding-occluded-windows --disable-renderer-backgrounding"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["jpg", "jpeg", "png", "gif", "webp", "avif", "bmp", "ico", "svg", "heic", "heif", "tif", "tiff", "apng", "tga", "psd"],
+        "name": "LvJiaoXiImage",
+        "description": "绿角犀看图图片文件",
+        "role": "Viewer"
+      }
+    ],
+    "shortDescription": "绿角犀看图 · 桌面图片查看器",
+    "longDescription": "基于 PRD《绿角犀看图桌面版》的桌面看图应用，支持全面格式解码、缩放旋转、批量处理。",
+    "windows": {
+      "nsis": {
+        "installerHooks": "installer.nsh"
+      },
+      "wix": {
+        "language": "zh-CN"
+      },
+      "webviewInstallMode": {
+        "type": "offlineInstaller"
+      }
+    }
+  },
+  "plugins": {}
+}

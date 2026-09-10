@@ -1,0 +1,54 @@
+# === 构建产物 ===
+dist/
+src-tauri/target/
+*.exe
+*.msi
+setup.exe
+
+# === 依赖 ===
+node_modules/
+package-lock.json
+
+# === 临时调试文件 ===
+*.ps1
+shot*.png
+shots_*.png
+cur_view.png
+final_view.png
+probe.png
+*_check.png
+*_view.png
+*_cap.png
+*_scan.png
+*_test*.png
+app_check.png
+app_screenshot.png
+verify*.png
+white_check.png
+win_cap.png
+pw_*.png
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+
+# === 项目内临时 ===
+.verif/
+.trae/
+.workbuddy/
+
+# === NSIS 临时 ===
+nsis_clean/
+nsis_x/
+
+# === Rust 构建 ===
+src-tauri/gen/
+src-tauri/Cargo.lock
+
+# === Node 工具链 ===
+scripts/onnx-verify/node_modules/

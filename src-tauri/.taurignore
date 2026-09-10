@@ -1,0 +1,11 @@
+# Tauri 前端打包忽略规则（src-tauri 目录）
+# frontendDist 指向仓库根（../），以下目录/文件不应打入安装包
+node_modules
+test
+.workbuddy
+src-tauri
+image-viewer-prd.html
+desktop.md
+overview.md
+*.md
+.DS_Store

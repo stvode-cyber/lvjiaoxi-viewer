@@ -1,0 +1,19 @@
+{
+  "name": "lvjiaoxi-viewer",
+  "private": true,
+  "version": "0.1.0",
+  "description": "绿角犀看图桌面版（Tauri 包装 Web 原型）",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "tauri": "tauri",
+    "test": "NODE_PATH=\"C:/Users/Administrator/.workbuddy/binaries/node/workspace/node_modules\" node test/regression.cjs",
+    "test:crop": "NODE_PATH=\"C:/Users/Administrator/.workbuddy/binaries/node/workspace/node_modules\" node test/edit-crop.cjs",
+    "test:recent": "NODE_PATH=\"C:/Users/Administrator/.workbuddy/binaries/node/workspace/node_modules\" node test/recent.cjs",
+    "test:photo": "NODE_PATH=\"C:/Users/Administrator/.workbuddy/binaries/node/workspace/node_modules\" node test/photo.cjs",
+    "test:beauty": "NODE_PATH=\"C:/Users/Administrator/.workbuddy/binaries/node/workspace/node_modules\" node test/beauty.cjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

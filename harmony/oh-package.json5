@@ -1,0 +1,8 @@
+{
+  "modelVersion": "5.0.0",
+  "description": "绿角犀看图·鸿蒙原生版（主线：选图/显示/缩放手势/EXIF正向/翻页）",
+  "dependencies": {},
+  "devDependencies": {
+    "@ohos/hypium": "1.0.6"
+  }
+}

@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>绿角犀看图 · Web 原型</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2C9678">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- 顶部工具栏 -->
+  <header class="toolbar">
+    <div class="tb-group tb-left">
+      <button class="btn text" id="btnOpenFiles" title="打开图片文件">📂 图片</button>
+      <button class="btn text" id="btnOpenDir" title="打开文件夹（递归遍历）">📁 文件夹</button>
+      <input type="file" id="fileInput" accept="image/*" multiple hidden>
+      <input type="file" id="dirInput" webkitdirectory directory multiple hidden>
+    </div>
+
+    <div class="tb-group tb-center">
+      <button class="btn icon" id="btnZoomOut" title="缩小 (-)">−</button>
+      <button class="btn text zoom-label" id="btnZoomFit" title="点击切换：适应窗口 / 实际大小">100%</button>
+      <button class="btn icon" id="btnZoomIn" title="放大 (+)">＋</button>
+      <span class="tb-sep"></span>
+      <button class="btn icon" id="btnRotL" title="左旋转 90° (L)">↺</button>
+      <button class="btn icon" id="btnRotR" title="右旋转 90° (R)">↻</button>
+      <button class="btn icon" id="btnFlipH" title="水平翻转 (H)">⇋</button>
+      <button class="btn icon" id="btnFlipV" title="垂直翻转 (V)">⇅</button>
+      <span class="tb-sep"></span>
+      <input class="thumb-search tb-search" id="thumbSearch" type="text" placeholder="搜索文件名过滤…" title="按文件名过滤缩略图">
+    </div>
+
+    <div class="tb-group tb-right">
+      <button class="btn icon" id="btnCopy" title="复制到剪贴板 (Ctrl+C)">⧉</button>
+      <button class="btn icon" id="btnUndo" title="撤销编辑 (Ctrl+Z)" disabled>↶</button>
+      <button class="btn icon" id="btnRedo" title="重做编辑 (Ctrl+Y)" disabled>↷</button>
+      <button class="btn icon" id="btnEdit" title="图片工具：滤镜 / 导出 (E)">🎨</button>
+      <button class="btn icon" id="btnInfo" title="图片信息 (I)">ⓘ</button>
+      <button class="btn icon" id="btnSlide" title="幻灯片播放 (S)">▶</button>
+      <button class="btn icon" id="btnBatch" title="批量处理">⚙</button>
+      <button class="btn icon" id="btnRecent" title="最近打开">🕘</button>
+      <button class="btn icon" id="btnSnap" title="画面区域截图：框选当前画面导出">📷</button>
+      <button class="btn icon" id="btnSettings" title="设置">⚒</button>
+      <button class="btn text" id="accountBtn" title="登录云端账户">☁ 登录</button>
+      <button class="btn icon" id="btnFull" title="全屏 (F)">⛶</button>
+    </div>
+  </header>
+
+  <!-- 美图常规条：主界面直接可用的核心美图控件（高级工具仍走 🎨 弹窗） -->
+  <div class="beauty-bar" id="beautyBar">
+    <span class="beauty-title">美图</span>
+    <label class="mini-field"><span class="mini-lbl">亮度</span>
+      <input type="range" id="miBrightness" min="0" max="200" value="100"><b id="miBrightnessVal">100</b></label>
+    <label class="mini-field"><span class="mini-lbl">对比</span>
+      <input type="range" id="miContrast" min="0" max="200" value="100"><b id="miContrastVal">100</b></label>
+    <label class="mini-field"><span class="mini-lbl">饱和</span>
+      <input type="range" id="miSaturate" min="0" max="200" value="100"><b id="miSaturateVal">100</b></label>
+    <label class="mini-field"><span class="mini-lbl">色温</span>
+      <input type="range" id="miTemp" min="-100" max="100" value="0"><b id="miTempVal">0</b></label>
+    <label class="mini-field"><span class="mini-lbl">锐化</span>
+      <input type="range" id="miSharp" min="0" max="100" value="0"><b id="miSharpVal">0</b></label>
+    <span class="beauty-sep"></span>
+    <label class="mini-field mini-beauty"><span class="mini-lbl">美白强度</span>
+      <input type="range" id="miBeautyVal" min="0" max="100" value="50"></label>
+    <span class="beauty-sep"></span>
+    <span class="mini-lbl mini-oneclick">一键美颜</span>
+    <button class="btn sm" id="miBeautyLight" title="一键美颜：轻度（提亮 + 轻磨皮）">轻度</button>
+    <button class="btn sm" id="miBeautyNatural" title="一键美颜：自然（推荐，提亮 + 中度磨皮）">自然</button>
+    <button class="btn sm accent" id="miBeautyFancy" title="一键美颜：精致（强提亮 + 强磨皮）">精致</button>
+    <button class="btn sm" id="miBeautySmooth" title="磨皮（OpenCV 双边滤波，导出时应用）">磨皮</button>
+    <button class="btn sm" id="miBeautyWhite" title="美白（提亮 + 轻磨皮）">美白</button>
+    <button class="btn sm" id="miEnhance" title="自动增强：直方图分析自动调亮度/对比/饱和">✨ 自动增强</button>
+    <button class="btn sm" id="miRecipe" title="风格配方：一键套用 25 套预设风格">🪄 风格配方</button>
+    <button class="btn sm" id="miRecipeRandom" title="随机套用一套风格配方">🎲 随机配方</button>
+    <span class="beauty-sep"></span>
+    <button class="btn sm accent" id="miMore" title="更多：风格 / 特效 / 高级 / 导出">🎨 更多工具</button>
+  </div>
+
+  <!-- 主工作区：左侧缩略图栏 + 右侧主画布 -->
+  <div class="app-row">
+
+    <!-- 缩略图栏（左侧纵向） -->
+    <footer class="thumb-bar" id="thumbBar" hidden>
+      <div class="thumb-head">
+        <span class="thumb-count" id="thumbCount"></span>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+    </footer>
+
+    <!-- 主画布区 -->
+    <main class="viewer" id="viewer">
+      <div class="stage" id="stage">
+        <div class="img-wrap" id="imgWrap"><img id="image" alt="" draggable="false" hidden></div>
+        <div class="empty-hint" id="emptyHint">
+          <div class="empty-icon">🖼️</div>
+          <h2>绿角犀看图</h2>
+          <p>拖入图片或文件夹，或点击左上角「图片 / 文件夹」</p>
+          <p class="empty-sub">原生支持 JPG · PNG · GIF · WebP · AVIF · SVG · BMP · ICO · APNG</p>
+          <div class="recent-inline" id="recentInline" hidden></div>
+        </div>
+        <div class="loading" id="loading" hidden><div class="spinner"></div><span class="loading-text">解码中…</span></div>
+      </div>
+
+      <button class="nav-arrow nav-prev" id="navPrev" hidden aria-label="上一张">‹</button>
+      <button class="nav-arrow nav-next" id="navNext" hidden aria-label="下一张">›</button>
+      <div class="edge-zone edge-left" id="edgeLeft" hidden></div>
+      <div class="edge-zone edge-right" id="edgeRight" hidden></div>
+      <div class="counter" id="counter" hidden title="点击跳转到指定图片"></div>
+      <input class="jump-input" id="jumpInput" type="number" min="1" hidden title="输入序号后回车跳转">
+    </main>
+
+    <!-- 信息面板 -->
+    <aside class="info-panel" id="infoPanel" hidden>
+      <div class="info-head">
+        <span>图片信息</span>
+        <button class="btn icon sm" id="infoClose" title="关闭">✕</button>
+      </div>
+      <div class="info-body" id="infoBody"></div>
+    </aside>
+
+  </div>
+
+  <!-- 图床/导出/信息/更多等面板：叠加层，不参与主布局 -->
+
+  <!-- 右键菜单 -->
+  <div class="ctx-menu" id="ctxMenu" hidden>
+    <button data-act="copy">⧉ 复制到剪贴板</button>
+    <button data-act="info">ⓘ 图片信息</button>
+    <button data-act="wallpaper">🖥 设为壁纸（下载）</button>
+    <button data-act="reveal">📍 复制文件路径</button>
+    <button data-act="slideshow">▶ 幻灯片播放</button>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div class="modal-mask" id="settingsMask" hidden>
+    <div class="modal settings-modal">
+      <div class="modal-head"><span>设置</span><button class="btn icon sm" id="settingsClose">✕</button></div>
+      <div class="settings-body">
+        <nav class="settings-nav" id="settingsNav"></nav>
+        <div class="settings-form" id="settingsForm"></div>
+      </div>
+      <div class="modal-foot"><button class="btn" id="settingsReset">恢复默认设置</button></div>
+    </div>
+  </div>
+
+  <!-- 批量弹窗 -->
+  <div class="modal-mask" id="batchMask" hidden>
+    <div class="modal batch-modal">
+      <div class="modal-head">
+        <span>批量处理</span>
+        <span class="batch-scope" id="batchScope"></span>
+        <button class="btn icon sm" id="batchClose">✕</button>
+      </div>
+      <div class="batch-tabs" id="batchTabs">
+        <button class="batch-tab active" data-tab="convert">格式转换</button>
+        <button class="batch-tab" data-tab="resize">调整尺寸</button>
+        <button class="batch-tab" data-tab="rename">重命名</button>
+        <button class="batch-tab" data-tab="tone">添加滤镜</button>
+        <button class="batch-tab" data-tab="compress">压缩</button>
+      </div>
+      <div class="batch-body" id="batchBody">
+
+        <!-- 转换 -->
+        <section class="batch-pane" data-pane="convert">
+          <div class="bt-preview">
+            <span class="bt-preview-label" id="cvPreviewLabel">转换预览：未选中</span>
+            <canvas id="cvPreview" width="200" height="200"></canvas>
+          </div>
+          <label class="field">
+            <span>目标格式</span>
+            <select id="cvFormat">
+              <option value="image/jpeg">JPG</option>
+              <option value="image/png">PNG</option>
+              <option value="image/webp">WebP</option>
+              <option value="image/bmp">BMP</option>
+            </select>
+          </label>
+          <label class="field" id="cvQualityField">
+            <span>质量 <b id="cvQualityVal">92</b></span>
+            <input type="range" id="cvQuality" min="1" max="100" value="92">
+          </label>
+          <label class="field">
+            <span>输出命名</span>
+            <select id="cvNaming">
+              <option value="replace">原名替换扩展名</option>
+              <option value="suffix">添加后缀 (_converted)</option>
+              <option value="prefix">添加前缀 (converted_)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>输出位置</span>
+            <select id="cvOutput">
+              <option value="subdir">新建子目录 converted/</option>
+              <option value="same">原目录（覆盖同名）</option>
+            </select>
+          </label>
+          <p class="hint">输出打包为 ZIP 下载（浏览器无法直接写本地磁盘）。</p>
+        </section>
+
+        <!-- 尺寸 -->
+        <section class="batch-pane" data-pane="resize" hidden>
+          <div class="bt-preview">
+            <span class="bt-preview-label" id="rsPreviewLabel">调整尺寸预览：未选中</span>
+            <canvas id="rsPreview" width="200" height="200"></canvas>
+          </div>
+          <label class="field">
+            <span>缩放模式</span>
+            <select id="rsMode">
+              <option value="percent">按百分比</option>
+              <option value="exact">指定宽高</option>
+            </select>
+          </label>
+          <label class="field" id="rsPercentField">
+            <span>百分比 <b id="rsPercentVal">50</b>%</span>
+            <input type="range" id="rsPercent" min="10" max="500" value="50">
+          </label>
+          <div class="field-row" id="rsExactField" hidden>
+            <label class="field"><span>宽度(px)</span><input type="number" id="rsWidth" value="1920" min="1"></label>
+            <label class="field"><span>高度(px)</span><input type="number" id="rsHeight" value="1080" min="1"></label>
+          </div>
+          <label class="field inline">
+            <input type="checkbox" id="rsLockRatio" checked> 锁定宽高比
+          </label>
+          <label class="field">
+            <span>重采样算法</span>
+            <select id="rsResample">
+              <option value="smooth">双线性（平衡）</option>
+              <option value="pixelated">最近邻（最快）</option>
+              <option value="high">Lanczos（高质量）</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>输出格式</span>
+            <select id="rsFormat">
+              <option value="image/jpeg">JPG</option>
+              <option value="image/png">PNG</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>分辨率 DPI</span>
+            <select id="rsDpi">
+              <option value="0">不设置</option>
+              <option value="72">72</option>
+              <option value="96" selected>96</option>
+              <option value="150">150</option>
+              <option value="300">300</option>
+              <option value="600">600</option>
+            </select>
+          </label>
+          <p class="hint">DPI 写入 PNG（pHYs）/ JPEG（JFIF 密度）/ WebP（EXIF 元数据）。</p>
+        </section>
+
+        <!-- 重命名 -->
+        <section class="batch-pane" data-pane="rename" hidden>
+          <label class="field">
+            <span>命名模板</span>
+            <input type="text" id="rnTemplate" value="{n:3}_{name}">
+          </label>
+          <p class="hint">变量：<code>{n}</code> 序号 · <code>{n:3}</code> 零填充3位 · <code>{name}</code> 原名 · <code>{date}</code> 今天 · <code>{date:YYYYMMDD}</code></p>
+          <div class="rename-preview" id="rnPreview"></div>
+          <p class="hint">重命名后原图与新名一并打包为 ZIP 下载，可解压还原。</p>
+        </section>
+
+        <!-- 添加滤镜 -->
+        <section class="batch-pane" data-pane="tone" hidden>
+          <div class="bt-preview">
+            <span class="bt-preview-label" id="btPreviewLabel">滤镜预览：未选中</span>
+            <canvas id="btPreview" width="200" height="200"></canvas>
+          </div>
+          <label class="field">
+            <span>滤镜预设</span>
+            <select id="btPreset"></select>
+          </label>
+          <label class="field">
+            <span>输出格式</span>
+            <select id="btFormat">
+              <option value="image/png">PNG</option>
+              <option value="image/jpeg">JPG</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </label>
+          <label class="field inline">
+            <input type="checkbox" id="btKeepName" checked> 保留原文件名（替换扩展名）
+          </label>
+          <p class="hint">将所选预设应用到全部图片，导出并打包 ZIP。滤镜走与编辑器相同的色调引擎。</p>
+        </section>
+
+        <!-- 压缩 -->
+        <section class="batch-pane" data-pane="compress" hidden>
+          <div class="bt-preview">
+            <span class="bt-preview-label" id="cpPreviewLabel">压缩预览：未选中</span>
+            <canvas id="cpPreview" width="200" height="200"></canvas>
+          </div>
+          <label class="field">
+            <span>目标格式</span>
+            <select id="cpFormat">
+              <option value="same">保持原格式</option>
+              <option value="image/jpeg">JPG</option>
+              <option value="image/webp">WebP</option>
+              <option value="image/png">PNG</option>
+            </select>
+            <p class="hint">「保持原格式」仅重编码压缩，不改扩展名；JPG/PNG 源亦可选 WebP 进一步减小体积。</p>
+          </label>
+          <label class="field" id="cpQualityField">
+            <span>质量 <b id="cpQualityVal">75</b></span>
+            <input type="range" id="cpQuality" min="1" max="100" value="75">
+            <p class="hint">仅对 JPG / WebP 生效，PNG 无损不受影响。</p>
+          </label>
+          <label class="field">
+            <span>最长边限制 (px)</span>
+            <input type="number" id="cpMaxEdge" value="1920" min="0">
+            <p class="hint">0 = 不缩放；其余按比例缩至最长边为该像素。</p>
+          </label>
+          <p class="hint">一键整批压缩照片：控制质量并将超长边缩小，导出打包 ZIP。</p>
+        </section>
+
+      </div>
+      <div class="modal-foot">
+        <div class="batch-progress" id="batchProgress" hidden>
+          <div class="batch-bar"><div class="batch-bar-fill" id="batchBarFill"></div></div>
+          <span id="batchProgressText">0 / 0</span>
+        </div>
+        <p class="batch-report" id="batchReport" hidden></p>
+        <button class="btn" id="batchCancel" hidden>取消</button>
+        <button class="btn primary" id="batchRun">开始处理</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 最近打开 -->
+  <div class="modal-mask" id="recentMask" hidden>
+    <div class="modal recent-modal">
+      <div class="modal-head">
+        <span>最近打开</span>
+        <button class="btn icon sm" id="recentClose">✕</button>
+      </div>
+      <ul class="recent-list" id="recentList"></ul>
+      <div class="recent-foot">
+        <span class="recent-hint" id="recentHint"></span>
+        <button class="btn sm" id="recentClear">清空记录</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图片工具：滤镜 / 导出（内嵌主界面面板，在图片下方展开，不浮窗） -->
+  <div class="edit-panel" id="editMask" hidden>
+    <div class="edit-panel-head">
+      <span>图片工具</span>
+      <span class="edit-name" id="editName"></span>
+      <button class="btn icon sm" id="editClose">✕</button>
+    </div>
+      <div class="edit-preview-wrap">
+        <canvas id="editPreview"></canvas>
+        <p class="hint" id="editPreviewHint">在图上拖拽选择保留区域，拖动四角可调整。</p>
+      </div>
+      <div class="edit-work">
+      <nav class="edit-tools" id="editTabs">
+        <button class="edit-tab active" data-tab="beauty">美颜</button>
+        <button class="edit-tab" data-tab="recipe">风格配方</button>
+        <button class="edit-tab" data-tab="decor">特效</button>
+        <button class="edit-tab" data-tab="pro">高级</button>
+        <button class="edit-tab" data-tab="export">导出</button>
+      </nav>
+      <div class="edit-body">
+      <div class="edit-pane" data-pane="recipe">
+      <div class="edit-section">
+        <h4>风格配方（一键 / 随机）</h4>
+        <p class="hint">25 套预设风格，点选即套用（非破坏性，可按 Ctrl+Z 撤销）。</p>
+        <div class="edit-actions">
+          <button class="btn" id="recipeRandom" title="随机套用一套风格配方">🎲 随机风格</button>
+        </div>
+        <div class="style-grid" id="styleGrid" style="margin-top:12px"></div>
+      </div>
+      </div><!-- /recipe pane -->
+
+      <div class="edit-pane active" data-pane="beauty">
+      <div class="edit-section">
+        <h4>美颜</h4>
+        <p class="hint">磨皮 / 美白基于 OpenCV；未加载时点按自动联网加载（约 8MB）。</p>
+        <div class="edit-actions">
+          <label class="field"><span>强度 <b id="beautyValVal">0</b>%</span>
+            <input type="range" id="beautyVal" min="0" max="100" value="0"></label>
+        </div>
+        <div class="edit-actions">
+          <button class="btn" id="beautySmooth">磨皮</button>
+          <button class="btn" id="beautyWhite">美白</button>
+        </div>
+      </div>
+      <div class="edit-section">
+        <h4>滤镜微调（完整参数）</h4>
+        <p class="hint">主界面已提供亮度 / 对比 / 饱和 / 色温 / 锐化，此处为完整参数。高光 / 暗部 / 褪色 / 颗粒 / 暗角在编辑预览与导出的全分辨率结果中生效。</p>
+        <div class="field-grid">
+        <label class="field"><span>亮度 <b id="flBrightnessVal">100</b>%</span>
+          <input type="range" id="flBrightness" min="0" max="200" value="100"></label>
+        <label class="field"><span>对比度 <b id="flContrastVal">100</b>%</span>
+          <input type="range" id="flContrast" min="0" max="200" value="100"></label>
+        <label class="field"><span>饱和度 <b id="flSaturateVal">100</b>%</span>
+          <input type="range" id="flSaturate" min="0" max="200" value="100"></label>
+        <label class="field"><span>灰度 <b id="flGrayVal">0</b>%</span>
+          <input type="range" id="flGray" min="0" max="100" value="0"></label>
+        <label class="field"><span>色温 <b id="flTempVal">0</b>（-冷 / +暖）</span>
+          <input type="range" id="flTemp" min="-100" max="100" value="0"></label>
+        <label class="field"><span>模糊 <b id="flBlurVal">0</b>px</span>
+          <input type="range" id="flBlur" min="0" max="10" step="0.1" value="0"></label>
+        <label class="field"><span>锐化 <b id="flSharpVal">0</b>%（导出时应用）</span>
+          <input type="range" id="flSharp" min="0" max="100" value="0"></label>
+        <label class="field"><span>高光 <b id="flHighlightVal">0</b>（-压暗 / +提亮）</span>
+          <input type="range" id="flHighlight" min="-100" max="100" value="0"></label>
+        <label class="field"><span>暗部 <b id="flShadowVal">0</b>（-压暗 / +提亮）</span>
+          <input type="range" id="flShadow" min="-100" max="100" value="0"></label>
+        <label class="field"><span>褪色 <b id="flFadeVal">0</b>（降低对比的怀旧感）</span>
+          <input type="range" id="flFade" min="0" max="100" value="0"></label>
+        <label class="field"><span>颗粒 <b id="flGrainVal">0</b>（胶片噪点）</span>
+          <input type="range" id="flGrain" min="0" max="100" value="0"></label>
+        <label class="field"><span>暗角 <b id="flVignetteVal">0</b>（聚焦中心）</span>
+          <input type="range" id="flVignette" min="0" max="100" value="0"></label>
+        </div>
+        <div class="edit-actions">
+          <button class="btn" id="flReset">重置滤镜</button>
+        </div>
+      </div>
+      <div class="edit-section">
+        <h4>色调分离（胶片刻色：分别给高光与阴影染色）</h4>
+        <div class="field-row">
+          <label class="field"><span>高光色调</span>
+            <input type="color" id="flTintH" value="#3d5a7a"></label>
+          <label class="field"><span>阴影色调</span>
+            <input type="color" id="flTintS" value="#a8863f"></label>
+        </div>
+        <label class="field"><span>染色强度 <b id="flTintAmtVal">0</b>%（0 为不染色）</span>
+          <input type="range" id="flTintAmt" min="0" max="100" value="0"></label>
+      </div>
+      <div class="edit-section">
+        <h4>照片调整</h4>
+        <p class="hint">自动增强：分析亮度直方图，自动调整亮度 / 对比度 / 饱和度（非破坏性，可继续手动微调）。</p>
+        <div class="edit-actions">
+          <button class="btn" id="btnAutoEnhance">✨ 自动增强</button>
+        </div>
+      </div>
+      </div><!-- /beauty pane -->
+
+      <div class="edit-pane" data-pane="decor">
+      <div class="edit-section">
+        <h4>边框</h4>
+        <div class="edit-actions">
+          <select id="borderMode">
+            <option value="none">无边框</option>
+            <option value="white">白边（5%）</option>
+            <option value="black">黑边（5%）</option>
+            <option value="white-thick">白边相纸（15%）</option>
+          </select>
+          <select id="borderRadius">
+            <option value="0">直角</option>
+            <option value="0.02">小圆角</option>
+            <option value="0.06">大圆角</option>
+          </select>
+        </div>
+      </div>
+      <div class="edit-section">
+        <h4>文字 / 水印</h4>
+        <div class="edit-actions">
+          <input type="text" id="txtInput" placeholder="输入文字…" style="flex:1">
+          <button class="btn" id="txtAdd">添加</button>
+        </div>
+        <div class="edit-actions">
+          <select id="txtFont">
+            <option value="'Microsoft YaHei', sans-serif">雅黑</option>
+            <option value="'SimSun', serif">宋体</option>
+            <option value="'KaiTi', serif">楷体</option>
+            <option value="Arial, sans-serif">Arial</option>
+          </select>
+          <input type="color" id="txtColor" value="#1c1c1c" title="文字颜色">
+          <label class="field" style="margin:0"><span>大小 <b id="txtSizeVal">5</b>%</span>
+            <input type="range" id="txtSize" min="2" max="20" value="5"></label>
+        </div>
+        <div class="edit-actions">
+          <label class="field" style="margin:0"><span>描边 <b id="txtStrokeVal">0</b></span>
+            <input type="range" id="txtStroke" min="0" max="10" value="0"></label>
+          <select id="txtPos">
+            <option value="br">右下</option>
+            <option value="bl">左下</option>
+            <option value="tr">右上</option>
+            <option value="tl">左上</option>
+            <option value="c">居中</option>
+          </select>
+        </div>
+        <div class="edit-actions">
+          <button class="btn" id="txtDel">删除选中文字</button>
+        </div>
+      </div>
+      <div class="edit-section">
+        <h4>马赛克笔刷</h4>
+        <p class="hint">在预览图上按住涂抹即可打码；再次点击「退出马赛克」恢复正常操作。</p>
+        <div class="edit-actions">
+          <button class="btn" id="mosaicBtn">🖌 进入马赛克模式</button>
+          <label class="field" style="margin:0"><span>笔刷 <b id="mosaicSizeVal">30</b></span>
+            <input type="range" id="mosaicSize" min="10" max="80" value="30"></label>
+          <button class="btn" id="mosaicClear">清空马赛克</button>
+        </div>
+      </div>
+      </div><!-- /decor pane -->
+
+      <div class="edit-pane" data-pane="pro">
+      <div class="edit-section">
+        <h4>高级处理（OpenCV）</h4>
+        <p class="hint">首次使用需联网加载 opencv.js（约 8MB）；处理在导出时应用到最终区域。CDN 地址可在「设置 → 高级」修改。</p>
+        <div class="edit-actions">
+          <button class="btn" id="cvDenoise">去噪（中值）</button>
+          <button class="btn" id="cvBilateral">保边去噪（双边）</button>
+          <button class="btn" id="cvSharp">智能锐化</button>
+          <button class="btn" id="opsReset">清空高级处理（0 步）</button>
+        </div>
+      </div>
+      <div class="edit-section">
+        <h4>AI 放大（实验性）</h4>
+        <p class="hint">需联网加载 onnxruntime-web 与超分辨率模型（.onnx 地址在「设置 → 高级」配置，输入 1×3×H×W），导出时推理；实际倍率以模型输出为准。</p>
+        <div class="edit-actions">
+          <select id="aiScale"><option value="2">放大 2×</option><option value="4">放大 4×</option></select>
+          <button class="btn" id="aiRun">AI 超分辨率放大</button>
+        </div>
+      </div>
+      <div class="edit-section">
+        <h4>瘦身 / 瘦脸（局部液化）</h4>
+        <p class="hint">瘦脸：两侧脸颊向面中收缩；瘦身：身体两侧向内收。点「设定锚点」后在预览图上拖拽定位作用中心，作用范围按模式自动取形。</p>
+        <div class="edit-actions">
+          <button class="btn" id="slimFace">瘦脸</button>
+          <button class="btn" id="slimBody">瘦身</button>
+          <button class="btn" id="slimMode">🎯 设定锚点</button>
+        </div>
+        <div class="edit-actions">
+          <label class="field" style="margin:0"><span>强度 <b id="slimStrengthVal">0</b>%</span>
+            <input type="range" id="slimStrength" min="0" max="100" value="0"></label>
+        </div>
+        <div class="edit-actions">
+          <label class="field" style="margin:0"><span>作用范围 <b id="slimRangeVal">22</b></span>
+            <input type="range" id="slimRange" min="8" max="60" value="22"></label>
+          <button class="btn" id="slimReset">重置</button>
+        </div>
+      </div>
+      <div class="edit-section">
+        <h4>裁剪</h4>
+        <p class="hint">导出时会包含当前裁剪区域。拖动选框四角可调整大小，框内可移动位置。</p>
+        <div class="edit-actions">
+          <button class="btn" id="cropReset">重置裁剪（全图）</button>
+        </div>
+      </div>
+      <div class="edit-section">
+        <h4>一键抠图（离线智能去背）</h4>
+        <p class="hint">点「前景笔」在要保留的主体上涂抹，「背景笔」在要去掉的区域涂抹，再点「✨ 一键抠图」生成透明蒙版。无需联网，边缘自动羽化；用「导出透明 PNG」保存带 alpha 的结果。</p>
+        <div class="edit-actions">
+          <button class="btn" id="matFg">🖌 前景笔</button>
+          <button class="btn" id="matBg">🧹 背景笔</button>
+          <label class="field" style="margin:0"><span>笔刷 <b id="matSizeVal">30</b></span>
+            <input type="range" id="matSize" min="10" max="80" value="30"></label>
+        </div>
+        <div class="edit-actions">
+          <button class="btn primary" id="matRun">✨ 一键抠图</button>
+          <button class="btn" id="matClear">清除笔迹</button>
+          <button class="btn" id="matExport">导出透明 PNG</button>
+        </div>
+        <p class="hint" id="matStatus">未涂抹 — 先在前景/背景画笔中选择一种，在预览图上涂抹标记。</p>
+      </div>
+      </div><!-- /pro pane -->
+
+      <div class="edit-pane" data-pane="export">
+      <div class="edit-section">
+        <h4>导出 / 另存为</h4>
+        <label class="field"><span>格式</span>
+          <select id="exFormat">
+            <option value="image/jpeg">JPG</option>
+            <option value="image/png">PNG</option>
+            <option value="image/webp">WebP</option>
+            <option value="image/bmp">BMP</option>
+          </select></label>
+        <label class="field" id="exQualityField"><span>质量 <b id="exQualityVal">92</b></span>
+          <input type="range" id="exQuality" min="1" max="100" value="92"></label>
+        <p class="hint">导出会包含当前旋转 / 翻转 / 滤镜 / 锐化 / 裁剪 / 高级处理（OpenCV·AI）效果，下载到本机。</p>
+        <div class="edit-actions">
+          <button class="btn primary" id="exRun">导出当前图片</button>
+        </div>
+      </div>
+      </div><!-- /export pane -->
+      </div><!-- /edit-body -->
+      </div><!-- /edit-work -->
+  </div>
+
+  <!-- 帮助 / 关于 / 系统集成说明 -->
+  <div class="modal-mask" id="aboutMask" hidden>
+    <div class="modal about-modal">
+      <div class="modal-head"><span>关于绿角犀看图 · Web 原型</span><button class="btn icon sm" id="aboutClose">✕</button></div>
+      <div class="about-body" id="aboutBody"></div>
+    </div>
+  </div>
+
+  <!-- 使用说明（应用内嵌） -->
+  <div class="modal-mask" id="manualMask" hidden>
+    <div class="modal about-modal">
+      <div class="modal-head"><span>使用说明</span><button class="btn icon sm" id="manualClose">✕</button></div>
+      <div class="about-body" id="manualBody"></div>
+    </div>
+  </div>
+
+  <!-- 登录 / 注册 -->
+  <div class="modal-mask" id="authMask" hidden>
+    <div class="modal auth-modal">
+      <div class="modal-head"><span id="authTitle">登录账户</span><button class="btn icon sm" id="authClose">✕</button></div>
+      <div class="auth-body">
+        <label class="field"><span>用户名</span><input type="text" id="authUser" placeholder="至少 3 个字符" autocomplete="username"></label>
+        <label class="field"><span>昵称</span><input type="text" id="authNick" placeholder="注册时填写" hidden></label>
+        <label class="field"><span>密码</span><input type="password" id="authPass" placeholder="至少 6 个字符" autocomplete="current-password"></label>
+        <p class="auth-err" id="authErr"></p>
+        <button class="btn primary" id="authSubmit">登录</button>
+        <p class="auth-switch">切换：
+          <select id="authTab">
+            <option value="login">登录</option>
+            <option value="register">注册新账户</option>
+          </select>
+        </p>
+        <p class="hint">云端账户为可选功能：登录后可跨设备同步设置、收藏、浏览历史。当前为本地 mock 后端（演示用，数据仅存本机）。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 云端面板：收藏 / 历史 / 资料 -->
+  <div class="modal-mask" id="cloudMask" hidden>
+    <div class="modal cloud-modal">
+      <div class="modal-head"><span>我的云端</span><button class="btn icon sm" id="cloudClose">✕</button></div>
+      <div class="cloud-body">
+        <div class="cloud-status" id="cloudStatus">未登录</div>
+        <div class="cloud-tabs">
+          <button class="cloud-tab active" data-tab="fav">收藏</button>
+          <button class="cloud-tab" data-tab="hist">浏览历史</button>
+          <button class="cloud-tab" data-tab="prof">账户资料</button>
+        </div>
+        <div class="cloud-pane" data-pane="fav">
+          <ul class="list fav-list" id="favList"></ul>
+        </div>
+        <div class="cloud-pane" data-pane="hist" hidden>
+          <ul class="list hist-list" id="histList"></ul>
+        </div>
+        <div class="cloud-pane" data-pane="prof" hidden>
+          <label class="field"><span>昵称</span><input type="text" id="profNick"></label>
+          <label class="field"><span>头像 URL</span><input type="text" id="profAvatar" placeholder="图片地址或 dataURL"></label>
+          <button class="btn" id="profSave">保存资料</button>
+          <label class="field"><span>原密码</span><input type="password" id="pwdOld"></label>
+          <label class="field"><span>新密码</span><input type="password" id="pwdNew" placeholder="至少 6 个字符"></label>
+          <button class="btn" id="pwdSave">修改密码</button>
+        </div>
+        <div class="cloud-foot">
+          <button class="btn" id="cloudSyncNow">立即同步</button>
+          <button class="btn danger" id="cloudLogout">退出登录</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 幻灯片控制条 -->
+  <div class="slide-bar" id="slideBar" hidden>
+    <button class="btn icon" id="slidePrev" title="上一张">‹</button>
+    <button class="btn icon" id="slidePlay" title="暂停/继续">⏸</button>
+    <div class="slide-progress"><div class="slide-progress-fill" id="slideFill"></div></div>
+    <button class="btn icon" id="slideNext" title="下一张">›</button>
+    <button class="btn icon" id="slideExit" title="退出 (Esc)">✕</button>
+  </div>
+
+  <!-- toast -->
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

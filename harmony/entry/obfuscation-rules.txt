@@ -1,0 +1,2 @@
+# 绿角犀看图·混淆规则（暂不启用，保可读）
+-enable-property-obfuscation

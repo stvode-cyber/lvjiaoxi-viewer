@@ -1,0 +1,1 @@
+{"name":"onnxverify","private":true,"type":"commonjs","dependencies":{"onnxruntime-node":"^1.29.0"}}

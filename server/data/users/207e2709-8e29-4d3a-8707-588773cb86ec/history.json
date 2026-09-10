@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "id": "h1788236478627",
+      "name": "offline.jpg",
+      "path": "/tmp/offline.jpg",
+      "openedAt": 1788236478627
+    },
+    {
+      "id": "h1788236477536",
+      "name": "b.jpg",
+      "path": "/tmp/b.jpg",
+      "openedAt": 1788236477536
+    }
+  ],
+  "updatedAt": 1788236478
+}
