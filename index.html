@@ -350,7 +350,17 @@
     <div class="edit-panel-head">
       <span>图片工具</span>
       <span class="edit-name" id="editName"></span>
+      <button class="btn icon sm" id="editHistoryBtn" title="编辑历史时间线">⏱</button>
       <button class="btn icon sm" id="editClose">✕</button>
+    </div>
+    <div class="edit-history-panel" id="editHistoryPanel" hidden>
+      <div class="eh-head">
+        <span>编辑历史</span>
+        <button class="btn icon sm" id="editHistoryClose">✕</button>
+      </div>
+      <div class="eh-timeline" id="editTimeline">
+        <!-- 由 renderEditTimeline() 填充 -->
+      </div>
     </div>
       <div class="edit-preview-wrap">
         <canvas id="editPreview"></canvas>
@@ -373,6 +383,15 @@
           <button class="btn" id="recipeRandom" title="随机套用一套风格配方">🎲 随机风格</button>
         </div>
         <div class="style-grid" id="styleGrid" style="margin-top:12px"></div>
+      </div>
+      <div class="edit-section">
+        <h4>我的风格（自定义预设）</h4>
+        <p class="hint">调好满意的参数后点「保存当前」，下次一键套用。最多存 10 个。</p>
+        <div class="edit-actions">
+          <button class="btn" id="saveMyStyle">💾 保存当前参数</button>
+          <button class="btn ghost" id="clearMyStyles" title="删除全部自定义预设">🗑 清空</button>
+        </div>
+        <div class="style-grid" id="myStyleGrid" style="margin-top:12px"></div>
       </div>
       </div><!-- /recipe pane -->
 

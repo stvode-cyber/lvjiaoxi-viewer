@@ -374,6 +374,8 @@
       'miBrightness', 'miBrightnessVal', 'miContrast', 'miContrastVal', 'miSaturate', 'miSaturateVal', 'miTemp', 'miTempVal', 'miSharp', 'miSharpVal',
       'miBeautyVal', 'miBeautySmooth', 'miBeautyWhite', 'miBeautyLight', 'miBeautyNatural', 'miBeautyFancy', 'miEnhance', 'miMore',
       'miRecipe', 'miRecipeRandom', 'recipeRandom',
+      'saveMyStyle', 'clearMyStyles', 'myStyleGrid',
+      'editHistoryBtn', 'editHistoryClose', 'editHistoryPanel', 'editTimeline',
     ].forEach((id) => { els[id] = document.getElementById(id); });
   }
 
@@ -1189,19 +1191,194 @@
   }
   function pushUndo() {
     editUndo.push(editSnap()); if (editUndo.length > UNDO_MAX) editUndo.shift();
-    editRedo.length = 0; updateEditUndoButtons();
+    editRedo.length = 0; updateEditUndoButtons(); if (els.editTimeline) renderEditTimeline();
   }
   function undoEdit() {
     if (!editUndo.length) { toast('没有可撤销的编辑'); return; }
     editRedo.push(editSnap()); const prev = editUndo.pop();
-    restoreEdit(prev); updateEditUndoButtons(); toast('已撤销');
+    restoreEdit(prev); updateEditUndoButtons(); toast('已撤销'); if (els.editTimeline) renderEditTimeline();
   }
   function redoEdit() {
     if (!editRedo.length) { toast('没有可重做的编辑'); return; }
     editUndo.push(editSnap()); const next = editRedo.pop();
-    restoreEdit(next); updateEditUndoButtons(); toast('已重做');
+    restoreEdit(next); updateEditUndoButtons(); toast('已重做'); if (els.editTimeline) renderEditTimeline();
   }
-  function clearEditHistory() { editUndo = []; editRedo = []; updateEditUndoButtons(); }
+  function clearEditHistory() { editUndo = []; editRedo = []; updateEditUndoButtons(); if (els.editTimeline) renderEditTimeline(); }
+
+  // ============ 自定义参数预设（localStorage 持久化） ============
+  const MY_STYLE_KEY = 'lvjx_my_styles';
+  const MY_STYLE_MAX = 10;
+  function loadMyStyles() {
+    try { return JSON.parse(localStorage.getItem(MY_STYLE_KEY) || '[]'); } catch { return []; }
+  }
+  function saveMyStylesList(list) {
+    localStorage.setItem(MY_STYLE_KEY, JSON.stringify(list.slice(0, MY_STYLE_MAX)));
+  }
+  function summarizeSnap(snap, idx, isCurrent) {
+    const s = JSON.parse(snap);
+    const f = s.f || {};
+    const parts = [];
+    if (f.brightness !== undefined && f.brightness !== 100) parts.push(f.brightness > 100 ? '亮' + (f.brightness - 100) : '暗' + (100 - f.brightness));
+    if (f.contrast !== undefined && f.contrast !== 100) parts.push(f.contrast > 100 ? '对比+' : '对比-');
+    if (f.saturate !== undefined && f.saturate !== 100) parts.push(f.saturate > 100 ? '饱和+' : '饱和-');
+    if (f.gray === 100) parts.push('黑白');
+    if (f.temp !== undefined && f.temp !== 0) parts.push(f.temp > 0 ? '暖' + f.temp : '冷' + (-f.temp));
+    if (f.sharp > 0) parts.push('锐化');
+    if (f.grain > 0) parts.push('颗粒');
+    if (f.vignette > 0) parts.push('暗角');
+    if (s.o && s.o.length) parts.push('磨皮×' + s.o.length);
+    if (s.s && s.s.enabled) parts.push(s.s.mode === 'face' ? '瘦脸' : '瘦身');
+    if (parts.length === 0) parts.push('原图');
+    return (idx + ': ' + parts.join(' ')).slice(0, 20);
+  }
+  function renderMyStyles() {
+    if (!els.myStyleGrid) return;
+    els.myStyleGrid.innerHTML = '';
+    const list = loadMyStyles();
+    if (!list.length) {
+      const empty = document.createElement('p');
+      empty.className = 'hint';
+      empty.textContent = '还没有保存的风格。调好参数后点「保存当前」即可。';
+      els.myStyleGrid.appendChild(empty);
+      return;
+    }
+    list.forEach((s, i) => {
+      const b = document.createElement('button');
+      b.className = 'btn style-cell del-btn'; b.type = 'button';
+      b.textContent = s.name; b.dataset.myStyle = String(i);
+      b.title = '应用「' + s.name + '」';
+      b.addEventListener('click', () => { applyMyStyle(i); });
+      const del = document.createElement('span');
+      del.className = 'del-x'; del.textContent = '✕'; del.title = '删除';
+      del.addEventListener('click', (e) => { e.stopPropagation(); deleteMyStyle(i); });
+      b.appendChild(del);
+      els.myStyleGrid.appendChild(b);
+    });
+  }
+  function saveCurrentStyle() {
+    const list = loadMyStyles();
+    const def = { brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0 };
+    const snap = editSnap();
+    const s = JSON.parse(snap);
+    // 简单命名：如果是黑白 / 暖色调等有特征的，自动命名；否则用时间戳
+    const f = s.f || {};
+    let autoName = '';
+    if (f.gray === 100) autoName = '黑白质感';
+    else if ((f.temp || 0) > 30) autoName = '暖阳暖调';
+    else if ((f.temp || 0) < -30) autoName = '冷色氛围';
+    else if ((f.brightness || 100) > 115) autoName = '明亮清新';
+    else if ((f.brightness || 100) < 85) autoName = '暗调电影';
+    else autoName = '我的风格';
+    let name = autoName;
+    let n = 1;
+    while (list.some((x) => x.name === name)) { name = autoName + ' ' + (++n); }
+    list.unshift({ name, snap });
+    saveMyStylesList(list);
+    renderMyStyles();
+    toast('已保存「' + name + '」到我的风格');
+  }
+  function applyMyStyle(i) {
+    const list = loadMyStyles();
+    if (!list[i]) return;
+    pushUndo();
+    restoreEdit(list[i].snap);
+    toast('已应用「' + list[i].name + '」');
+  }
+  function deleteMyStyle(i) {
+    const list = loadMyStyles();
+    if (!list[i]) return;
+    const name = list[i].name;
+    list.splice(i, 1);
+    saveMyStylesList(list);
+    renderMyStyles();
+    toast('已删除「' + name + '」');
+  }
+  function clearAllMyStyles() {
+    const list = loadMyStyles();
+    if (!list.length) { toast('没有可清空的风格'); return; }
+    if (!confirm('确定清空全部 ' + list.length + ' 个自定义风格？此操作不可撤销。')) return;
+    localStorage.removeItem(MY_STYLE_KEY);
+    renderMyStyles();
+    toast('已清空全部自定义风格');
+  }
+
+  // ============ 编辑历史时间线 UI ============
+  function renderEditTimeline() {
+    if (!els.editTimeline) return;
+    els.editTimeline.innerHTML = '';
+    const total = editUndo.length + 1 + editRedo.length; // undo steps + current + redo steps
+    // 显示：[undo倒序] → [current] → [redo正序]
+    // 索引 0..editUndo.length-1 = 过去(可 undo 到)
+    // 索引 editUndo.length = 当前状态
+    // 索引 editUndo.length+1..total-1 = 未来(可 redo 到)
+    // 显示时按时间正序：redo(过去) → undo(未来) 的相反
+    // 简化：直接展示 undo 正序 + [当前] + redo 正序
+    const items = [];
+    editUndo.forEach((s, i) => items.push({ snap: s, idx: i, label: '步骤 ' + (i + 1), state: 'past' }));
+    items.push({ snap: editSnap(), idx: editUndo.length, label: '当前', state: 'current' });
+    editRedo.forEach((s, i) => items.push({ snap: s, idx: editUndo.length + 1 + i, label: '重做 ' + (i + 1), state: 'future' }));
+    if (items.length === 1) {
+      const empty = document.createElement('p');
+      empty.className = 'hint';
+      empty.textContent = '尚无编辑历史。开始调整图片参数后会自动记录每一步。';
+      els.editTimeline.appendChild(empty);
+      return;
+    }
+    items.forEach((it) => {
+      const b = document.createElement('button');
+      b.className = 'eh-step ' + it.state;
+      b.type = 'button';
+      const label = summarizeSnap(it.snap, it.idx, it.state === 'current');
+      const span = document.createElement('span');
+      span.className = 'eh-label';
+      span.textContent = label;
+      b.appendChild(span);
+      if (it.state !== 'current') {
+        b.addEventListener('click', () => jumpToHistory(it.snap));
+      }
+      els.editTimeline.appendChild(b);
+    });
+  }
+  function jumpToHistory(targetSnap) {
+    // 计算从当前状态到目标的操作步数
+    // 简化方法：先回到初始，再依次 pushUndo 直到 target
+    // 但这样太慢。更简单：直接 restore + 重建 undo/redo
+    const currentSnap = editSnap();
+    // 如果 target 在 editUndo 中（过去），撤销直到找到
+    // 如果 target 在 editRedo 中（未来），重做直到找到
+    // 用 diff 最快路径：找到 target 在 undo 还是 redo
+    const undoIdx = editUndo.lastIndexOf(targetSnap);
+    const redoIdx = editRedo.indexOf(targetSnap);
+    if (undoIdx >= 0) {
+      // 在 undo 里：撤销 (editUndo.length - undoIdx - 1) 次
+      const times = editUndo.length - undoIdx - 1;
+      for (let i = 0; i < times; i++) { editRedo.push(editUndo.pop()); }
+    } else if (redoIdx >= 0) {
+      // 在 redo 里：重做 (redoIdx + 1) 次
+      const times = redoIdx + 1;
+      for (let i = 0; i < times; i++) { editUndo.push(editRedo.shift()); }
+    } else {
+      // 不在历史里（可能是当前状态的字符串化不同），直接 restore
+      // 把当前快照推入 undo
+      editUndo.push(currentSnap);
+      editRedo.length = 0;
+      restoreEdit(targetSnap);
+      updateEditUndoButtons();
+      renderEditTimeline();
+      toast('已跳转到目标步骤');
+      return;
+    }
+    // 最后一次 restore 并更新状态
+    restoreEdit(editUndo[editUndo.length - 1] || editSnap());
+    updateEditUndoButtons();
+    renderEditTimeline();
+    toast('已跳转到目标步骤');
+  }
+  function toggleEditHistory() {
+    if (!els.editHistoryPanel) return;
+    renderEditTimeline();
+    els.editHistoryPanel.hidden = !els.editHistoryPanel.hidden;
+  }
 
   // ---- 高级像素质点（美图秀秀式：高光 / 暗部 / 褪色 / 色调分离 / 颗粒 / 暗角）----
   // 预览（小画布，同步）与导出（全尺寸，异步分块）走同一套算法，所见即所得。
@@ -1297,6 +1474,7 @@
     els.editName.textContent = item.name;
     syncFilterUI();
     renderStyleGrid();
+    renderMyStyles();
     switchEditTab(typeof tab === 'string' ? tab : 'beauty');
     els.editMask.hidden = false;
     renderEditPreview();
@@ -3742,6 +3920,10 @@
     if (els.miRecipe) els.miRecipe.addEventListener('click', () => openEdit('recipe'));
     if (els.miRecipeRandom) els.miRecipeRandom.addEventListener('click', applyRandomStyle);
     if (els.recipeRandom) els.recipeRandom.addEventListener('click', applyRandomStyle);
+    if (els.saveMyStyle) els.saveMyStyle.addEventListener('click', saveCurrentStyle);
+    if (els.clearMyStyles) els.clearMyStyles.addEventListener('click', clearAllMyStyles);
+    if (els.editHistoryBtn) els.editHistoryBtn.addEventListener('click', toggleEditHistory);
+    if (els.editHistoryClose) els.editHistoryClose.addEventListener('click', () => { if (els.editHistoryPanel) els.editHistoryPanel.hidden = true; });
     if (els.miMore) els.miMore.addEventListener('click', openEdit);
     syncBeautyBar();
     // 美工：美颜 / 边框 / 文字 / 马赛克
