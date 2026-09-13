@@ -32,7 +32,7 @@ P2 差异化：1 款独家 + 难度 ⭐⭐⭐⭐ 以上但有高价值
 
 | 功能 | HoneyView | XnView | IrfanView | FastStone | 光影 | 我们 |
 |---|---|---|---|---|---|---|
-| **压缩包直看** | ✅ ZIP/RAR/7Z/CBR/CBZ | ✅ 基础 | ✅ 插件 | ❌ | ❌ | ❌ 空白 |
+| **压缩包直看** | ✅ ZIP/RAR/7Z/CBR/CBZ | ✅ 基础 | ✅ 插件 | ❌ | ✅ | ✅ commit a38ea97（一期 ZIP/CBZ，RAR/7Z 后续版）|
 | 500+ 格式 | 50+ | 500+ | 100+ 插件 | 50+ | 50+ | HEIC/WebP/PNG/JPG/GIF/BMP/AVIF |
 | RAW 支持 | ✅ | ✅ | ✅ 插件 | ✅ | ✅ 基于 LibRaw | ❌ |
 | PSD/SVG | ✅ PSD | ✅ | ❌ | ✅ PSD | ✅ | ❌ |
