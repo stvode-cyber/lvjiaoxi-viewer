@@ -361,7 +361,7 @@
       'flHighlight', 'flHighlightVal', 'flShadow', 'flShadowVal', 'flFade', 'flFadeVal', 'flGrain', 'flGrainVal', 'flVignette', 'flVignetteVal', 'flTintH', 'flTintS', 'flTintAmt', 'flTintAmtVal',
       'btnAutoEnhance', 'cvDenoise', 'cvBilateral', 'cvSharp', 'opsReset', 'aiScale', 'aiRun',
       'styleGrid', 'beautyVal', 'beautyValVal', 'beautySmooth', 'beautyWhite',
-      'borderMode', 'borderRadius',
+      'borderMode', 'borderRadius', 'emojiBar', 'emojiSize', 'emojiSizeVal', 'emojiClear', 'posterTitle', 'posterSubtitle', 'posterLayout', 'posterGenerate',
       'txtInput', 'txtAdd', 'txtFont', 'txtColor', 'txtSize', 'txtSizeVal', 'txtStroke', 'txtStrokeVal', 'txtPos', 'txtDel',
       'mosaicBtn', 'mosaicSize', 'mosaicSizeVal', 'mosaicClear', 'eraserBtn', 'eraserSize', 'eraserSizeVal', 'eraserClear',
       'matFg', 'matBg', 'matRun', 'matClear', 'matExport', 'matSize', 'matSizeVal', 'matStatus',
@@ -2461,26 +2461,110 @@
     const rad = els.borderRadius ? +els.borderRadius.value : 0;
     return { mode, rad };
   }
+  // 边框预设配置：每个 mode 有独立的渲染逻辑
+  const BORDER_PRESETS = {
+    none:       { padPct: 0,      bg: '#F5F4F7', rad: 0 },
+    white:      { padPct: 0.05,   bg: '#F5F4F7', rad: 0 },
+    black:      { padPct: 0.05,   bg: '#1C1C1C', rad: 0 },
+    'white-thick': { padPct: 0.15, bg: '#F5F4F7', rad: 0 },
+    // 拍立得（底部留白更大，贴照片贴纸效果）
+    polaroid:   { padPct: 0.08,   bg: '#FFFFFF', rad: 0.02, bottomExtra: 0.18 },
+    // 复古米黄 + 内阴影
+    vintage:    { padPct: 0.06,   bg: '#F5EDDC', rad: 0.03, innerShadow: true },
+    // 投影边框（悬浮卡片）
+    shadow:     { padPct: 0.03,   bg: '#FFFFFF', rad: 0.04, shadowBlurPct: 0.08, shadowColor: 'rgba(0,0,0,0.35)' },
+    // 渐变边框（从左下到右上）
+    gradient:   { padPct: 0.06,   rad: 0.06, gradient: ['#FF6B6B', '#4ECDC4', '#45B7D1'] },
+    // 对角斜角（45° 切角）
+    diagonal:   { padPct: 0.08,   bg: '#F5F4F7', rad: 0, cornerCutPct: 0.15 },
+  };
   function applyBorder(canvas) {
     const { mode, rad } = borderSpec();
     if (mode === 'none' && rad <= 0) return canvas;
-    const padMap = { none: 0, white: 0.05, black: 0.05, 'white-thick': 0.15 };
-    const padPct = padMap[mode] || 0;
-    const pad = Math.round(Math.min(canvas.width, canvas.height) * padPct);
+    const preset = BORDER_PRESETS[mode] || BORDER_PRESETS.white;
+    let padPct = preset.padPct || 0;
+    let pad = Math.round(Math.min(canvas.width, canvas.height) * padPct);
+    // polaroid 底部额外留白（贴标题/日期）
+    if (preset.bottomExtra) pad = Math.round(Math.min(canvas.width, canvas.height) * preset.bottomExtra);
     const out = document.createElement('canvas');
-    out.width = canvas.width + pad * 2; out.height = canvas.height + pad * 2;
+    out.width = canvas.width + pad * 2; out.height = canvas.height + pad;
     const ctx = out.getContext('2d');
     if (!ctx || !ctx.drawImage) return canvas;
-    ctx.fillStyle = mode === 'black' ? '#1C1C1C' : '#F5F4F7';
+
+    // 背景填充
+    if (preset.gradient) {
+      const grad = ctx.createLinearGradient(0, 0, out.width, out.height);
+      preset.gradient.forEach((c, i) => grad.addColorStop(i / (preset.gradient.length - 1), c));
+      ctx.fillStyle = grad;
+    } else {
+      ctx.fillStyle = preset.bg || '#F5F4F7';
+    }
     ctx.fillRect(0, 0, out.width, out.height);
-    if (rad > 0) {
-      const r = Math.round(Math.min(canvas.width, canvas.height) * rad);
+
+    // 四角圆角
+    const canvasRad = rad > 0 ? Math.round(Math.min(canvas.width, canvas.height) * rad) :
+                      preset.rad > 0 ? Math.round(Math.min(canvas.width, canvas.height) * preset.rad) : 0;
+
+    if (mode === 'shadow') {
+      // 悬浮卡片效果：圆角 + 外投影
       ctx.save();
-      roundRectPath(ctx, pad, pad, canvas.width, canvas.height, r);
+      ctx.shadowColor = preset.shadowColor;
+      ctx.shadowBlur = Math.round(Math.min(canvas.width, canvas.height) * preset.shadowBlurPct);
+      ctx.shadowOffsetX = Math.round(Math.min(canvas.width, canvas.height) * 0.02);
+      ctx.shadowOffsetY = Math.round(Math.min(canvas.width, canvas.height) * 0.03);
+      ctx.fillStyle = '#FFFFFF';
+      roundRectPath(ctx, pad, pad, canvas.width, canvas.height, canvasRad);
+      ctx.fill();
+      ctx.restore();
+      ctx.drawImage(canvas, pad, pad);
+    } else if (mode === 'vintage' && preset.innerShadow) {
+      // 内阴影：先画原图 + clip 圆角 + 画一层深色圆角矩形做内阴影
+      ctx.save();
+      roundRectPath(ctx, pad, pad, canvas.width, canvas.height, canvasRad);
       ctx.clip();
       ctx.drawImage(canvas, pad, pad);
       ctx.restore();
-    } else ctx.drawImage(canvas, pad, pad);
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.15)';
+      ctx.shadowBlur = Math.round(Math.min(canvas.width, canvas.height) * 0.04);
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = 2;
+      roundRectPath(ctx, pad, pad, canvas.width, canvas.height, canvasRad);
+      ctx.stroke();
+      ctx.restore();
+    } else if (mode === 'polaroid' || mode === 'diagonal') {
+      // 圆角/斜角 clip + 原图
+      ctx.save();
+      if (canvasRad > 0) {
+        roundRectPath(ctx, pad, pad, canvas.width, canvas.height, canvasRad);
+      } else if (mode === 'diagonal') {
+        const cut = Math.round(Math.min(canvas.width, canvas.height) * (preset.cornerCutPct || 0.15));
+        ctx.beginPath();
+        ctx.moveTo(pad + cut, pad);                       // 左上切角点
+        ctx.lineTo(pad + canvas.width - cut, pad);       // 右上
+        ctx.lineTo(pad + canvas.width, pad + cut);       // 右上切角点
+        ctx.lineTo(pad + canvas.width, pad + canvas.height - cut); // 右下
+        ctx.lineTo(pad + canvas.width - cut, pad + canvas.height); // 右下切角点
+        ctx.lineTo(pad + cut, pad + canvas.height);      // 左下
+        ctx.lineTo(pad, pad + canvas.height - cut);      // 左下切角点
+        ctx.lineTo(pad, pad + cut);                      // 左上
+        ctx.closePath();
+      }
+      if (canvasRad > 0 || mode === 'diagonal') ctx.clip();
+      ctx.drawImage(canvas, pad, pad);
+      ctx.restore();
+    } else {
+      // gradient 或普通模式
+      if (canvasRad > 0) {
+        ctx.save();
+        roundRectPath(ctx, pad, pad, canvas.width, canvas.height, canvasRad);
+        ctx.clip();
+        ctx.drawImage(canvas, pad, pad);
+        ctx.restore();
+      } else ctx.drawImage(canvas, pad, pad);
+    }
     return out;
   }
   function roundRectPath(ctx, x, y, w, h, r) {
@@ -2501,6 +2585,86 @@
     const [x, y] = map[pos] || map.br;
     return { x, y };
   }
+  // ===== Emoji 贴纸 + 海报标题一键生成 =====
+  const EMOJI_PRESETS = ['😀','😍','🥰','😎','🤩','😜','🙃','😇','🤗','🤫','😂','😭','😤','🤔','🥳','🤯','😱','🫣','🤠','🥸','👻','👽','🤖','👾','💩','🎃','😺','😈','💀','☠️','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💯','✨','🔥','🌟','⭐','🎉','🎊','🎁','🎈','🎂','🍕','🍔','🍟','🌭','🍿','🧁','🍰','🍩','🍪','🍎','🍊','🍋','🍌','🍉','🍓','🍇','🥝','🍑','🍒','🥥','🥑','🥦','🥕','🌽','🍅','🍆','🥔','🥑','🥒','🥬','🥦','🧄','🧅','🥜','🫘','🌰','🫚','🫛','🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐢','🐍','🦎','🦖','🦕','🐳','🐬','🐟','🐠','🐡','🦈','🐙','🐚','🪸','🪼','🐌','🦋','🦐','🦞','🦀','🦑','🌍','🌎','🌏','🌐','🪨','🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘','🌙','🌚','🌛','🌜','☀️','🌝','🌞','🪐','⭐','🌟','🌠','🌌','☁️','⛅','⛈️','🌤️','🌥️','🌦️','🌧️','🌨️','🌩️','🌪️','🌫️','🌬️','🌀','🌈','🌂','☂️','☔','⛱️','⚡','❄️','☃️','⛄','☄️','🔥','💧','🌊','🎈','🎉','🎊','🎁','🎀','🪄','🎊','✨','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈺','🈶','🈚','🈸','🈺','🈷️','✴️','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','💯','💢','♨️','🚫','🚰','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯','💹','❇️','✴️','❎','🌐','💤','🏧','🚾','♿','🅿️','🈳','🈂️','🛂','🛃','🛄','🛅','🚹','🚺','🚼','⚧','🚻','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','⏏️','▶️','⏸️','⏯️','⏹️','⏺️','⏭️','⏮️','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','🎼','🎹','🥁','🎷','🎺','🎸','🪕','🎻','🪈','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤼','🤸','🤺','⛹️','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🏵️','🎗️','🎫','🎟️','🎪','🤹','🎭','🩰','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🎷','🎺','🎸','🪕','🎻','🪈','📱','📲','☎️','📞','📟','📠','🔋','🪫','🔌','💻','🖥️','🖨️','⌨️','🖱️','🖲️','💽','💾','💿','📀','🧮','🎥','🎞️','📽️','🎬','📺','📷','📸','📹','📼','🔍','🔎','🕯️','💡','🔦','🏮','🪔','📔','📕','📖','📗','📘','📙','📚','📓','📒','📃','📜','📄','📰','🗞️','📑','🔖','🏷️','💰','💴','💵','💶','💷','💸','💳','🧧','✅','📪','📫','📬','📭','📮','🗳️','✏️','✒️','🖋️','🖊️','🖌️','🖍️','📝','💼','📁','📂','🗂️','📅','📆','🗒️','🗓️','📇','📈','📉','📊','📋','📌','📍','📎','🖇️','📏','📐','✂️','🗃️','🗄️','🗑️','🔒','🔓','🔏','🔐','🔑','🗝️','🔨','🪓','⛏️','⚒️','🛠️','🗡️','⚔️','🔫','🏹','🛡️','🔧','🔩','⚙️','🗜️','⚖️','🦯','🔗','⛓️','🪝','🧰','🧲','🪜','⚗️','🧪','🧫','🧬','🔬','🔭','📡','💉','💊','🩹','🩺','🩻','🚪','🛗','🪞','🪟','🛏️','🛋️','🪑','🚽','🪠','🚿','🛁','🪤','🪒','🧴','🧷','🧹','🧺','🧻','🪣','🧼','🧽','🧯','🛒','🚬','⚰️','🪦','⚱️','🪬','🗿','🪧','🪪'];
+  function initEmojiBar() {
+    const bar = els.emojiBar; if (!bar) return;
+    bar.innerHTML = '';
+    EMOJI_PRESETS.forEach((e) => {
+      const btn = document.createElement('button');
+      btn.textContent = e;
+      btn.style.cssText = 'font-size:18px;border:none;background:transparent;cursor:pointer;padding:2px 4px;border-radius:4px;line-height:1';
+      btn.title = e;
+      btn.addEventListener('click', () => addSticker(e));
+      bar.appendChild(btn);
+    });
+  }
+  function addSticker(emoji) {
+    pushUndo();
+    const size = els.emojiSize ? +els.emojiSize.value : 8;
+    const t = {
+      id: 'e' + Date.now() + Math.random().toString(36).slice(2, 6),
+      text: emoji,
+      x: 0.5, y: 0.5,
+      size,
+      font: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+      color: '#1c1c1c',
+      stroke: 0,
+      anchor: 'c',
+      type: 'emoji',
+    };
+    state.texts.push(t);
+    state.textSel = t.id;
+    renderEditPreview();
+  }
+  function clearStickers() {
+    pushUndo();
+    state.texts = state.texts.filter((t) => t.type !== 'emoji');
+    state.textSel = null;
+    renderEditPreview();
+    toast('已清空贴纸');
+  }
+  function generatePoster() {
+    const title = (els.posterTitle.value || '').trim();
+    const subtitle = (els.posterSubtitle.value || '').trim();
+    const layout = els.posterLayout ? els.posterLayout.value : 'center';
+    if (!title && !subtitle) { toast('请至少填写主标题或副标题'); return; }
+    pushUndo();
+    // 先移除上一个海报生成的文字（type: 'poster'）
+    state.texts = state.texts.filter((t) => t.type !== 'poster');
+    const makeText = (opts) => ({
+      id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6),
+      text: opts.text,
+      x: opts.x, y: opts.y,
+      size: opts.size,
+      font: opts.font || '"Microsoft YaHei", sans-serif',
+      color: opts.color || '#1c1c1c',
+      stroke: opts.stroke || 0,
+      anchor: opts.anchor || 'c',
+      type: 'poster',
+    });
+    const posters = [];
+    if (layout === 'top') {
+      if (title) posters.push(makeText({ text: title, x: 0.5, y: 0.08, size: 8, color: '#FFFFFF', stroke: 4 }));
+      if (subtitle) posters.push(makeText({ text: subtitle, x: 0.5, y: 0.92, size: 5, color: '#FFFFFF', stroke: 3 }));
+    } else if (layout === 'center') {
+      if (title) posters.push(makeText({ text: title, x: 0.5, y: 0.45, size: 10, color: '#1c1c1c' }));
+      if (subtitle) posters.push(makeText({ text: subtitle, x: 0.5, y: 0.6, size: 5, color: '#666666' }));
+    } else if (layout === 'bottom') {
+      if (title) posters.push(makeText({ text: title, x: 0.5, y: 0.85, size: 7, color: '#FFFFFF', stroke: 3 }));
+      if (subtitle) posters.push(makeText({ text: subtitle, x: 0.5, y: 0.93, size: 4, color: '#F0F0F0', stroke: 2 }));
+    } else if (layout === 'price') {
+      if (title) posters.push(makeText({ text: title, x: 0.5, y: 0.3, size: 6, color: '#FF6B6B' }));
+      if (subtitle) posters.push(makeText({ text: subtitle, x: 0.5, y: 0.55, size: 14, color: '#FF2D55', font: '"Microsoft YaHei", sans-serif', stroke: 5 }));
+      // 装饰线
+      posters.push(makeText({ text: '————', x: 0.5, y: 0.7, size: 4, color: '#CCCCCC' }));
+    }
+    state.texts.push(...posters);
+    if (posters.length) state.textSel = posters[0].id;
+    renderEditPreview();
+    toast('海报文字已生成（可拖拽移动）');
+  }
+
   function addText() {
     const text = (els.txtInput.value || '').trim();
     if (!text) { toast('请输入文字'); return; }
@@ -4654,6 +4818,11 @@
     if (els.eraserBtn) els.eraserBtn.addEventListener('click', toggleEraserMode);
     if (els.eraserSize) els.eraserSize.addEventListener('input', () => { els.eraserSizeVal.textContent = els.eraserSize.value; });
     if (els.eraserClear) els.eraserClear.addEventListener('click', clearEraser);
+    // Emoji 贴纸 + 海报标题
+    initEmojiBar();
+    if (els.emojiSize) els.emojiSize.addEventListener('input', () => { els.emojiSizeVal.textContent = els.emojiSize.value; });
+    if (els.emojiClear) els.emojiClear.addEventListener('click', clearStickers);
+    if (els.posterGenerate) els.posterGenerate.addEventListener('click', generatePoster);
     // 瘦身 / 瘦脸（局部液化）：模式 / 锚点 / 强度 / 作用范围 / 重置
     if (els.slimFace) els.slimFace.addEventListener('click', () => { if (state.slim.mode === 'face') return; state.slim.mode = 'face'; state.slim.enabled = true; state.slimMode = false; pushUndo(); updateSlimUI(); renderEditPreview(); });
     if (els.slimBody) els.slimBody.addEventListener('click', () => { if (state.slim.mode === 'body') return; state.slim.mode = 'body'; state.slim.enabled = true; state.slimMode = false; pushUndo(); updateSlimUI(); renderEditPreview(); });
@@ -5458,6 +5627,7 @@
     };
   }
 })();
+
 
 
 

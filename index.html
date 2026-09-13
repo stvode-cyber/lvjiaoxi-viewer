@@ -525,15 +525,55 @@
         <div class="edit-actions">
           <select id="borderMode">
             <option value="none">无边框</option>
-            <option value="white">白边（5%）</option>
-            <option value="black">黑边（5%）</option>
-            <option value="white-thick">白边相纸（15%）</option>
+            <optgroup label="基础">
+              <option value="white">白边（5%）</option>
+              <option value="black">黑边（5%）</option>
+              <option value="white-thick">白边相纸（15%）</option>
+            </optgroup>
+            <optgroup label="海报边框">
+              <option value="polaroid">拍立得（底部留白）</option>
+              <option value="vintage">复古米黄 + 内阴影</option>
+              <option value="shadow">悬浮卡片（外投影）</option>
+              <option value="gradient">渐变边框（粉→青→蓝）</option>
+              <option value="diagonal">对角斜角</option>
+            </optgroup>
           </select>
           <select id="borderRadius">
             <option value="0">直角</option>
             <option value="0.02">小圆角</option>
             <option value="0.06">大圆角</option>
           </select>
+        </div>
+      </div>
+      <div class="edit-section">
+        <h4>Emoji 贴纸</h4>
+        <p class="hint">点击 emoji 快速贴到图上（出现在中央，可拖拽移动）。</p>
+        <div class="edit-actions emoji-bar" id="emojiBar" style="flex-wrap:wrap;gap:6px">
+          <!-- JS 动态填充 -->
+        </div>
+        <div class="edit-actions">
+          <label class="field" style="margin:0"><span>贴纸大小 <b id="emojiSizeVal">8</b>%</span>
+            <input type="range" id="emojiSize" min="3" max="20" value="8"></label>
+          <button class="btn" id="emojiClear">清空贴纸</button>
+        </div>
+      </div>
+      <div class="edit-section">
+        <h4>海报标题（一键生成）</h4>
+        <p class="hint">快速生成标题/副标题/价格海报。生成后自动加入文字层，可继续拖拽编辑。</p>
+        <div class="edit-actions">
+          <input type="text" id="posterTitle" placeholder="主标题（如「限时特惠」）" style="flex:1">
+        </div>
+        <div class="edit-actions">
+          <input type="text" id="posterSubtitle" placeholder="副标题（如「全场 5 折起」）" style="flex:1">
+        </div>
+        <div class="edit-actions">
+          <select id="posterLayout">
+            <option value="top">顶部标题 + 底部副标题</option>
+            <option value="center">居中双行</option>
+            <option value="bottom">底部标题栏</option>
+            <option value="price">价格海报（大字价格）</option>
+          </select>
+          <button class="btn primary" id="posterGenerate">生成海报文字</button>
         </div>
       </div>
       <div class="edit-section">

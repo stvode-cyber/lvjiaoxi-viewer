@@ -1104,6 +1104,60 @@ test('消除笔：patchMatchInpaint 核心算法 + findBestPatch + drawEraser + 
   assert(appSrc.includes('state.mosaicMode = false;') && appSrc.includes('state.eraserMode'), '进入消除笔时退出其他模式');
 });
 
+// ---- 海报/边框/贴纸（对标 FastStone/美图秀秀）----
+test('海报边框扩展 + emoji 贴纸 + 海报标题一键生成', async () => {
+  const fs = require('fs');
+  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const htmlSrc = fs.readFileSync('index.html', 'utf-8');
+
+  // 1. 边框预设（BORDER_PRESETS 6 种新模式）
+  assert(appSrc.includes('const BORDER_PRESETS ='), 'BORDER_PRESETS 配置对象存在');
+  assert(appSrc.includes('polaroid:'), 'polaroid 拍立得预设');
+  assert(appSrc.includes('vintage:'), 'vintage 复古预设');
+  assert(appSrc.includes('shadow:'), 'shadow 悬浮卡片预设');
+  assert(appSrc.includes('gradient:'), 'gradient 渐变预设');
+  assert(appSrc.includes('diagonal:'), 'diagonal 对角斜角预设');
+
+  // 2. 边框渲染模式分支
+  assert(appSrc.includes("mode === 'shadow'"), 'shadow 悬浮卡片渲染');
+  assert(appSrc.includes("mode === 'vintage'"), 'vintage 内阴影渲染');
+  assert(appSrc.includes("mode === 'polaroid' || mode === 'diagonal'"), 'polaroid/diagonal clip 渲染');
+  assert(appSrc.includes('createLinearGradient'), 'gradient 用线性渐变');
+  assert(appSrc.includes('shadowBlur'), 'shadow 用 canvas 投影');
+
+  // 3. Emoji 贴纸
+  assert(appSrc.includes('const EMOJI_PRESETS ='), 'EMOJI_PRESETS 列表存在');
+  assert(appSrc.includes('function initEmojiBar'), 'initEmojiBar 初始化函数');
+  assert(appSrc.includes('function addSticker'), 'addSticker 添加贴纸');
+  assert(appSrc.includes('function clearStickers'), 'clearStickers 清空贴纸');
+  assert(appSrc.includes('type:'), 'texts 条目不只有 type 字段');
+  assert(appSrc.includes('Apple Color Emoji'), 'emoji 专用字体回退链');
+
+  // 4. 海报标题一键生成
+  assert(appSrc.includes('function generatePoster'), 'generatePoster 函数存在');
+  assert(appSrc.includes("type: 'poster'") || appSrc.includes('type: "poster"'), 'poster 类型标记');
+  assert(appSrc.includes("layout === 'top'"), 'top 布局');
+  assert(appSrc.includes("layout === 'center'"), 'center 布局');
+  assert(appSrc.includes("layout === 'bottom'"), 'bottom 布局');
+  assert(appSrc.includes("layout === 'price'"), 'price 价格海报布局');
+  assert(appSrc.includes('#FF2D55'), '价格海报主色（美图秀秀同款红）');
+
+  // 5. UI DOM
+  assert(htmlSrc.includes('data-tab="decor"'), 'decor tab 存在');
+  assert(htmlSrc.includes('emojiBar'), 'emojiBar DOM');
+  assert(htmlSrc.includes('emojiSize'), 'emojiSize slider');
+  assert(htmlSrc.includes('posterTitle'), 'posterTitle 输入框');
+  assert(htmlSrc.includes('posterGenerate'), 'posterGenerate 按钮');
+  assert(htmlSrc.includes('borderMode'), 'borderMode select');
+  assert(htmlSrc.includes('optgroup label="基础"'), '基础边框分组');
+  assert(htmlSrc.includes('optgroup label="海报边框"'), '海报边框分组');
+
+  // 6. 事件绑定
+  assert(appSrc.includes('initEmojiBar()'), 'initEmojiBar 在 bindEvents 被调用');
+  assert(appSrc.includes('clearStickers'), 'clearStickers 有绑定');
+  assert(appSrc.includes('generatePoster'), 'generatePoster 有绑定');
+});
+
 // ---- 运行 ----
 (async () => {
   console.log('=== 绿角犀看图 回归测试 ===');
