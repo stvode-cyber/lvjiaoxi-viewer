@@ -72,9 +72,9 @@
       await this.invoke('copy_image', { bytes: Array.from(buf) }); return true;
     },
     // 桌面版：从本地路径加载图片列表（Rust 解码后端格式后返回 data URL 条目）
-    async loadPaths(paths) {
+    async loadPaths(paths, recursive) {
       if (!this.available() || !paths || !paths.length) return false;
-      const entries = await this.invoke('load_paths', { paths });
+      const entries = await this.invoke('load_paths', { paths, recursive: !!recursive });
       this.flog('loadPaths got entries=' + (Array.isArray(entries) ? entries.length : String(entries)));
       if (!Array.isArray(entries)) return false;
       const items = entries.map((e) => ({
@@ -3607,7 +3607,7 @@
       ? (entry.path ? [entry.path] : [])
       : (entry.paths || []);
     if (desktop.available() && paths.length) {
-      desktop.loadPaths(paths)
+      desktop.loadPaths(paths, getSetting('files', 'recursive'))
         .then((ok) => { if (!ok) toast('打开失败：' + entry.name); })
         .catch(() => toast('打开失败：' + entry.name));
       return;
@@ -4553,12 +4553,12 @@
         const ev = window.__TAURI__.event;
         ev.listen('tauri://file-drop', (e) => {
           const paths = (e.payload && e.payload.paths) || [];
-          if (paths.length) desktop.loadPaths(paths);
+          if (paths.length) desktop.loadPaths(paths, getSetting('files', 'recursive'));
         });
         ev.listen('open-file', (e) => {
           const pl = e.payload;
           const paths = Array.isArray(pl) ? pl : (pl && pl.path ? [pl.path] : []);
-          if (paths.length) desktop.loadPaths(paths);
+          if (paths.length) desktop.loadPaths(paths, getSetting('files', 'recursive'));
         });
         // 启动参数拉取：双击关联文件/右键菜单启动时，Rust 端 setup 阶段的 emit 会因
         // WebView 未加载完成而丢失。改为启动后多次重试 invoke 拉取（取后即清空），
@@ -4568,7 +4568,7 @@
           desktop.invoke('get_pending_paths').then((paths) => {
             if (Array.isArray(paths) && paths.length) {
               const key = paths.slice().sort().join('\u0000');
-              if (key !== pendingLoaded) { pendingLoaded = key; desktop.loadPaths(paths); }
+              if (key !== pendingLoaded) { pendingLoaded = key; desktop.loadPaths(paths, getSetting('files', 'recursive')); }
             }
           }).catch(() => { /* 非致命 */ });
         };
@@ -4919,7 +4919,7 @@
   }
   function openFromList(li) {
     const name = li.getAttribute('data-name'); const path = li.getAttribute('data-path');
-    if (path && typeof window.__TAURI__ !== 'undefined') { desktop.loadPaths([path]); closeCloudPanel(); }
+    if (path && typeof window.__TAURI__ !== 'undefined') { desktop.loadPaths([path], getSetting('files', 'recursive')); closeCloudPanel(); }
     else toast('本地记录：' + name + (path ? '（' + path + '）' : '') + ' — 桌面版可一键打开');
   }
 

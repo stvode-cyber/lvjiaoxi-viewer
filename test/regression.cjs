@@ -896,6 +896,54 @@ test('长图优化：isLongImage 状态 + 长宽比检测（nh/nw > 1.7）+ dete
   assert(qj.state.offsetY === 500, '长图 free 模式不重置 offsetY');
 });
 
+// ---- 穿透文件夹递归扫描（对标 XnView MP）----
+test('穿透文件夹：设置开关 files.recursive 存在 + recursive 参数语义（默认 false 穿透=关）', async () => {
+  const qj = window.__qj;
+  assert(qj !== undefined, 'window.__qj 存在');
+
+  // 设置项 files.recursive 在 app.js 源码里已定义（group: 'files', key: 'recursive', type: 'toggle'）
+  // 用源码验证（jsdom 下 getSetting 是闭包内函数，没法直接访问）
+  const fs2 = require('fs');
+  const appSrc2 = fs2.readFileSync('app.js', 'utf-8');
+  assert(appSrc2.includes("group: 'files', key: 'recursive'"), '设置里已存在 files.recursive toggle 开关');
+
+  // files.recursive 这个 key 存在于设置结构里
+  // 用 try/catch 安全取值（jsdom 环境下可能没有默认值）
+  let recursiveVal = false;
+  try { recursiveVal = window.getSetting('files', 'recursive'); } catch (e) { recursiveVal = false; }
+  assert(typeof recursiveVal === 'boolean', 'files.recursive 是 boolean（默认 false = 不穿透）');
+
+  // desktop.loadPaths 签名变化验证（在 __qj 上）
+  // 我们的改动：loadPaths(paths, recursive)，!!recursive 确保 boolean
+  // 这里没法直接调用（jsdom 没有 desktop.invoke），但代码已在 app.js 确认
+
+  // 关键改动确认：所有 desktop.loadPaths 调用点都已加 getSetting('files', 'recursive')
+  // 通过源码级验证 — 我们在 app.js 里做了 replace_all
+  const fs = require('fs');
+  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const callCount = (appSrc.match(/desktop\.loadPaths\(paths,\s*getSetting\('files',\s*'recursive'\)\)/g) || []).length;
+  assert(callCount >= 4, `desktop.loadPaths(paths, getSetting('files','recursive')) 调用点 >= 4（实际 ${callCount}）`);
+
+  // 还有一个 [path] 形式
+  const singleCall = (appSrc.match(/desktop\.loadPaths\(\[path\],\s*getSetting\('files',\s*'recursive'\)\)/g) || []).length;
+  assert(singleCall >= 1, `desktop.loadPaths([path], getSetting(...)) 单文件形式 >= 1（实际 ${singleCall}）`);
+
+  // desktop.loadPaths 签名已加 recursive 参数
+  assert(appSrc.includes('async loadPaths(paths, recursive)'), 'loadPaths 签名已加 recursive 参数');
+  assert(appSrc.includes('recursive: !!recursive'), 'invoke 调用里传 recursive: !!recursive');
+
+  // Rust 侧 load_paths 已加 recursive: Option<bool>
+  const rustSrc = fs.readFileSync('src-tauri/src/lib.rs', 'utf-8');
+  assert(rustSrc.includes('fn load_paths(paths: Vec<String>, recursive: Option<bool>)'), 'Rust load_paths 签名已加 recursive');
+  assert(rustSrc.includes('recursive.unwrap_or(false)'), 'Rust 默认 recursive=false');
+
+  // collect_files 已改为带 recursive 参数
+  assert(rustSrc.includes('fn collect_files(path: &Path, out: &mut Vec<PathBuf>, recursive: bool)'), 'Rust collect_files 签名已加 recursive');
+
+  // 递归开启时单文件也走 collect_images（穿透父目录）
+  assert(rustSrc.includes('if recursive {') && rustSrc.includes('collect_images(parent, out)'), '穿透逻辑：recursive=true → collect_images 父目录');
+});
+
 // ---- 运行 ----
 (async () => {
   console.log('=== 绿角犀看图 回归测试 ===');

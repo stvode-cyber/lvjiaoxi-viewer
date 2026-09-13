@@ -224,12 +224,18 @@ fn rgb_to_jpeg_data_url(img: image::RgbImage) -> Result<String, String> {
 
 // 打开单张图片：一并加载同文件夹的图片（仅当前目录，不递归），
 // 好让底部缩略图栏能左右切换同一目录下的相邻照片。目录则递归收集。
-fn collect_files(path: &Path, out: &mut Vec<PathBuf>) {
+fn collect_files(path: &Path, out: &mut Vec<PathBuf>, recursive: bool) {
     if path.is_dir() {
-        collect_images(path, out);
+        collect_images(path, out); // 文件夹始终递归
     } else if path.exists() {
         match path.parent() {
-            Some(parent) => collect_images_flat(parent, out),
+            Some(parent) => {
+                if recursive {
+                    collect_images(parent, out); // 穿透：单文件 → 递归父目录所有子目录
+                } else {
+                    collect_images_flat(parent, out); // 默认：仅父目录一层
+                }
+            }
             None => out.push(path.to_path_buf()),
         }
     }
@@ -241,11 +247,12 @@ fn flog(message: String) {
 }
 
 #[tauri::command]
-async fn load_paths(paths: Vec<String>) -> Result<Vec<ImageEntry>, String> {
-    dbg_log(&format!("[load_paths] in={:?}", paths));
+async fn load_paths(paths: Vec<String>, recursive: Option<bool>) -> Result<Vec<ImageEntry>, String> {
+    let recursive = recursive.unwrap_or(false);
+    dbg_log(&format!("[load_paths] in={:?} recursive={}", paths, recursive));
     let mut files: Vec<PathBuf> = Vec::new();
     for p in &paths {
-        collect_files(Path::new(p), &mut files);
+        collect_files(Path::new(p), &mut files, recursive);
     }
     dbg_log(&format!("[load_paths] collected {} files", files.len()));
     files.sort_by(|a, b| {
@@ -622,7 +629,7 @@ mod tests {
         std::fs::write(dir.join("real.heic"), b"heiHei").unwrap(); // HEIC：透传原始 data URL
         std::fs::write(dir.join("note.txt"), b"yy").unwrap(); // 非图片
         // 打开单张 good.png：跳过 bad.psd / note.txt，HEIC 透传为 data URL，且不报错
-        let entries = tauri::async_runtime::block_on(crate::load_paths(vec![good.to_string_lossy().into_owned()]))
+        let entries = tauri::async_runtime::block_on(crate::load_paths(vec![good.to_string_lossy().into_owned()], None))
             .expect("load_paths 不应因 unsupported 相邻图而报错");
         let names: Vec<String> = entries.iter().map(|e| e.name.clone()).collect();
         assert!(names.contains(&"good.png".to_string()));
