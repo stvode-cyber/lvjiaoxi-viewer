@@ -422,6 +422,12 @@
           <input type="range" id="flGray" min="0" max="100" value="0"></label>
         <label class="field"><span>色温 <b id="flTempVal">0</b>（-冷 / +暖）</span>
           <input type="range" id="flTemp" min="-100" max="100" value="0"></label>
+        <label class="field"><span>色相 <b id="flHslHVal">0</b>°（-180..+180，绿→紫→红→橙）</span>
+          <input type="range" id="flHslH" min="-180" max="180" value="0"></label>
+        <label class="field"><span>饱和度 <b id="flHslSVal">100</b>%（HSL 分通道，0 灰 / 200 翻倍鲜艳）</span>
+          <input type="range" id="flHslS" min="0" max="200" value="100"></label>
+        <label class="field"><span>明度 <b id="flHslLVal">0</b>（-压暗 / +提亮，HSL 通道）</span>
+          <input type="range" id="flHslL" min="-100" max="100" value="0"></label>
         <label class="field"><span>模糊 <b id="flBlurVal">0</b>px</span>
           <input type="range" id="flBlur" min="0" max="10" step="0.1" value="0"></label>
         <label class="field"><span>锐化 <b id="flSharpVal">0</b>%（导出时应用）</span>

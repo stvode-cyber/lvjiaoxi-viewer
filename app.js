@@ -316,7 +316,7 @@
     touch: null, lastTapTime: 0, panelDrag: null, panelTouchId: null,
     cache: new Map(),     // index -> HTMLImageElement (预加载)
     showThumbs: true,
-    filters: { brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0 },
+    filters: { brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0, hslH: 0, hslS: 100, hslL: 0 },
     ops: [],             // 高级处理队列（OpenCV / AI），导出时依序应用
     texts: [],           // 文字层 [{id,x,y,size%,font,color,stroke,text,pos}]（归一化坐标）
     textSel: null,       // 选中的文字 id
@@ -354,7 +354,7 @@
       'aboutMask', 'aboutClose', 'aboutBody',
       'editMask', 'editClose', 'editName', 'editPreview', 'cropReset',
       'flBrightness', 'flBrightnessVal', 'flContrast', 'flContrastVal', 'flSaturate', 'flSaturateVal', 'flGray', 'flGrayVal', 'flReset',
-      'flTemp', 'flTempVal', 'flBlur', 'flBlurVal', 'flSharp', 'flSharpVal',
+      'flTemp', 'flTempVal', 'flHslH', 'flHslHVal', 'flHslS', 'flHslSVal', 'flHslL', 'flHslLVal', 'flBlur', 'flBlurVal', 'flSharp', 'flSharpVal',
       'flHighlight', 'flHighlightVal', 'flShadow', 'flShadowVal', 'flFade', 'flFadeVal', 'flGrain', 'flGrainVal', 'flVignette', 'flVignetteVal', 'flTintH', 'flTintS', 'flTintAmt', 'flTintAmtVal',
       'btnAutoEnhance', 'cvDenoise', 'cvBilateral', 'cvSharp', 'opsReset', 'aiScale', 'aiRun',
       'styleGrid', 'beautyVal', 'beautyValVal', 'beautySmooth', 'beautyWhite',
@@ -1278,7 +1278,7 @@
   }
   function saveCurrentStyle() {
     const list = loadMyStyles();
-    const def = { brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0 };
+    const def = { brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0, hslH: 0, hslS: 100, hslL: 0 };
     const snap = editSnap();
     const s = JSON.parse(snap);
     // 简单命名：如果是黑白 / 暖色调等有特征的，自动命名；否则用时间戳
@@ -1415,7 +1415,15 @@
     return s * s * (3 - 2 * s);
   }
   function needsTone(f) {
-    return !!(f && (((f.highlight || 0) !== 0) || ((f.shadow || 0) !== 0) || (f.fade || 0) > 0 || (f.grain || 0) > 0 || (f.vignette || 0) > 0 || ((f.tintAmt || 0) > 0 && (f.tintH || f.tintS))));
+    return !!(f && (
+      ((f.highlight || 0) !== 0) || ((f.shadow || 0) !== 0) ||
+      (f.fade || 0) > 0 || (f.grain || 0) > 0 || (f.vignette || 0) > 0 ||
+      ((f.tintAmt || 0) > 0 && (f.tintH || f.tintS)) ||
+      // HSL 分通道：色相偏移 != 0 / 饱和度 != 100 / 明度偏移 != 0
+      (f.hslH !== undefined && f.hslH !== 0) ||
+      (f.hslS !== undefined && f.hslS !== 100) ||
+      (f.hslL !== undefined && f.hslL !== 0)
+    ));
   }
   function tonal(f, W, H) {
     const cx = (W - 1) / 2, cy = (H - 1) / 2;
@@ -1427,7 +1435,52 @@
       useHl: (f.highlight || 0) !== 0 || (!!f.tintH && (f.tintAmt || 0) > 0),
       useSh: (f.shadow || 0) !== 0 || (!!f.tintS && (f.tintAmt || 0) > 0),
       cx, cy, invMax: 1 / Math.sqrt(cx * cx + cy * cy),
+      // HSL 分通道参数
+      hslH: (f.hslH || 0) / 180,              // -180..180° → -1..1
+      hslS: (f.hslS !== undefined ? f.hslS : 100) / 100, // 0..200% → 0..2
+      hslL: (f.hslL || 0) / 100,              // -100..100% → -1..1
+      useHsl: (f.hslH || 0) !== 0 || (f.hslS !== undefined && f.hslS !== 100) || (f.hslL || 0) !== 0,
     };
+  }
+  // RGB 0-255 → HSL (H,S,L 都是 0-1)
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    const l = (mx + mn) / 2;
+    let h, s;
+    if (mx === mn) { h = 0; s = 0; }
+    else {
+      const d = mx - mn;
+      s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+      switch (mx) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        default: h = (r - g) / d + 4;
+      }
+      h /= 6;
+    }
+    return [h, s, l];
+  }
+  // HSL (H,S,L 都是 0-1) → RGB [r, g, b] 0-255
+  function hslToRgb(h, s, l) {
+    let r, g, b;
+    if (s === 0) { r = g = b = l; }
+    else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1 / 3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1 / 3);
+    }
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
   }
   // 确定性伪随机（按像素坐标散列）：预览/导出一致，且不引入 Canvas 污染
   function gnash(x, y) {
@@ -1437,12 +1490,25 @@
     return (n & 0x3fffffff) / 0x3fffffff;
   }
   function toneRows(d, W, y0, y1, cfg) {
-    const { hl, sh, fade, grain, vig, tintAmt, th, ts, useHl, useSh, cx, cy, invMax } = cfg;
+    const { hl, sh, fade, grain, vig, tintAmt, th, ts, useHl, useSh, cx, cy, invMax, hslH, hslS, hslL, useHsl } = cfg;
     const gAmp = grain * 30;
     for (let y = y0; y < y1; y++) {
       for (let x = 0; x < W; x++) {
         const i = (y * W + x) * 4;
         let r = d[i], g = d[i + 1], b = d[i + 2];
+        // ===== HSL 分通道（在 highlight/shadow 之前执行，确保色彩调整先于明暗）=====
+        if (useHsl) {
+          let H, S, L;
+          rgbToHsl(r, g, b, H = 0, S = 0, L = 0);
+          // 色相偏移：-1..1 映射 -180°..180°，加模 1.0
+          H = ((H + hslH) % 1 + 1) % 1;
+          // 饱和度缩放：0..2（1.0 是原值）
+          S = clamp(S * hslS, 0, 1);
+          // 明度偏移：-1..1（+ 提亮 / - 压暗），叠加到 L
+          L = clamp(L + hslL * 0.5, 0, 1);  // 0.5 系数避免一次调到底
+          const rgb = hslToRgb(H, S, L);
+          r = rgb[0]; g = rgb[1]; b = rgb[2];
+        }
         const lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
         const hm = useHl ? smstep(0.42, 1.0, lum) : 0;   // 高光掩码（含中亮部，越亮越强）
         const sm = useSh ? smstep(0.5, 0.0, lum) : 0;     // 阴影掩码（越暗越强）
@@ -1533,7 +1599,7 @@
     els.exQualityField.hidden = (fmt === 'image/png' || fmt === 'image/bmp');
   }
   function resetFilters() {
-    state.filters = { brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0 };
+    state.filters = { brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0, hslH: 0, hslS: 100, hslL: 0 };
     syncFilterUI(); applyFilters();
     toast('滤镜已重置');
   }
@@ -2312,7 +2378,7 @@
   ];
   function applyStylePreset(preset) {
     pushUndo();
-    state.filters = Object.assign({ brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0 }, preset.f);
+    state.filters = Object.assign({ brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0, hslH: 0, hslS: 100, hslL: 0 }, preset.f);
     syncFilterUI(); applyFilters();
   }
   function renderStyleGrid() {
@@ -3408,7 +3474,7 @@
   // 批量套滤镜：把 STYLE_PRESETS 预设应用到单张原图，输出为指定格式 Blob
   async function batchTone(item, presetId, fmt) {
     const preset = STYLE_PRESETS.find((p) => p.id === presetId) || STYLE_PRESETS[0];
-    const f = Object.assign({ brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0 }, preset.f);
+    const f = Object.assign({ brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0, hslH: 0, hslS: 100, hslL: 0 }, preset.f);
     const canvas = document.createElement('canvas');
     canvas.width = item.img.naturalWidth; canvas.height = item.img.naturalHeight;
     const ctx = canvas.getContext('2d');
@@ -3468,7 +3534,7 @@
         srcCv.height = Math.max(1, Math.round(src.naturalHeight * s));
         srcCv.getContext('2d').drawImage(src, 0, 0, srcCv.width, srcCv.height);
       }
-      const f = Object.assign({ brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0 }, p.f || {});
+      const f = Object.assign({ brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0, hslH: 0, hslS: 100, hslL: 0 }, p.f || {});
       const out = await applyToneChunked(srcCv, f);
       ctx.clearRect(0, 0, MAX, MAX);
       if (out) ctx.drawImage(out, 0, 0, out.width, out.height, (MAX - out.width) / 2, (MAX - out.height) / 2, out.width, out.height);
@@ -4123,7 +4189,7 @@
     if (els.matRun) els.matRun.addEventListener('click', () => { if (runMatting()) updateMattingUI(); });
     if (els.matClear) els.matClear.addEventListener('click', clearMatting);
     if (els.matExport) els.matExport.addEventListener('click', exportMatting);
-    const flMap = [['flBrightness', 'brightness', 'flBrightnessVal'], ['flContrast', 'contrast', 'flContrastVal'], ['flSaturate', 'saturate', 'flSaturateVal'], ['flGray', 'gray', 'flGrayVal'], ['flTemp', 'temp', 'flTempVal'], ['flBlur', 'blur', 'flBlurVal'], ['flSharp', 'sharp', 'flSharpVal'], ['flHighlight', 'highlight', 'flHighlightVal'], ['flShadow', 'shadow', 'flShadowVal'], ['flFade', 'fade', 'flFadeVal'], ['flGrain', 'grain', 'flGrainVal'], ['flVignette', 'vignette', 'flVignetteVal'], ['flTintAmt', 'tintAmt', 'flTintAmtVal']];
+    const flMap = [['flBrightness', 'brightness', 'flBrightnessVal'], ['flContrast', 'contrast', 'flContrastVal'], ['flSaturate', 'saturate', 'flSaturateVal'], ['flGray', 'gray', 'flGrayVal'], ['flTemp', 'temp', 'flTempVal'], ['flHslH', 'hslH', 'flHslHVal'], ['flHslS', 'hslS', 'flHslSVal'], ['flHslL', 'hslL', 'flHslLVal'], ['flBlur', 'blur', 'flBlurVal'], ['flSharp', 'sharp', 'flSharpVal'], ['flHighlight', 'highlight', 'flHighlightVal'], ['flShadow', 'shadow', 'flShadowVal'], ['flFade', 'fade', 'flFadeVal'], ['flGrain', 'grain', 'flGrainVal'], ['flVignette', 'vignette', 'flVignetteVal'], ['flTintAmt', 'tintAmt', 'flTintAmtVal']];
     flMap.forEach(([id, key, valId]) => {
       if (!els[id]) return;  // 兼容缺节点的环境
       els[id].addEventListener('input', () => {
@@ -4993,3 +5059,7 @@
     };
   }
 })();
+
+
+
+

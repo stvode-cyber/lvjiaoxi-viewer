@@ -944,6 +944,53 @@ test('穿透文件夹：设置开关 files.recursive 存在 + recursive 参数�
   assert(rustSrc.includes('if recursive {') && rustSrc.includes('collect_images(parent, out)'), '穿透逻辑：recursive=true → collect_images 父目录');
 });
 
+// ---- HSL 分通道调色（对标 FastStone）----
+test('HSL 分通道：rgbToHsl/hslToRgb 函数存在 + state.filters.hslH/S/L 默认值 + flMap 绑定 + needsTone 识别', async () => {
+  const qj = window.__qj;
+  assert(qj !== undefined, 'window.__qj 存在');
+  const fs = require('fs');
+  const appSrc = fs.readFileSync('app.js', 'utf-8');
+
+  // 1. 函数存在
+  assert(appSrc.includes('function rgbToHsl'), 'rgbToHsl 函数存在');
+  assert(appSrc.includes('function hslToRgb'), 'hslToRgb 函数存在');
+  assert(appSrc.includes('function needsTone'), 'needsTone 函数存在');
+
+  // 2. HSL 默认值（filters 里）
+  // state.filters 默认: hslH:0, hslS:100, hslL:0
+  assert(appSrc.includes('hslH: 0'), 'filters 默认 hslH: 0');
+  assert(appSrc.includes('hslS: 100'), 'filters 默认 hslS: 100');
+  assert(appSrc.includes('hslL: 0'), 'filters 默认 hslL: 0');
+
+  // 3. needsTone 能识别 HSL 非默认值
+  assert(appSrc.includes('f.hslH'), 'needsTone 检查 hslH');
+  assert(appSrc.includes('f.hslS'), 'needsTone 检查 hslS');
+  assert(appSrc.includes('f.hslL'), 'needsTone 检查 hslL');
+
+  // 4. tonal 函数组装 HSL 参数
+  assert(appSrc.includes('hslH: (f.hslH || 0) / 180'), 'tonal 组装 hslH (-180..180 → -1..1)');
+  assert(appSrc.includes('hslS: (f.hslS'), 'tonal 组装 hslS');
+  assert(appSrc.includes('hslL: (f.hslL || 0) / 100'), 'tonal 组装 hslL');
+  assert(appSrc.includes('useHsl'), 'tonal 组装 useHsl 标志');
+
+  // 5. toneRows 解构 + 调用
+  assert(appSrc.includes('hslH, hslS, hslL, useHsl'), 'toneRows 解构 HSL 参数');
+  assert(appSrc.includes('if (useHsl)'), 'toneRows 里有 useHsl 分支');
+  assert(appSrc.includes('rgbToHsl(r, g, b'), 'toneRows 里调用 rgbToHsl');
+  assert(appSrc.includes('hslToRgb(H, S, L)'), 'toneRows 里调用 hslToRgb');
+
+  // 6. flMap 事件绑定
+  assert(appSrc.includes("['flHslH', 'hslH', 'flHslHVal']"), 'flMap 绑定 hslH');
+  assert(appSrc.includes("['flHslS', 'hslS', 'flHslSVal']"), 'flMap 绑定 hslS');
+  assert(appSrc.includes("['flHslL', 'hslL', 'flHslLVal']"), 'flMap 绑定 hslL');
+
+  // 7. index.html 有 DOM
+  const htmlSrc = fs.readFileSync('index.html', 'utf-8');
+  assert(htmlSrc.includes('flHslH'), 'index.html 有 flHslH DOM');
+  assert(htmlSrc.includes('flHslS'), 'index.html 有 flHslS DOM');
+  assert(htmlSrc.includes('flHslL'), 'index.html 有 flHslL DOM');
+});
+
 // ---- 运行 ----
 (async () => {
   console.log('=== 绿角犀看图 回归测试 ===');
