@@ -991,6 +991,56 @@ test('HSL 分通道：rgbToHsl/hslToRgb 函数存在 + state.filters.hslH/S/L �
   assert(htmlSrc.includes('flHslL'), 'index.html 有 flHslL DOM');
 });
 
+// ---- 批量加水印（对标 FastStone/IrfanView）----
+test('批量加水印：drawWatermarkOnCanvas 纯函数 + 10 种位置 + tile 平铺 + batchWatermark + 批量主循环接入', async () => {
+  const fs = require('fs');
+  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const htmlSrc = fs.readFileSync('index.html', 'utf-8');
+
+  // 1. 核心函数存在
+  assert(appSrc.includes('function drawWatermarkOnCanvas'), 'drawWatermarkOnCanvas 纯函数存在');
+  assert(appSrc.includes('function batchWatermark'), 'batchWatermark 函数存在');
+  assert(appSrc.includes('function renderWmPreview'), 'renderWmPreview 预览函数存在');
+  assert(appSrc.includes('function updateWmUI'), 'updateWmUI UI 同步函数存在');
+
+  // 2. 10 种位置：9 宫格 + tile 平铺
+  const positions = ['tl', 'tc', 'tr', 'ml', 'mc', 'mr', 'bl', 'bc', 'br', 'tile'];
+  for (const p of positions) {
+    assert(appSrc.includes("pos === '" + p + "'"), '位置分支 ' + p + ' 存在');
+  }
+
+  // 3. 平铺特殊逻辑
+  assert(appSrc.includes('gapX = tw * 1.8'), 'tile 平铺 gapX 计算');
+  assert(appSrc.includes('gapY = fontSize * 2.2'), 'tile 平铺 gapY 计算');
+  assert(appSrc.includes('ctx.rotate(-Math.PI / 6)'), 'tile 平铺 -30° 斜向');
+
+  // 4. 九宫格锚点 + margin + 透明度
+  assert(appSrc.includes('anchorX'), '九宫格 anchorX 存在');
+  assert(appSrc.includes('anchorY'), '九宫格 anchorY 存在');
+  assert(appSrc.includes('marginPct'), '边距百分比参数');
+  assert(appSrc.includes('globalAlpha = opacity'), '透明度应用');
+
+  // 5. 批量主循环接入
+  assert(appSrc.includes("batchTab === 'watermark'"), '批量主循环 watermark 分支存在');
+
+  // 6. tab 切换 + 事件绑定
+  assert(appSrc.includes("tab === 'watermark'"), 'switchBatchTab watermark 分支存在');
+  assert(appSrc.includes("'wmText', 'wmSize', 'wmOpacity'"), 'wm 事件绑定数组存在');
+
+  // 7. index.html tab + pane
+  assert(htmlSrc.includes('data-tab="watermark"'), 'index.html 有 watermark tab 按钮');
+  assert(htmlSrc.includes('data-pane="watermark"'), 'index.html 有 watermark pane');
+  assert(htmlSrc.includes('wmText'), 'index.html 有 wmText DOM');
+  assert(htmlSrc.includes('wmSize'), 'index.html 有 wmSize DOM');
+  assert(htmlSrc.includes('wmOpacity'), 'index.html 有 wmOpacity DOM');
+  assert(htmlSrc.includes('wmColor'), 'index.html 有 wmColor DOM');
+  assert(htmlSrc.includes('wmPos'), 'index.html 有 wmPos DOM');
+  assert(htmlSrc.includes('wmFormat'), 'index.html 有 wmFormat DOM');
+
+  // 8. 输出格式
+  assert(htmlSrc.includes('image/jpeg') && htmlSrc.includes('image/png') && htmlSrc.includes('image/webp'), 'wmFormat 有 3 种输出格式');
+});
+
 // ---- 运行 ----
 (async () => {
   console.log('=== 绿角犀看图 回归测试 ===');

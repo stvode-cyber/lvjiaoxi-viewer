@@ -350,7 +350,7 @@
       'cvQuality', 'cvQualityVal', 'cvNaming', 'cvOutput', 'cvFormat', 'cvQualityField', 'cvPreview', 'cvPreviewLabel',
       'rsMode', 'rsPercent', 'rsPercentVal', 'rsPercentField', 'rsExactField', 'rsWidth', 'rsHeight', 'rsLockRatio', 'rsResample', 'rsFormat', 'rsDpi', 'rsPreview', 'rsPreviewLabel',
       'rnTemplate', 'rnPreview', 'batchProgress', 'batchBarFill', 'batchProgressText', 'batchRun', 'batchCancel', 'batchReport', 'btPreset', 'btFormat', 'btKeepName', 'btPreview', 'btPreviewLabel',
-      'cpFormat', 'cpQuality', 'cpQualityVal', 'cpQualityField', 'cpMaxEdge', 'cpPreview', 'cpPreviewLabel',
+      'cpFormat', 'cpQuality', 'cpQualityVal', 'cpQualityField', 'cpMaxEdge', 'cpPreview', 'cpPreviewLabel', 'wmText', 'wmSize', 'wmSizeVal', 'wmOpacity', 'wmOpacityVal', 'wmColor', 'wmPos', 'wmMargin', 'wmMarginVal', 'wmFormat', 'wmPreview', 'wmPreviewLabel',
       'aboutMask', 'aboutClose', 'aboutBody',
       'editMask', 'editClose', 'editName', 'editPreview', 'cropReset',
       'flBrightness', 'flBrightnessVal', 'flContrast', 'flContrastVal', 'flSaturate', 'flSaturateVal', 'flGray', 'flGrayVal', 'flReset',
@@ -3268,6 +3268,116 @@
     else if (tab === 'resize') { updateRsUI(); renderRsPreview(); }
     else if (tab === 'tone') renderTonePreview();
     else if (tab === 'compress') { updateCompressUI(); renderCompressPreview(); }
+    else if (tab === 'watermark') { updateWmUI(); renderWmPreview(); }
+  }
+  // ===== 批量加水印 =====
+  function updateWmUI() {
+    if (els.wmSizeVal) els.wmSizeVal.textContent = els.wmSize.value;
+    if (els.wmOpacityVal) els.wmOpacityVal.textContent = els.wmOpacity.value;
+    if (els.wmMarginVal) els.wmMarginVal.textContent = els.wmMargin.value;
+  }
+  // 纯函数：在 canvas ctx 上画文字水印，返回同 ctx（可链式调用）
+  // 参考：drawTexts(ctx, W, H)（state.texts 版），这里是批量独立参数版
+  function drawWatermarkOnCanvas(ctx, W, H, opts) {
+    const text = opts.text || '';
+    if (!text) return ctx;
+    const sizePct = opts.size !== undefined ? opts.size : 5;      // 短边百分比
+    const opacity = opts.opacity !== undefined ? opts.opacity / 100 : 0.6;
+    const color = opts.color || '#ffffff';
+    const pos = opts.pos || 'br';
+    const marginPct = opts.margin !== undefined ? opts.margin / 100 : 0.03;
+    const minEdge = Math.min(W, H);
+    const fontSize = Math.max(8, sizePct / 100 * minEdge);
+    const margin = Math.max(4, marginPct * minEdge);
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.font = fontSize + 'px "Microsoft YaHei", "PingFang SC", sans-serif';
+    ctx.textBaseline = 'alphabetic';
+    const metrics = ctx.measureText(text);
+    const tw = metrics.width;
+    // 位置计算
+    let x, y, anchorX, anchorY;
+    if (pos === 'tl') { x = margin; y = margin + fontSize; anchorX = 'left'; anchorY = 'top'; }
+    else if (pos === 'tc') { x = W / 2; y = margin + fontSize; anchorX = 'center'; anchorY = 'top'; }
+    else if (pos === 'tr') { x = W - margin; y = margin + fontSize; anchorX = 'right'; anchorY = 'top'; }
+    else if (pos === 'ml') { x = margin; y = H / 2; anchorX = 'left'; anchorY = 'middle'; }
+    else if (pos === 'mc') { x = W / 2; y = H / 2; anchorX = 'center'; anchorY = 'middle'; }
+    else if (pos === 'mr') { x = W - margin; y = H / 2; anchorX = 'right'; anchorY = 'middle'; }
+    else if (pos === 'bl') { x = margin; y = H - margin; anchorX = 'left'; anchorY = 'bottom'; }
+    else if (pos === 'bc') { x = W / 2; y = H - margin; anchorX = 'center'; anchorY = 'bottom'; }
+    else if (pos === 'br') { x = W - margin; y = H - margin; anchorX = 'right'; anchorY = 'bottom'; }
+    else if (pos === 'tile') { // 平铺
+      ctx.globalAlpha = opacity * 0.4;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const gapX = tw * 1.8, gapY = fontSize * 2.2;
+      for (let gy = gapY / 2; gy < H; gy += gapY) {
+        for (let gx = gapX / 2; gx < W; gx += gapX) {
+          // 轻微斜体 + 旋转 -30°
+          ctx.save();
+          ctx.translate(gx, gy);
+          ctx.rotate(-Math.PI / 6);
+          ctx.fillStyle = color;
+          ctx.fillText(text, 0, 0);
+          ctx.restore();
+        }
+      }
+      ctx.restore();
+      return ctx;
+    }
+    // 单点：加描边 + 填充
+    ctx.textAlign = anchorX; ctx.textBaseline = anchorY;
+    ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = Math.max(1, fontSize / 14);
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+    ctx.restore();
+    return ctx;
+  }
+  async function renderWmPreview() {
+    const cv = els.wmPreview, lbl = els.wmPreviewLabel;
+    if (!cv || !lbl) return;
+    const it = state.items[state.index] || state.items[0];
+    const ctx = cv.getContext('2d');
+    if (!it || !it.img) { lbl.textContent = '水印预览：无图片'; ctx.clearRect(0, 0, cv.width, cv.height); return; }
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    // 按比例缩放原图到 200x200 内
+    const scale = Math.min(cv.width / it.img.naturalWidth, cv.height / it.img.naturalHeight);
+    const dw = it.img.naturalWidth * scale, dh = it.img.naturalHeight * scale;
+    const dx = (cv.width - dw) / 2, dy = (cv.height - dh) / 2;
+    ctx.drawImage(it.img, dx, dy, dw, dh);
+    // 画水印（参数从 DOM 读）
+    drawWatermarkOnCanvas(ctx, dw, dh, {
+      text: els.wmText ? els.wmText.value : '',
+      size: els.wmSize ? +els.wmSize.value : 5,
+      opacity: els.wmOpacity ? +els.wmOpacity.value : 60,
+      color: els.wmColor ? els.wmColor.value : '#ffffff',
+      pos: els.wmPos ? els.wmPos.value : 'br',
+      margin: els.wmMargin ? +els.wmMargin.value : 3,
+    });
+    lbl.textContent = '水印预览：' + it.name;
+  }
+  async function batchWatermark(it) {
+    const fmt = els.wmFormat ? els.wmFormat.value : 'image/jpeg';
+    const text = els.wmText ? els.wmText.value.trim() : '';
+    if (!text) { toast('请先输入水印文字'); return null; }
+    await loadImage(it);
+    if (!it.img) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = it.img.naturalWidth;
+    canvas.height = it.img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(it.img, 0, 0);
+    drawWatermarkOnCanvas(ctx, canvas.width, canvas.height, {
+      text,
+      size: els.wmSize ? +els.wmSize.value : 5,
+      opacity: els.wmOpacity ? +els.wmOpacity.value : 60,
+      color: els.wmColor ? els.wmColor.value : '#ffffff',
+      pos: els.wmPos ? els.wmPos.value : 'br',
+      margin: els.wmMargin ? +els.wmMargin.value : 3,
+    });
+    const mime = fmt === 'image/jpeg' ? 'image/jpeg' : fmt === 'image/webp' ? 'image/webp' : 'image/png';
+    const quality = mime === 'image/png' ? undefined : 0.92;
+    return new Promise((res) => { canvas.toBlob(res, mime, quality); });
   }
   function updateCompressUI() {
     const f = els.cpFormat ? els.cpFormat.value : 'same';
@@ -3439,6 +3549,7 @@
           else if (batchTab === 'rename') { blob = await fileToBlob(it.file); name = applyRenameTemplate(els.rnTemplate.value, it.name, i); }
           else if (batchTab === 'tone') { blob = await batchTone(it, els.btPreset.value, els.btFormat.value); if (els.btKeepName.checked) name = stripExt(it.name) + extFromMime(els.btFormat.value); }
           else if (batchTab === 'compress') { const r = await batchCompress(it); blob = r.blob; name = r.name; }
+          else if (batchTab === 'watermark') { blob = await batchWatermark(it); if (blob) name = stripExt(it.name) + extFromMime(els.wmFormat.value); }
           if (blob) entries.push({ name, data: new Uint8Array(await blob.arrayBuffer()) });
           else fail++;
         } catch (err) {
@@ -4574,6 +4685,14 @@
     if (els.cpQuality) els.cpQuality.addEventListener('input', () => { updateCompressUI(); renderCompressPreview(); });
     if (els.cpMaxEdge) els.cpMaxEdge.addEventListener('change', renderCompressPreview);
 
+    // 批量加水印事件
+    ['wmText', 'wmSize', 'wmOpacity', 'wmColor', 'wmPos', 'wmMargin', 'wmFormat'].forEach((id) => {
+      const el = els[id];
+      if (!el) return;
+      el.addEventListener('input', () => { updateWmUI(); renderWmPreview(); });
+      el.addEventListener('change', () => { updateWmUI(); renderWmPreview(); });
+    });
+
     // 关于弹窗
     els.aboutClose.addEventListener('click', () => els.aboutMask.hidden = true);
     els.aboutMask.addEventListener('click', (e) => { if (e.target === els.aboutMask) els.aboutMask.hidden = true; });
@@ -5059,6 +5178,7 @@
     };
   }
 })();
+
 
 
 

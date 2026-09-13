@@ -159,6 +159,7 @@
         <button class="batch-tab" data-tab="rename">重命名</button>
         <button class="batch-tab" data-tab="tone">添加滤镜</button>
         <button class="batch-tab" data-tab="compress">压缩</button>
+        <button class="batch-tab" data-tab="watermark">加水印</button>
       </div>
       <div class="batch-body" id="batchBody">
 
@@ -315,6 +316,57 @@
             <p class="hint">0 = 不缩放；其余按比例缩至最长边为该像素。</p>
           </label>
           <p class="hint">一键整批压缩照片：控制质量并将超长边缩小，导出打包 ZIP。</p>
+        </section>
+
+        <!-- 加水印 -->
+        <section class="batch-pane" data-pane="watermark" hidden>
+          <div class="bt-preview">
+            <span class="bt-preview-label" id="wmPreviewLabel">水印预览：未选中</span>
+            <canvas id="wmPreview" width="200" height="200"></canvas>
+          </div>
+          <label class="field">
+            <span>水印文字</span>
+            <input type="text" id="wmText" value="绿角犀" placeholder="要印的字（留空则不处理）">
+          </label>
+          <label class="field">
+            <span>字号 <b id="wmSizeVal">5</b>%（相对于图片短边）</span>
+            <input type="range" id="wmSize" min="1" max="20" step="0.5" value="5">
+          </label>
+          <label class="field">
+            <span>透明度 <b id="wmOpacityVal">60</b>%</span>
+            <input type="range" id="wmOpacity" min="5" max="100" value="60">
+          </label>
+          <label class="field">
+            <span>颜色</span>
+            <input type="color" id="wmColor" value="#ffffff">
+          </label>
+          <label class="field">
+            <span>位置</span>
+            <select id="wmPos">
+              <option value="tl">↖ 左上</option>
+              <option value="tc">↑ 顶部居中</option>
+              <option value="tr">↗ 右上</option>
+              <option value="ml">← 左中</option>
+              <option value="mc">· 居中</option>
+              <option value="mr">→ 右中</option>
+              <option value="bl">↙ 左下</option>
+              <option value="bc">↓ 底部居中</option>
+              <option value="br" selected>↘ 右下</option>
+              <option value="tile">⊞ 平铺</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>边距 <b id="wmMarginVal">3</b>%</span>
+            <input type="range" id="wmMargin" min="0" max="15" value="3">
+          </label>
+          <label class="field">
+            <span>输出格式</span>
+            <select id="wmFormat">
+              <option value="image/jpeg">JPG（推荐，体积小）</option>
+              <option value="image/png">PNG（无损）</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </label>
         </section>
 
       </div>
