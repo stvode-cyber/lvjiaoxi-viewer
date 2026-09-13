@@ -576,6 +576,13 @@
           <label class="field" style="margin:0"><span>笔刷 <b id="mosaicSizeVal">30</b></span>
             <input type="range" id="mosaicSize" min="10" max="80" value="30"></label>
           <button class="btn" id="mosaicClear">清空马赛克</button>
+          <hr class="edit-sep" style="margin:14px 0;border-color:#e5f0ec">
+          <p class="edit-section-title">🩹 消除笔（内容感知填充）</p>
+          <p class="hint">涂抹要消除的物体（文字/水印/路人），算法从周围纹理自动采样填充。纹理重复区域效果最佳。</p>
+          <button class="btn" id="eraserBtn">🩹 进入消除笔模式</button>
+          <label class="field" style="margin:0"><span>笔刷 <b id="eraserSizeVal">20</b></span>
+            <input type="range" id="eraserSize" min="10" max="80" value="20"></label>
+          <button class="btn" id="eraserClear">清空消除笔</button>
         </div>
       </div>
       </div><!-- /decor pane -->

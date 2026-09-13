@@ -322,6 +322,9 @@
     textSel: null,       // 选中的文字 id
     mosaic: [],          // 马赛克笔触 [{x,y,r}]（归一化坐标，r 为归一化半径）
     mosaicMode: false,   // 预览画布处于马赛克涂抹模式
+    eraser: [],          // 消除笔笔触 [{x,y,r}]（和 mosaic 同结构）
+    eraserMode: false,   // 预览画布处于消除笔涂抹模式
+    eraserPainting: false,  // 消除笔涂抹进行中
     slimMode: false,     // 预览画布处于瘦身/瘦脸锚点拖拽模式
     slim: { enabled: false, mode: 'face', strength: 0, cx: 0.5, cy: 0.5, rx: 0.22, ry: 0.22 },  // 瘦身/瘦脸局部液化
     crop: null,
@@ -360,7 +363,7 @@
       'styleGrid', 'beautyVal', 'beautyValVal', 'beautySmooth', 'beautyWhite',
       'borderMode', 'borderRadius',
       'txtInput', 'txtAdd', 'txtFont', 'txtColor', 'txtSize', 'txtSizeVal', 'txtStroke', 'txtStrokeVal', 'txtPos', 'txtDel',
-      'mosaicBtn', 'mosaicSize', 'mosaicSizeVal', 'mosaicClear',
+      'mosaicBtn', 'mosaicSize', 'mosaicSizeVal', 'mosaicClear', 'eraserBtn', 'eraserSize', 'eraserSizeVal', 'eraserClear',
       'matFg', 'matBg', 'matRun', 'matClear', 'matExport', 'matSize', 'matSizeVal', 'matStatus',
       'exFormat', 'exQuality', 'exQualityVal', 'exQualityField', 'exRun',
       'slimFace', 'slimBody', 'slimMode', 'slimStrength', 'slimStrengthVal', 'slimRange', 'slimRangeVal', 'slimReset',
@@ -611,7 +614,7 @@
     }
     // 美工状态随图切换重置（滤镜按既有行为在切图时保留由 resetFilters 显式清）
     state.texts = []; state.textSel = null;
-    state.mosaic = []; state.mosaicMode = false; state.mosaicPainting = false; state.textDrag = null; state.cropDrag = null;
+    state.mosaic = []; state.mosaicMode = false; state.eraser = []; state.eraserMode = false; state.mosaicPainting = false; state.eraserPainting = false; state.textDrag = null; state.cropDrag = null;
     if (els.mosaicBtn) els.mosaicBtn.textContent = '🖌 进入马赛克模式';
     state.mode = getSetting('view', 'defaultZoom') === 'actual' ? 'actual' : 'fit';
 
@@ -1191,16 +1194,16 @@
   let editUndo = [], editRedo = [];
   function editSnap() {
     return JSON.stringify({
-      f: state.filters, t: state.texts || [], m: state.mosaic || [], c: state.crop || null,
+      f: state.filters, t: state.texts || [], m: state.mosaic || [], e: state.eraser || [], c: state.crop || null,
       o: state.ops || [], s: state.slim || null, df: state.deform || [],
-      mm: state.mosaicMode || false, sm: state.slimMode || false, dm: state.deformMode || null,
+      mm: state.mosaicMode || false, em: state.eraserMode || false, sm: state.slimMode || false, dm: state.deformMode || null,
     });
   }
   function restoreEdit(snap) {
     const s = JSON.parse(snap);
-    state.filters = s.f; state.texts = s.t; state.mosaic = s.m; state.crop = s.c; state.ops = s.o;
+    state.filters = s.f; state.texts = s.t; state.mosaic = s.m; state.eraser = s.e || []; state.crop = s.c; state.ops = s.o;
     if (s.s) state.slim = s.s; if (s.df) state.deform = s.df;
-    state.mosaicMode = !!s.mm; state.slimMode = !!s.sm; state.deformMode = s.dm || null;
+    state.mosaicMode = !!s.mm; state.eraserMode = !!s.em; state.slimMode = !!s.sm; state.deformMode = s.dm || null;
     syncFilterUI(); applyFilters();
     if (state.textSel && !state.texts.some((x) => x.id === state.textSel)) state.textSel = null;
     if (document.getElementById('txtStyle')) { /* txt 属性输入区由用户重新选中加载 */ }
@@ -2594,6 +2597,253 @@
     toast('已清空马赛克');
   }
 
+  // ===== 消除笔简单版：Patch-Match Inpainting（对标光影看图 / FastStone）=====
+  // 核心算法：笔触覆盖区域内每个像素 → 从区域外找相似小补丁（SSD 匹配）→ 复制覆盖 + 高斯羽化
+  // 优化：降采样到 min(短边, 800) 像素做 inpaint，再上采样回原分辨率
+  function toggleEraserMode() {
+    state.eraserMode = !state.eraserMode;
+    if (state.eraserMode) {
+      // 互斥：进入消除笔模式时退出其他笔刷模式
+      state.mosaicMode = false;
+      state.slimMode = false;
+      if (state.deformMode) { state.deformMode = null; }
+      if (els.mosaicBtn) els.mosaicBtn.textContent = '🖌 进入马赛克模式';
+    }
+    if (els.eraserBtn) els.eraserBtn.textContent = state.eraserMode ? '✓ 退出消除笔' : '🩹 进入消除笔模式';
+    toast(state.eraserMode ? '消除笔：在要消除的物体上涂抹（纹理重复区域效果好）' : '已退出消除笔模式');
+  }
+  function clearEraser() {
+    state.eraser = [];
+    renderEditPreview();
+    toast('已清空消除笔');
+  }
+  function eraserRadiusNorm() {
+    const v = els.eraserSize ? Number(els.eraserSize.value) : 20;
+    return Math.min(0.3, v / 1000); // 归一化半径，最小 0.005，最大 0.3
+  }
+
+  // 核心算法：patch-match inpaint（简化版）
+  // full: ImageData (W×H×4 RGBA)  →  修改原图数据（原地 inpaint）
+  // strokes: [{x,y,r}] 归一化笔触  →  在 full 上绘制对应圆形 mask
+  function patchMatchInpaint(full, strokes) {
+    const W = full.width, H = full.height;
+    const data = full.data;
+    if (!strokes.length) return;
+
+    // 1. 构建 mask：笔触覆盖的像素标记为 1（uint8）
+    const mask = new Uint8Array(W * H);
+    for (const s of strokes) {
+      const cx = Math.round(s.x * W), cy = Math.round(s.y * H);
+      const r = Math.round(s.r * Math.min(W, H));
+      const r2 = r * r;
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (dx * dx + dy * dy <= r2) {
+            const px = cx + dx, py = cy + dy;
+            if (px >= 0 && px < W && py >= 0 && py < H) mask[py * W + px] = 1;
+          }
+        }
+      }
+    }
+
+    // 2. 降采样（如果图太大）：最长边 > 800 → 缩到 800 做 inpaint
+    let scale = 1;
+    let sW = W, sH = H, sData = data, sMask = mask;
+    const maxEdge = Math.max(W, H);
+    if (maxEdge > 800) {
+      scale = 800 / maxEdge;
+      sW = Math.round(W * scale); sH = Math.round(H * scale);
+      sData = new Uint8ClampedArray(sW * sH * 4);
+      sMask = new Uint8Array(sW * sH);
+      // 双线性降采样 data 和 mask
+      for (let y = 0; y < sH; y++) {
+        for (let x = 0; x < sW; x++) {
+          const sx = x / scale, sy = y / scale;
+          const x0 = Math.floor(sx), y0 = Math.floor(sy);
+          const fx = sx - x0, fy = sy - y0;
+          const x1 = Math.min(W - 1, x0 + 1), y1 = Math.min(H - 1, y0 + 1);
+          // 对每个通道双线性插值
+          for (let c = 0; c < 4; c++) {
+            const tl = data[(y0 * W + x0) * 4 + c];
+            const tr = data[(y0 * W + x1) * 4 + c];
+            const bl = data[(y1 * W + x0) * 4 + c];
+            const br = data[(y1 * W + x1) * 4 + c];
+            const v = tl * (1 - fx) * (1 - fy) + tr * fx * (1 - fy) + bl * (1 - fx) * fy + br * fx * fy;
+            sData[(y * sW + x) * 4 + c] = v | 0;
+          }
+          // mask 直接取 nearest
+          if (mask[Math.min(H - 1, y0) * W + Math.min(W - 1, x0)]) sMask[y * sW + x] = 1;
+        }
+      }
+    }
+
+    // 3. Patch-match 填充（Navier-Stokes 简化版）
+    const PATCH = 7;       // 7×7 补丁（奇数）
+    const HALF = 3;        // PATCH / 2 floor
+    const SEARCH = 15;     // 搜索窗口半径
+    const borderMask = new Uint8Array(sW * sH);
+    // 3a. 计算哪些像素在 mask 边界（mask 内但有邻居在 mask 外）
+    for (let y = 1; y < sH - 1; y++) {
+      for (let x = 1; x < sW - 1; x++) {
+        if (sMask[y * sW + x] === 1) {
+          let isBorder = false;
+          for (let dy = -1; dy <= 1 && !isBorder; dy++)
+            for (let dx = -1; dx <= 1 && !isBorder; dx++)
+              if (sMask[(y + dy) * sW + (x + dx)] === 0) isBorder = true;
+          if (isBorder) borderMask[y * sW + x] = 1;
+        }
+      }
+    }
+
+    // 3b. 迭代填充（每次只处理 borderMask 上的像素，向内推进）
+    let remaining = 0;
+    for (let i = 0; i < sMask.length; i++) if (sMask[i]) remaining++;
+    let iter = 0, maxIter = Math.max(20, Math.ceil(Math.sqrt(remaining) / 2));
+
+    while (remaining > 0 && iter < maxIter) {
+      iter++;
+      let filled = 0;
+      const newBorder = new Uint8Array(sW * sH);
+
+      for (let y = HALF; y < sH - HALF; y++) {
+        for (let x = HALF; x < sW - HALF; x++) {
+          if (!borderMask[y * sW + x]) continue;
+
+          // 在周围 SEARCH×SEARCH 窗口里找非 mask 区域的最佳匹配补丁
+          const best = findBestPatch(sData, sMask, x, y, sW, sH, PATCH, HALF, SEARCH);
+          if (!best) { borderMask[y * sW + x] = 0; continue; }
+
+          // 复制最佳补丁到当前位置（只填充 mask 内的像素）
+          for (let py = 0; py < PATCH; py++) {
+            for (let px = 0; px < PATCH; px++) {
+              const tx = x - HALF + px, ty = y - HALF + py;
+              const sx = best.x - HALF + px, sy = best.y - HALF + py;
+              if (tx < 0 || tx >= sW || ty < 0 || ty >= sH) continue;
+              if (sx < 0 || sx >= sW || sy < 0 || sy >= sH) continue;
+              if (sMask[ty * sW + tx]) {
+                const ti = (ty * sW + tx) * 4, si = (sy * sW + sx) * 4;
+                sData[ti] = sData[si]; sData[ti + 1] = sData[si + 1];
+                sData[ti + 2] = sData[si + 2]; sData[ti + 3] = sData[si + 3];
+                sMask[ty * sW + tx] = 0;  // 已填充
+              }
+            }
+          }
+          filled++;
+        }
+      }
+
+      // 重新计算 borderMask（处理后新暴露的边缘）
+      borderMask.fill(0);
+      for (let y = HALF; y < sH - HALF; y++) {
+        for (let x = HALF; x < sW - HALF; x++) {
+          if (sMask[y * sW + x] === 1) {
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (sMask[(y + dy) * sW + (x + dx)] === 0) { borderMask[y * sW + x] = 1; break; }
+              }
+              if (borderMask[y * sW + x]) break;
+            }
+          }
+        }
+      }
+
+      // 统计剩余
+      remaining = 0;
+      for (let i = 0; i < sMask.length; i++) if (sMask[i]) remaining++;
+      if (filled === 0) break;  // 卡住了
+    }
+
+    // 4. 上采样回原分辨率（如果降采样过）
+    if (scale < 1) {
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          if (!mask[y * W + x]) continue;  // 只处理 mask 覆盖的像素
+          const sx = x * scale, sy = y * scale;
+          const x0 = Math.floor(sx), y0 = Math.floor(sy);
+          const fx = sx - x0, fy = sy - y0;
+          const x1 = Math.min(sW - 1, x0 + 1), y1 = Math.min(sH - 1, y0 + 1);
+          for (let c = 0; c < 4; c++) {
+            const tl = sData[(y0 * sW + x0) * 4 + c];
+            const tr = sData[(y0 * sW + x1) * 4 + c];
+            const bl = sData[(y1 * sW + x0) * 4 + c];
+            const br = sData[(y1 * sW + x1) * 4 + c];
+            const v = tl * (1 - fx) * (1 - fy) + tr * fx * (1 - fy) + bl * (1 - fx) * fy + br * fx * fy;
+            data[(y * W + x) * 4 + c] = v | 0;
+          }
+        }
+      }
+    }
+    // 没降采样的情况：sData 就是 data，原地修改的已经生效
+  }
+  // 在非 mask 区域里找和 (cx, cy) 位置的补丁最相似的位置
+  function findBestPatch(data, mask, cx, cy, W, H, PATCH, HALF, SEARCH) {
+    let bestX = -1, bestY = -1, bestD = Infinity;
+    // 搜索范围：cx±SEARCH, cy±SEARCH
+    const x0 = Math.max(HALF, cx - SEARCH), x1 = Math.min(W - HALF - 1, cx + SEARCH);
+    const y0 = Math.max(HALF, cy - SEARCH), y1 = Math.min(H - HALF - 1, cy + SEARCH);
+
+    // 目标补丁的 mask：只在 mask=1 时需要匹配（mask=0 的像素不需要被填）
+    for (let y = y0; y <= y1; y += 2) {  // +=2 步长加速（半分辨率搜索）
+      for (let x = x0; x <= x1; x += 2) {
+        if (mask[y * W + x] === 1) continue;  // 源位置不能在 mask 里
+        let d = 0, count = 0;
+        for (let py = 0; py < PATCH && d < bestD; py++) {
+          for (let px = 0; px < PATCH; px++) {
+            const tx = cx - HALF + px, ty = cy - HALF + py;
+            const sx = x - HALF + px, sy = y - HALF + py;
+            if (tx < 0 || tx >= W || ty < 0 || ty >= H) continue;
+            if (sx < 0 || sx >= W || sy < 0 || sy >= H) continue;
+            if (mask[sy * W + sx]) continue;  // 源位置不能是 mask
+            const di = (ty * W + tx) * 4, si = (sy * W + sx) * 4;
+            const dr = data[di] - data[si], dg = data[di + 1] - data[si + 1], db = data[di + 2] - data[si + 2];
+            d += dr * dr + dg * dg + db * db;
+            count++;
+          }
+        }
+        if (count >= PATCH * PATCH * 0.5 && d < bestD) { bestD = d; bestX = x; bestY = y; }
+      }
+    }
+    if (bestX < 0) return null;
+    // 用细搜索在 bestX/bestY 周围 ±2 做精确匹配
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const x = bestX + dx, y = bestY + dy;
+        if (x < HALF || x >= W - HALF || y < HALF || y >= H - HALF) continue;
+        if (mask[y * W + x] === 1) continue;
+        let d = 0, count = 0;
+        for (let py = 0; py < PATCH && d < bestD; py++) {
+          for (let px = 0; px < PATCH; px++) {
+            const tx = cx - HALF + px, ty = cy - HALF + py;
+            const sx = x - HALF + px, sy = y - HALF + py;
+            if (mask[sy * W + sx]) continue;
+            const di = (ty * W + tx) * 4, si = (sy * W + sx) * 4;
+            const dr = data[di] - data[si], dg = data[di + 1] - data[si + 1], db = data[di + 2] - data[si + 2];
+            d += dr * dr + dg * dg + db * db;
+            count++;
+          }
+        }
+        if (count >= PATCH * PATCH * 0.5 && d < bestD) { bestD = d; bestX = x; bestY = y; }
+      }
+    }
+    return { x: bestX, y: bestY, d: bestD };
+  }
+  function drawEraser(ctx, full, W, H) {
+    if (!state.eraser.length) return;
+    // 在 full（ImageData）上做原地 patch-match inpaint
+    patchMatchInpaint(full, state.eraser);
+    // 再画回 canvas（已经修改了 full.data）
+    ctx.putImageData(full, 0, 0);
+    // 最后画笔触预览圈（让用户知道涂过哪些地方）
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = '#2C9678';
+    for (const s of state.eraser) {
+      const cx = s.x * W, cy = s.y * H, r = s.r * Math.min(W, H);
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   // ===== 编辑预览 + 裁剪交互 =====
   function renderEditPreview() {
     if (els.editMask.hidden) return;
@@ -2617,7 +2867,8 @@
     try { applyDeformInPlace(ctx, canvas.width, canvas.height, state.deform, state.slim); } catch (e) { /* 无像素环境跳过 */ }
     // 高级像素质点（高光/暗部/褪色/色调分离/颗粒/暗角）：预览分辨率同步应用，与导出算法一致
     try { applyTone(ctx, canvas.width, canvas.height, state.filters); } catch (e) { /* 无像素环境跳过 */ }
-    // 美工叠加：马赛克（预览用缩放画布像素化，烘焙在导出用全尺寸重算）与文字层
+    // 美工叠加：消除笔（patch-match inpaint 原图像素）→ 马赛克 → 文字层
+    try { drawEraser(ctx, full, canvas.width, canvas.height); } catch (e) { /* 无像素环境跳过 */ }
     try { drawMosaic(ctx, full, canvas.width, canvas.height); } catch (e) { /* 无像素环境跳过 */ }
     try { drawTexts(ctx, canvas.width, canvas.height); } catch (e) { /* 无字体环境跳过 */ }
     if (matted) applyMaskOverlay(ctx, canvas.width, canvas.height, matted);
@@ -2753,6 +3004,16 @@
       e.preventDefault();
       return;
     }
+    // 消除笔模式：按下即涂抹笔触（每次 renderEditPreview 都会完整跑 patch-match inpaint）
+    if (state.eraserMode) {
+      state.eraserPainting = true;
+      state.eraser.push({ x: p.x, y: p.y, r: eraserRadiusNorm() });
+      editSnap();  // 消除笔涂抹也算一次编辑快照（撤销需要）
+      renderEditPreview();
+      if (els.editPreview.setPointerCapture) { try { els.editPreview.setPointerCapture(e.pointerId); } catch (_) {} }
+      e.preventDefault();
+      return;
+    }
     // 文字优先：点中文字 → 拖拽 / 选中（有文字时不再落入裁剪逻辑）
     if (state.texts.length) {
       const hit = selTextAt(p.x, p.y, els.editPreview.width, els.editPreview.height);
@@ -2794,6 +3055,12 @@
       renderEditPreview();
       return;
     }
+    // 消除笔涂抹
+    if (state.eraserPainting) {
+      state.eraser.push({ x: p.x, y: p.y, r: eraserRadiusNorm() });
+      renderEditPreview();
+      return;
+    }
     // 文字拖拽
     if (state.textDrag) {
       const t = state.texts.find((x) => x.id === state.textDrag.id);
@@ -2829,6 +3096,7 @@
   function onPreviewUp(e) {
     if (state.slimDrag) { state.slimDrag = false; return; }
     if (state.mosaicPainting) { state.mosaicPainting = false; return; }
+    if (state.eraserPainting) { state.eraserPainting = false; return; }
     if (state.textDrag) { state.textDrag = null; return; }
     if (!state.cropDrag) return;
     if (state.cropDrag.mode === 'new' && (state.crop.w < 0.01 || state.crop.h < 0.01)) state.crop = null;
@@ -3023,7 +3291,16 @@
     try { await loadImage(item); } catch (e) { toast('无法加载图片'); return; }
     let canvas = await exportCanvasOfCurrent();
     if (!canvas) return;
-    // 美工烘焙：马赛克（全尺寸重算）→ 文字 → 边框（OpenCV/AI 之后、编码之前）
+    // 美工烘焙：消除笔（全尺寸 inpaint）→ 马赛克 → 文字 → 边框（OpenCV/AI 之后、编码之前）
+    if (state.eraser.length) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        try {
+          const full = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          drawEraser(ctx, full, canvas.width, canvas.height);
+        } catch (e) { /* 跳过 */ }
+      }
+    }
     if (state.mosaic.length) {
       const ctx = canvas.getContext('2d');
       if (ctx) { try { drawMosaic(ctx, canvas, canvas.width, canvas.height); } catch (e) { /* 跳过 */ } }
@@ -4374,6 +4651,9 @@
     if (els.mosaicBtn) els.mosaicBtn.addEventListener('click', toggleMosaicMode);
     if (els.mosaicSize) els.mosaicSize.addEventListener('input', () => { els.mosaicSizeVal.textContent = els.mosaicSize.value; });
     if (els.mosaicClear) els.mosaicClear.addEventListener('click', clearMosaic);
+    if (els.eraserBtn) els.eraserBtn.addEventListener('click', toggleEraserMode);
+    if (els.eraserSize) els.eraserSize.addEventListener('input', () => { els.eraserSizeVal.textContent = els.eraserSize.value; });
+    if (els.eraserClear) els.eraserClear.addEventListener('click', clearEraser);
     // 瘦身 / 瘦脸（局部液化）：模式 / 锚点 / 强度 / 作用范围 / 重置
     if (els.slimFace) els.slimFace.addEventListener('click', () => { if (state.slim.mode === 'face') return; state.slim.mode = 'face'; state.slim.enabled = true; state.slimMode = false; pushUndo(); updateSlimUI(); renderEditPreview(); });
     if (els.slimBody) els.slimBody.addEventListener('click', () => { if (state.slim.mode === 'body') return; state.slim.mode = 'body'; state.slim.enabled = true; state.slimMode = false; pushUndo(); updateSlimUI(); renderEditPreview(); });
@@ -5178,6 +5458,9 @@
     };
   }
 })();
+
+
+
 
 
 

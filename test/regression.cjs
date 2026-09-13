@@ -1041,6 +1041,69 @@ test('批量加水印：drawWatermarkOnCanvas 纯函数 + 10 种位置 + tile �
   assert(htmlSrc.includes('image/jpeg') && htmlSrc.includes('image/png') && htmlSrc.includes('image/webp'), 'wmFormat 有 3 种输出格式');
 });
 
+// ---- 消除笔简单版：Patch-Match Inpainting（对标光影看图 / FastStone）----
+test('消除笔：patchMatchInpaint 核心算法 + findBestPatch + drawEraser + state.eraser + editSnap 撤销 + UI', async () => {
+  const fs = require('fs');
+  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const htmlSrc = fs.readFileSync('index.html', 'utf-8');
+
+  // 1. 状态字段
+  assert(appSrc.includes('eraser: [],'), 'state.eraser 笔触数组存在');
+  assert(appSrc.includes('eraserMode: false'), 'state.eraserMode 模式开关');
+  assert(appSrc.includes('eraserPainting: false'), 'state.eraserPainting 涂抹进行中');
+
+  // 2. 核心算法（难度 ⭐⭐⭐ 的部分）
+  assert(appSrc.includes('function patchMatchInpaint'), 'patchMatchInpaint 核心 inpaint 函数存在');
+  assert(appSrc.includes('function findBestPatch'), 'findBestPatch SSD 补丁匹配函数存在');
+  assert(appSrc.includes('function drawEraser'), 'drawEraser 渲染函数存在');
+
+  // 3. Patch-match 参数
+  assert(appSrc.includes('PATCH = 7'), 'PATCH=7 补丁大小（7x7）');
+  assert(appSrc.includes('SEARCH = 15'), 'SEARCH=15 搜索窗口半径');
+  assert(appSrc.includes('PATCH * PATCH * 0.5'), '源补丁有效性阈值 50%');
+  assert(appSrc.includes('scale = 800 / maxEdge'), '降采样优化到最长边 800px');
+  assert(appSrc.includes('双线性降采样'), '降采样用双线性插值');
+  assert(appSrc.includes('双线性插值'), '上采样用双线性插值');
+
+  // 4. 迭代填充（Navier-Stokes 简化版）
+  assert(appSrc.includes('borderMask'), 'borderMask 边界推进填充');
+  assert(appSrc.includes('iter < maxIter'), '有最大迭代次数保护');
+  assert(appSrc.includes('filled === 0'), '卡住时自动退出');
+
+  // 5. editSnap/restoreEdit 接入
+  assert(appSrc.includes("e: state.eraser || []"), 'editSnap 存 eraser');
+  assert(appSrc.includes("em: state.eraserMode"), 'editSnap 存 eraserMode');
+  assert(appSrc.includes("state.eraser = s.e"), 'restoreEdit 恢复 eraser');
+  assert(appSrc.includes("state.eraserMode = !!s.em"), 'restoreEdit 恢复 eraserMode');
+
+  // 6. 交互链路
+  assert(appSrc.includes('function toggleEraserMode'), 'toggleEraserMode 模式切换');
+  assert(appSrc.includes('function clearEraser'), 'clearEraser 清空');
+  assert(appSrc.includes('function eraserRadiusNorm'), 'eraserRadiusNorm 笔刷半径归一化');
+  assert(appSrc.includes('state.eraserPainting = true'), 'mouse down 设置 eraserPainting');
+  assert(appSrc.includes('state.eraser.push'), 'mouse down/move 推入笔触');
+
+  // 7. 导出链路（消除笔在马赛克之前执行）
+  assert(appSrc.includes('drawEraser(ctx, full, canvas.width, canvas.height)'), 'drawEraser 在 renderEditPreview 里被调用');
+  assert(appSrc.includes('drawEraser(ctx, full, canvas, canvas.width, canvas.height)') ||
+         appSrc.includes('drawEraser(ctx, full, canvas.width, canvas.height)'), 'drawEraser 在导出烘焙里被调用');
+
+  // 8. UI DOM
+  assert(htmlSrc.includes('id="eraserBtn"'), 'index.html 有 eraserBtn');
+  assert(htmlSrc.includes('id="eraserSize"'), 'index.html 有 eraserSize slider');
+  assert(htmlSrc.includes('id="eraserClear"'), 'index.html 有 eraserClear');
+
+  // 9. cacheDom 注册
+  assert(appSrc.includes("'eraserBtn', 'eraserSize', 'eraserSizeVal', 'eraserClear'"), 'cacheDom 注册消除笔 4 个 DOM id');
+
+  // 10. 事件绑定
+  assert(appSrc.includes("toggleEraserMode"), 'toggleEraserMode 有绑定');
+  assert(appSrc.includes("clearEraser"), 'clearEraser 有绑定');
+
+  // 11. 互斥逻辑
+  assert(appSrc.includes('state.mosaicMode = false;') && appSrc.includes('state.eraserMode'), '进入消除笔时退出其他模式');
+});
+
 // ---- 运行 ----
 (async () => {
   console.log('=== 绿角犀看图 回归测试 ===');
