@@ -310,6 +310,7 @@
     scale: 1, fitScale: 1,
     offsetX: 0, offsetY: 0,
     rotation: 0, flipH: false, flipV: false,
+    isLongImage: false,    // 长图（height/width > 1.7）自动滚轮翻页模式
     mode: 'fit',          // fit | actual | free
     dragging: false, dragStart: null,
     touch: null, lastTapTime: 0, panelDrag: null, panelTouchId: null,
@@ -639,6 +640,8 @@
       if (!item.exif && item.type === 'image/jpeg') readExif(item);
       // 记录浏览历史（登录态下自动上传云端）
       recordHistory(item);
+      // 长图检测：height/width > 1.7（对应约 16:9 的反面），自动启用滚轮翻页模式
+      detectLongImage(item);
     };
 
     const cached = state.cache.get(index);
@@ -674,6 +677,20 @@
     if (orientSwaps(currentOrient())) { const t = w; w = h; h = t; }
     if ((state.rotation % 180) !== 0) { const t = w; w = h; h = t; }
     return { w: w || 1, h: h || 1 };
+  }
+
+  function detectLongImage(item) {
+    // 长图判定：height / width > 1.7（漫画党刚需，约等于 1200×2000 以上的竖图）
+    const nw = item.natW || (item.img ? item.img.naturalWidth : 0);
+    const nh = item.natH || (item.img ? item.img.naturalHeight : 0);
+    if (!nw || !nh) { state.isLongImage = false; return; }
+    state.isLongImage = nh / nw > 1.7;
+    // 长图在 fit 模式下自动定位到顶端（offsetY = 0 就是顶端，已由 applyFit 默认保证）
+    // 如果是 free/actual 模式且 offsetY 在中间，自动拉到顶端方便阅读
+    if (state.isLongImage && state.mode === 'fit') {
+      state.offsetX = 0; state.offsetY = 0;
+      applyTransform(); clampOffset();
+    }
   }
 
   function computeFit() {
@@ -4247,6 +4264,25 @@
     els.stage.addEventListener('wheel', (e) => {
       if (!state.items.length) return;
       e.preventDefault();
+      // ===== 长图优化（对标 HoneyView v5.53） =====
+      // 长图默认滚轮 = 纵向 pan；Ctrl + 滚轮 = 缩放（不翻页）
+      if (state.isLongImage && !e.ctrlKey) {
+        const panStep = Math.max(40, Math.round(els.stage.clientHeight * 0.12));
+        state.offsetY -= e.deltaY > 0 ? panStep : -panStep;
+        state.mode = 'free';
+        applyTransform(); clampOffset();
+        // 滚到顶 → 翻上一张；滚到底 → 翻下一张（翻页时保留当前缩放和 offset 位置）
+        const { w, h } = displayDims();
+        const dh = h * state.scale;
+        const sw = els.stage.clientHeight;
+        if (dh > sw) {
+          const maxY = -(dh - sw) / 2;  // clampOffset 保证 offsetY ∈ [maxY, -maxY]
+          if (e.deltaY > 0 && state.offsetY <= maxY + 1) { next(); return; }
+          if (e.deltaY < 0 && state.offsetY >= -maxY - 1) { prev(); return; }
+        }
+        return;
+      }
+      // ===== 普通图：既有逻辑 =====
       const zoomMode = getSetting('view', 'wheelMode') === 'zoom';
       if ((zoomMode && !e.ctrlKey) || (!zoomMode && e.ctrlKey)) {
         const rect = els.stage.getBoundingClientRect();
@@ -4915,7 +4951,7 @@
       window.__qj = {
       get state() { return state; },
       makeCanvasOfCurrent, bakeFullCanvas, exportCanvasOfCurrent, setPngDpi, setJpegDpi, setWebpDpi, buildExifTiff, embedDpi, crc32,
-      renderEditPreview, resetCrop, normToPx,
+      renderEditPreview, resetCrop, normToPx, detectLongImage,
       // 照片处理 测试钩子
       sharpenCanvas, autoEnhance, resetOps, applyPixelOpsAsync, filterCss, syncFilterUI,
       upscaleInterp, aiUpscale,

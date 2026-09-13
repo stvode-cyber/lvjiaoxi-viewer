@@ -838,6 +838,64 @@ test('瘦身/瘦脸：控件 + 模式切换 + 锚点 + 位移场 + 导出', asyn
   assert(qj.slimMode === false, '重置退出锚点模式');
 });
 
+// ---- 长图优化滚轮翻页（对标 HoneyView v5.53）----
+test('长图优化：isLongImage 状态 + 长宽比检测（nh/nw > 1.7）+ detectLongImage 函数 + offset 默认顶端', async () => {
+  closeAllMasks();
+  const qj = window.__qj;
+  assert(qj !== undefined, 'window.__qj 存在');
+
+  // 函数存在性
+  assert(typeof qj.detectLongImage === 'function', 'detectLongImage 函数存在');
+
+  // 普通图（16:10 ≈ 1.6）→ 非长图
+  qj.state = qj.state || {};
+  qj.state.isLongImage = false;
+  qj.detectLongImage({ natW: 1920, natH: 1200 });
+  assert(qj.state.isLongImage === false, '1920×1200 (ratio=0.625→h/w=0.625) 不是长图');
+
+  // 横图（宽>高）→ 非长图
+  qj.detectLongImage({ natW: 2560, natH: 1440 });
+  assert(qj.state.isLongImage === false, '2560×1440 横图不是长图');
+
+  // 长图 1080×1920（h/w=1.778）→ 长图！刚好超过 1.7
+  qj.detectLongImage({ natW: 1080, natH: 1920 });
+  assert(qj.state.isLongImage === true, '1080×1920 (h/w≈1.778) 是长图');
+
+  // 长图 750×1334（iPhone 6/7/8，h/w=1.779）→ 长图
+  qj.detectLongImage({ natW: 750, natH: 1334 });
+  assert(qj.state.isLongImage === true, '750×1334 iPhone 标准长图');
+
+  // 边界 exactly 1.7 → 非长图（严格大于）
+  qj.detectLongImage({ natW: 1000, natH: 1700 });
+  assert(qj.state.isLongImage === false, '1000×1700 ratio=1.7 不是长图（严格 > 1.7）');
+
+  // 边界 1701/1000 = 1.701 → 长图
+  qj.detectLongImage({ natW: 1000, natH: 1701 });
+  assert(qj.state.isLongImage === true, '1000×1701 ratio=1.701 是长图');
+
+  // 空尺寸 → 安全降级
+  qj.detectLongImage({ natW: 0, natH: 0 });
+  assert(qj.state.isLongImage === false, 'natW=0 安全降级 isLongImage=false');
+
+  qj.detectLongImage({});
+  assert(qj.state.isLongImage === false, '空对象安全降级 isLongImage=false');
+
+  // fit 模式长图 → offsetY 归零（自动定位顶端）
+  qj.state.isLongImage = true;
+  qj.state.mode = 'fit';
+  qj.state.offsetY = 999;
+  qj.detectLongImage({ natW: 1080, natH: 1920 });
+  assert(qj.state.offsetY === 0, '长图 fit 模式自动定位顶端 offsetY=0');
+  assert(qj.state.offsetX === 0, '长图 fit 模式自动居中 offsetX=0');
+
+  // free 模式不受影响
+  qj.state.isLongImage = true;
+  qj.state.mode = 'free';
+  qj.state.offsetY = 500;
+  qj.detectLongImage({ natW: 1080, natH: 1920 });
+  assert(qj.state.offsetY === 500, '长图 free 模式不重置 offsetY');
+});
+
 // ---- 运行 ----
 (async () => {
   console.log('=== 绿角犀看图 回归测试 ===');
