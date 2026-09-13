@@ -32,8 +32,12 @@ arboard = "3"
 base64 = "0.22"
 # SVG 文本内联
 percent-encoding = "2"
+# 压缩包直看（ZIP/CBZ 不解压直接浏览）
+zip = "2"
 
 # ===== 扩展点（PRD 5.2 需后端解码的格式，按需解除注释并实现 decode_to_rgb 对应分支）=====
 # libheif-rs = "1"     # HEIC / HEIF
 # rawler = "1"         # RAW (CR2 / NEF / ARW / DNG ...)
 # psd = "0.3"          # PSD
+# rar = "0.9"          # RAR / CBR（后续版本再加）
+# sevenz-rust = "0.3"  # 7Z（后续版本再加）

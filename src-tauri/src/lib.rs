@@ -22,6 +22,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::borrow::Cow;
+use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
@@ -30,6 +31,8 @@ use serde::Serialize;
 use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 use image::codecs::jpeg::JpegEncoder;
+use image::ImageEncoder;
+use zip::ZipArchive;
 
 // 启动参数缓存：setup 阶段 emit 的 open-file 事件会因 WebView 未加载完成而丢失，
 // 前端启动后主动 invoke get_pending_paths 拉取（取后清空）。
@@ -95,6 +98,99 @@ fn get_pending_paths() -> Vec<String> {
     Vec::new()
 }
 
+// ===== 压缩包直看（HoneyView 对标）=====
+
+#[derive(Serialize, Clone)]
+pub struct ArchiveEntry {
+    pub index: usize,       // zip 内索引（前端懒加载用）
+    pub name: String,       // 条目标题（压缩包内路径）
+    pub size: u64,          // 未压缩大小
+}
+
+/// 列出压缩包内的图片条目（自然排序）
+#[tauri::command]
+fn list_archive_entries(path: String) -> Result<Vec<ArchiveEntry>, String> {
+    let file = std::fs::File::open(&path).map_err(|e| format!("打开压缩包失败: {}", e))?;
+    let mut zip = ZipArchive::new(std::io::BufReader::new(file))
+        .map_err(|e| format!("解析 ZIP 失败（请确认是 .zip / .cbz 格式）: {}", e))?;
+
+    let mut entries: Vec<ArchiveEntry> = Vec::new();
+    for i in 0..zip.len() {
+        let zf = zip.by_index(i).map_err(|e| format!("读取 entry {} 失败: {}", i, e))?;
+        if zf.is_file() {
+            let name = zf.name().to_string();
+            // 跳过 __MACOSX / .DS_Store 等无用条目
+            if name.starts_with("__MACOSX") || name.ends_with(".DS_Store") {
+                continue;
+            }
+            if is_image_entry(&name) {
+                entries.push(ArchiveEntry {
+                    index: i,
+                    name: name.clone(),
+                    size: zf.size(),
+                });
+            }
+        }
+    }
+    // 数字感知自然排序（img2 < img10）
+    entries.sort_by(|a, b| natural_cmp(&a.name, &b.name));
+    Ok(entries)
+}
+
+/// 读取压缩包内指定索引的图片，返回 data URL（前端懒加载时调用）
+#[tauri::command]
+fn read_archive_entry(path: String, index: usize) -> Result<String, String> {
+    let file = std::fs::File::open(&path).map_err(|e| format!("打开压缩包失败: {}", e))?;
+    let mut zip = ZipArchive::new(std::io::BufReader::new(file))
+        .map_err(|e| format!("解析 ZIP 失败: {}", e))?;
+    let mut zf = zip.by_index(index).map_err(|e| format!("entry {} 不存在: {}", index, e))?;
+    if !zf.is_file() {
+        return Err("entry 不是文件".to_string());
+    }
+
+    // 读取原始字节
+    let mut buf = Vec::with_capacity(zf.size() as usize);
+    std::io::Read::read_to_end(&mut zf, &mut buf)
+        .map_err(|e| format!("读取 entry 数据失败: {}", e))?;
+
+    // 扩展名判断 mime + 是否需要 Rust 解码
+    let ext = Path::new(zf.name())
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    let mime = mime_of(&ext);
+
+    // WebView 原生支持 → 直接 data URL
+    if NATIVE_EXTS.contains(&ext.as_str()) {
+        let b64 = B64.encode(&buf);
+        return Ok(format!("data:{};base64,{}", mime, b64));
+    }
+
+    // TIFF / TGA 等 → Rust image crate 解码转 JPEG
+    if matches!(ext.as_str(), "tif" | "tiff" | "tga") {
+        let cursor = Cursor::new(&buf);
+        let img = image::ImageReader::new(cursor)
+            .with_guessed_format()
+            .map_err(|e| format!("格式探测失败: {}", e))?
+            .decode()
+            .map_err(|e| format!("解码失败: {}", e))?;
+        // 转 JPEG data URL（和 decode_to_rgb 同款逻辑）
+        let mut jpeg_buf = Vec::new();
+        let mut jcursor = std::io::Cursor::new(&mut jpeg_buf);
+        let enc = JpegEncoder::new_with_quality(&mut jcursor, 90);
+        img.write_with_encoder(enc)
+            .map_err(|e| format!("JPEG 编码失败: {}", e))?;
+        let b64 = B64.encode(&jpeg_buf);
+        return Ok(format!("data:image/jpeg;base64,{}", b64));
+    }
+
+    // 兜底：原样 base64（前端可能仍能渲染）
+    let b64 = B64.encode(&buf);
+    Ok(format!("data:{};base64,{}", mime, b64))
+}
+
 #[derive(Serialize, Clone)]
 pub struct ImageEntry {
     pub name: String,
@@ -109,6 +205,31 @@ pub struct ImageEntry {
 const NATIVE_EXTS: &[&str] = &[
     "jpg", "jpeg", "png", "gif", "webp", "bmp", "ico", "svg", "avif", "apng",
 ];
+
+// 压缩包扩展名（ZIP/CBZ 一期支持；RAR/7Z 后续版再加）
+const ARCHIVE_EXTS: &[&str] = &[
+    "zip", "cbz",
+];
+
+// 压缩包内可识别的图片扩展名
+const ARCHIVE_IMAGE_EXTS: &[&str] = &[
+    "jpg", "jpeg", "png", "gif", "webp", "bmp", "ico", "tif", "tiff", "tga",
+];
+
+fn is_archive(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| ARCHIVE_EXTS.contains(&e.to_lowercase().as_str()))
+        .unwrap_or(false)
+}
+
+fn is_image_entry(name: &str) -> bool {
+    Path::new(name)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| ARCHIVE_IMAGE_EXTS.contains(&e.to_lowercase().as_str()))
+        .unwrap_or(false)
+}
 
 // 需要 Rust 后端解码的格式（image crate 已覆盖 tiff/tga；其余见文件末尾扩展点）
 fn is_image(path: &Path) -> bool {
@@ -562,7 +683,9 @@ pub fn run() {
             reveal_in_explorer,
             copy_image,
             get_pending_paths,
-            flog
+            flog,
+            list_archive_entries,
+            read_archive_entry,
         ]);
 
     builder

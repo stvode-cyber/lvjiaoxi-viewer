@@ -917,16 +917,16 @@ test('穿透文件夹：设置开关 files.recursive 存在 + recursive 参数�
   // 我们的改动：loadPaths(paths, recursive)，!!recursive 确保 boolean
   // 这里没法直接调用（jsdom 没有 desktop.invoke），但代码已在 app.js 确认
 
-  // 关键改动确认：所有 desktop.loadPaths 调用点都已加 getSetting('files', 'recursive')
-  // 通过源码级验证 — 我们在 app.js 里做了 replace_all
+  // 关键改动确认：所有桌面文件打开入口都已走 handleOpenPaths（压缩包直看 + 普通图片 统一分发）
   const fs = require('fs');
   const appSrc = fs.readFileSync('app.js', 'utf-8');
-  const callCount = (appSrc.match(/desktop\.loadPaths\(paths,\s*getSetting\('files',\s*'recursive'\)\)/g) || []).length;
-  assert(callCount >= 4, `desktop.loadPaths(paths, getSetting('files','recursive')) 调用点 >= 4（实际 ${callCount}）`);
+  const callCount = (appSrc.match(/handleOpenPaths\(paths,\s*getSetting\('files',\s*'recursive'\)\)/g) || []).length;
+  assert(callCount >= 4, `handleOpenPaths(paths, getSetting('files','recursive')) 调用点 >= 4（实际 ${callCount}）`);
 
-  // 还有一个 [path] 形式
-  const singleCall = (appSrc.match(/desktop\.loadPaths\(\[path\],\s*getSetting\('files',\s*'recursive'\)\)/g) || []).length;
-  assert(singleCall >= 1, `desktop.loadPaths([path], getSetting(...)) 单文件形式 >= 1（实际 ${singleCall}）`);
+  // handleOpenPaths 内部应该调 desktop.loadPaths + 检测 archive
+  assert(appSrc.includes('desktop.loadPaths(paths, recursive)'), 'handleOpenPaths 内部调 desktop.loadPaths');
+  assert(appSrc.includes('isArchiveFile'), '有 isArchiveFile 压缩包检测');
+  assert(appSrc.includes('desktop.openArchive'), '有 desktop.openArchive 压缩包打开入口');
 
   // desktop.loadPaths 签名已加 recursive 参数
   assert(appSrc.includes('async loadPaths(paths, recursive)'), 'loadPaths 签名已加 recursive 参数');
@@ -1156,6 +1156,57 @@ test('海报边框扩展 + emoji 贴纸 + 海报标题一键生成', async () =>
   assert(appSrc.includes('initEmojiBar()'), 'initEmojiBar 在 bindEvents 被调用');
   assert(appSrc.includes('clearStickers'), 'clearStickers 有绑定');
   assert(appSrc.includes('generatePoster'), 'generatePoster 有绑定');
+});
+
+// ---- 压缩包直看（对标 HoneyView ZIP/CBZ 不解压浏览）----
+test('压缩包直看 ZIP/CBZ + 懒加载 + handleOpenPaths 统一入口', async () => {
+  const fs = require('fs');
+  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const rustSrc = fs.readFileSync('src-tauri/src/lib.rs', 'utf-8');
+  const cargoSrc = fs.readFileSync('src-tauri/Cargo.toml', 'utf-8');
+
+  // 1. 前端常量 + 辅助函数
+  assert(appSrc.includes("const ARCHIVE_EXT = ['zip','cbz']"), 'ARCHIVE_EXT 包含 zip/cbz');
+  assert(appSrc.includes('function isArchiveFile(name)'), 'isArchiveFile 函数存在');
+
+  // 2. desktop 压缩包方法
+  assert(appSrc.includes('async openArchive(path)'), 'desktop.openArchive 方法');
+  assert(appSrc.includes('async readArchiveEntry(path, index)'), 'desktop.readArchiveEntry 懒加载方法');
+
+  // 3. 统一入口 handleOpenPaths
+  assert(appSrc.includes('async function handleOpenPaths(paths, recursive)'), 'handleOpenPaths 统一入口');
+  assert(appSrc.includes('isArchiveFile(paths[0])'), 'handleOpenPaths 检测单路径压缩包');
+  assert(appSrc.includes('desktop.openArchive(paths[0])'), '压缩包 → openArchive');
+  assert(appSrc.includes('desktop.loadPaths(paths, recursive)'), '普通路径 → loadPaths');
+
+  // 4. 懒加载逻辑（resolveItemSrc）
+  assert(appSrc.includes('item.archiveIndex !== undefined && item.url === null'), 'archive 条目 url 为空走懒加载');
+  assert(appSrc.includes('desktop.readArchiveEntry(item.path, item.archiveIndex)'), 'resolveItemSrc 调 readArchiveEntry');
+
+  // 5. Rust 侧依赖 + command
+  assert(cargoSrc.includes('zip = "2"'), 'Cargo.toml 加 zip crate');
+  assert(rustSrc.includes('use zip::ZipArchive'), 'lib.rs 导入 ZipArchive');
+  assert(rustSrc.includes('const ARCHIVE_EXTS'), 'lib.rs ARCHIVE_EXTS 常量');
+  assert(rustSrc.includes('const ARCHIVE_IMAGE_EXTS'), 'lib.rs ARCHIVE_IMAGE_EXTS 常量');
+  assert(rustSrc.includes('fn is_archive(path: &Path)'), 'lib.rs is_archive 辅助函数');
+  assert(rustSrc.includes('fn is_image_entry(name: &str)'), 'lib.rs is_image_entry 辅助函数');
+  assert(rustSrc.includes('pub struct ArchiveEntry'), 'ArchiveEntry struct（index/name/size）');
+  assert(rustSrc.includes('fn list_archive_entries(path: String)'), 'list_archive_entries command');
+  assert(rustSrc.includes('fn read_archive_entry(path: String, index: usize)'), 'read_archive_entry command');
+
+  // 6. 渲染逻辑
+  assert(rustSrc.includes('ZipArchive::new'), 'Rust 侧 ZipArchive::new 打开');
+  assert(rustSrc.includes('entries.sort_by(|a, b| natural_cmp'), '自然排序（img2 < img10）');
+  assert(rustSrc.includes('__MACOSX'), '跳过 __MACOSX 无用条目');
+  assert(rustSrc.includes('.DS_Store'), '跳过 .DS_Store');
+  assert(rustSrc.includes('NATIVE_EXTS.contains'), 'WebView 原生格式直接 data URL');
+  assert(rustSrc.includes('matches!(ext.as_str(), "tif" | "tiff" | "tga")'), 'TIFF/TGA 走 image crate 解码');
+  assert(rustSrc.includes('image::ImageReader::new'), 'image crate ImageReader 解码');
+  assert(rustSrc.includes('write_with_encoder'), 'JPEG 编码（和 decode_to_rgb 同款）');
+
+  // 7. invoke_handler 注册
+  assert(rustSrc.includes('list_archive_entries,'), 'list_archive_entries 注册到 generate_handler');
+  assert(rustSrc.includes('read_archive_entry,'), 'read_archive_entry 注册到 generate_handler');
 });
 
 // ---- 运行 ----

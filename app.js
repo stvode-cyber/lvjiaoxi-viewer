@@ -1,4 +1,4 @@
-/* 绿角犀看图 · Web 原型 — 核心逻辑
+﻿/* 绿角犀看图 · Web 原型 — 核心逻辑
  * 覆盖 PRD 5.2~5.6；5.1 系统集成层以 Web 能力替代并在「关于」中标注。
  * 纯前端、零依赖、离线可用（双击 index.html 即可运行）。
  */
@@ -11,6 +11,8 @@
 
   const IMG_EXT = ['jpg','jpeg','png','gif','webp','avif','svg','bmp','ico','apng','tif','tiff','heic','heif','tga','psd'];
   const NATIVE_EXT = ['jpg','jpeg','png','gif','webp','avif','svg','bmp','ico','apng'];
+  // 压缩包直看（对标 HoneyView）— ZIP/CBZ 一期，RAR/7Z 后续版
+  const ARCHIVE_EXT = ['zip','cbz'];
 
   function extOf(name) {
     const m = /\.([a-z0-9]+)$/i.exec(name);
@@ -18,6 +20,9 @@
   }
   function isImageFile(name) {
     return IMG_EXT.includes(extOf(name));
+  }
+  function isArchiveFile(name) {
+    return ARCHIVE_EXT.includes(extOf(name));
   }
   function formatBytes(n) {
     if (!n && n !== 0) return '—';
@@ -101,10 +106,54 @@
       updateChrome();
       return true;
     },
+    // 桌面版：打开压缩包（ZIP/CBZ），列出图片条目但不解压，按需懒加载
+    async openArchive(path) {
+      if (!this.available()) return false;
+      this.flog('openArchive ' + path);
+      const entries = await this.invoke('list_archive_entries', { path });
+      if (!Array.isArray(entries) || !entries.length) {
+        toast('压缩包内未找到图片');
+        return false;
+      }
+      // 统一 items 格式：url 留空（懒加载），path 存压缩包路径
+      const items = entries.map((e) => ({
+        name: e.name.split(/[\\/]/).pop() || e.name,
+        size: e.size || 0, lastModified: 0,
+        type: 'image/*', url: null,
+        path: path,              // 压缩包文件路径
+        archiveIndex: e.index,   // zip 内原始索引（read_archive_entry 用）
+        archiveName: e.name,     // zip 内完整路径
+      }));
+      state.items.forEach((it) => { if (it.url && it.url.indexOf('blob:') === 0) URL.revokeObjectURL(it.url); if (it.displayUrl && it.displayUrl.indexOf('blob:') >= 0) URL.revokeObjectURL(it.displayUrl); });
+      state.items = items; state.index = -1;
+      state.archivePath = path;  // 标记当前处于压缩包浏览模式
+      els.emptyHint.hidden = true;
+      renderThumbs();
+      toast('📦 ' + items.length + ' 张图片（压缩包直看）');
+      showImage(0);
+      updateChrome();
+      return true;
+    },
+    // 桌面版：懒加载压缩包内指定索引的图片，返回 data URL
+    async readArchiveEntry(path, index) {
+      return await this.invoke('read_archive_entry', { path, index });
+    },
     async flog(message) {
       try { if (this.available()) await this.invoke('flog', { message }); } catch (e) {}
     },
   };
+
+  // ============ 统一文件打开入口（压缩包直看 + 普通图片）============
+  // 判断路径是否包含压缩包 → 调 openArchive；否则调 loadPaths
+  async function handleOpenPaths(paths, recursive) {
+    if (!paths || !paths.length) return;
+    // 压缩包优先：如果只有一个路径且是压缩包 → 走 archive 流程
+    if (paths.length === 1 && isArchiveFile(paths[0])) {
+      return desktop.openArchive(paths[0]);
+    }
+    // 多个路径 / 普通图片 → 走原有 loadPaths
+    return desktop.loadPaths(paths, recursive);
+  }
 
   function download(blob, name) {
     const url = URL.createObjectURL(blob);
@@ -567,8 +616,18 @@
     return pixelsToBlobUrl(ch.data, w, h, stride);
   }
 
-  // 解析 <img> 可用的源 URL：普通格式用原 URL；HEIC 转码一次并缓存到 item.displayUrl，后续复用。
+  // 解析 <img> 可用的源 URL：普通格式用原 URL；HEIC 转码一次并缓存到 item.displayUrl；
+  // 压缩包条目（archiveIndex 存在）懒加载 Rust 端解压返回 data URL。
   function resolveItemSrc(item) {
+    // 压缩包条目（url 为空，按需懒加载）
+    if (item.archiveIndex !== undefined && item.url === null) {
+      if (item.displayUrl) { item.url = item.displayUrl; return Promise.resolve(item.url); }
+      return desktop.readArchiveEntry(item.path, item.archiveIndex).then((dataUrl) => {
+        item.url = dataUrl;          // 缓存到 item.url（和普通条目统一）
+        item.displayUrl = dataUrl;    // 再存一份 displayUrl（resolveItemSrc 已有缓存逻辑）
+        return dataUrl;
+      }).catch((e) => { throw new Error('压缩包图片加载失败: ' + e); });
+    }
     if (!isHeicItem(item)) return Promise.resolve(item.url);
     if (item.displayUrl) return Promise.resolve(item.displayUrl);
     return decodeHeicToUrl(item).then((u) => { item.displayUrl = u; return u; });
@@ -4225,7 +4284,7 @@
       ? (entry.path ? [entry.path] : [])
       : (entry.paths || []);
     if (desktop.available() && paths.length) {
-      desktop.loadPaths(paths, getSetting('files', 'recursive'))
+      handleOpenPaths(paths, getSetting('files', 'recursive'))
         .then((ok) => { if (!ok) toast('打开失败：' + entry.name); })
         .catch(() => toast('打开失败：' + entry.name));
       return;
@@ -5187,12 +5246,12 @@
         const ev = window.__TAURI__.event;
         ev.listen('tauri://file-drop', (e) => {
           const paths = (e.payload && e.payload.paths) || [];
-          if (paths.length) desktop.loadPaths(paths, getSetting('files', 'recursive'));
+          if (paths.length) handleOpenPaths(paths, getSetting('files', 'recursive'));
         });
         ev.listen('open-file', (e) => {
           const pl = e.payload;
           const paths = Array.isArray(pl) ? pl : (pl && pl.path ? [pl.path] : []);
-          if (paths.length) desktop.loadPaths(paths, getSetting('files', 'recursive'));
+          if (paths.length) handleOpenPaths(paths, getSetting('files', 'recursive'));
         });
         // 启动参数拉取：双击关联文件/右键菜单启动时，Rust 端 setup 阶段的 emit 会因
         // WebView 未加载完成而丢失。改为启动后多次重试 invoke 拉取（取后即清空），
@@ -5202,7 +5261,7 @@
           desktop.invoke('get_pending_paths').then((paths) => {
             if (Array.isArray(paths) && paths.length) {
               const key = paths.slice().sort().join('\u0000');
-              if (key !== pendingLoaded) { pendingLoaded = key; desktop.loadPaths(paths, getSetting('files', 'recursive')); }
+              if (key !== pendingLoaded) { pendingLoaded = key; handleOpenPaths(paths, getSetting('files', 'recursive')); }
             }
           }).catch(() => { /* 非致命 */ });
         };
