@@ -560,6 +560,36 @@
         </div>
       </div>
       <div class="edit-section">
+        <h4>✨ 美型微调 <span id="deformCount" class="deform-count"></span></h4>
+        <p class="hint">点按钮添加对应美型，再次点击撤销；右键按钮单独清除。支持多种同时启用。</p>
+        <div class="deform-grid">
+          <button class="btn deform-btn" id="deform_eye">👁 大眼</button>
+          <button class="btn deform-btn" id="deform_cheek">😀 小脸</button>
+          <button class="btn deform-btn" id="deform_teeth">🦷 美牙</button>
+          <button class="btn deform-btn" id="deform_lip">💋 丰唇</button>
+          <button class="btn deform-btn" id="deform_nose">👃 瘦鼻</button>
+        </div>
+        <div class="edit-actions" style="margin-top:8px">
+          <button class="btn" id="deformModeBtn">🎯 定位模式</button>
+          <button class="btn ghost" id="deformClearAll" title="清除所有美型变形">🗑 全部清除</button>
+        </div>
+        <div class="deform-ctrl" id="deformCtrl" hidden>
+          <label class="field" style="margin:0"><span>调整项目
+            <select id="deformKindSel">
+              <option value="">(未选中)</option>
+              <option value="eye">大眼</option>
+              <option value="cheek">小脸</option>
+              <option value="teeth">美牙</option>
+              <option value="lip">丰唇</option>
+              <option value="nose">瘦鼻</option>
+            </select>
+          </span></label>
+          <label class="field" style="margin:0"><span>强度 <b id="deformStrengthVal">25</b>%</span>
+            <input type="range" id="deformStrength" min="0" max="100" value="25"></label>
+          <p class="hint" style="margin:4px 0 0">点「定位模式」后，点击按钮切换到该项目的锚点模式，然后在预览图上点击/拖拽确定作用位置。</p>
+        </div>
+      </div>
+      <div class="edit-section">
         <h4>裁剪</h4>
         <p class="hint">导出时会包含当前裁剪区域。拖动选框四角可调整大小，框内可移动位置。</p>
         <div class="edit-actions">

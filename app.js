@@ -363,6 +363,8 @@
       'matFg', 'matBg', 'matRun', 'matClear', 'matExport', 'matSize', 'matSizeVal', 'matStatus',
       'exFormat', 'exQuality', 'exQualityVal', 'exQualityField', 'exRun',
       'slimFace', 'slimBody', 'slimMode', 'slimStrength', 'slimStrengthVal', 'slimRange', 'slimRangeVal', 'slimReset',
+      'deform_eye', 'deform_teeth', 'deform_cheek', 'deform_lip', 'deform_nose',
+      'deformCount', 'deformClearAll', 'deformModeBtn', 'deformKindSel', 'deformStrength', 'deformStrengthVal',
       'slideBar', 'slidePrev', 'slidePlay', 'slideFill', 'slideNext', 'slideExit',
       'toast',
       'accountBtn', 'btnFav',
@@ -1173,17 +1175,19 @@
   function editSnap() {
     return JSON.stringify({
       f: state.filters, t: state.texts || [], m: state.mosaic || [], c: state.crop || null,
-      o: state.ops || [], s: state.slim || null, mm: state.mosaicMode || false, sm: state.slimMode || false,
+      o: state.ops || [], s: state.slim || null, df: state.deform || [],
+      mm: state.mosaicMode || false, sm: state.slimMode || false, dm: state.deformMode || null,
     });
   }
   function restoreEdit(snap) {
     const s = JSON.parse(snap);
     state.filters = s.f; state.texts = s.t; state.mosaic = s.m; state.crop = s.c; state.ops = s.o;
-    if (s.s) state.slim = s.s; state.mosaicMode = !!s.mm; state.slimMode = !!s.sm;
+    if (s.s) state.slim = s.s; if (s.df) state.deform = s.df;
+    state.mosaicMode = !!s.mm; state.slimMode = !!s.sm; state.deformMode = s.dm || null;
     syncFilterUI(); applyFilters();
     if (state.textSel && !state.texts.some((x) => x.id === state.textSel)) state.textSel = null;
     if (document.getElementById('txtStyle')) { /* txt 属性输入区由用户重新选中加载 */ }
-    updateOpsUI(); updateSlimUI(); renderEditPreview();
+    updateOpsUI(); updateSlimUI(); updateDeformUI(); renderEditPreview();
   }
   function updateEditUndoButtons() {
     if (els.btnUndo) els.btnUndo.disabled = editUndo.length === 0;
@@ -1551,8 +1555,11 @@
   async function exportCanvasOfCurrent() {
     let full = bakeFullCanvas();
     if (!full) return null;
-    // 瘦身 / 瘦脸（几何形变）在烘焙后、像素质点前应用，位移不受后续色调整影响
-    if (state.slim.enabled) { const sl = slimCanvas(full, state.slim); if (sl) full = sl; }
+    // 瘦身/瘦脸 + 美型变形（大眼/美牙/小脸/丰唇/瘦鼻）合并位移场，一次双线性采样
+    if (state.slim.enabled || (state.deform && state.deform.some((d) => (d.strength || 0) > 0))) {
+      const df = deformCanvas(full, state.deform, state.slim);
+      if (df) full = df;
+    }
     // 锐化（3×3 卷积）在烘焙后、裁剪前应用；无像素环境（jsdom）自动跳过
     if (state.filters.sharp > 0) { const s = sharpenCanvas(full, state.filters.sharp); if (s) full = s; }
     // 高级像素质点（高光/暗部/褪色/色调分离/颗粒/暗角）：全分辨率分块异步应用
@@ -1721,6 +1728,222 @@
     const R = Math.round((state.slim.mode === 'body' ? state.slim.ry : state.slim.rx) * W);
     ctx.save();
     ctx.strokeStyle = 'rgba(120,220,160,0.95)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(px, py, Math.max(8, R), 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px - 14, py); ctx.lineTo(px + 14, py);
+    ctx.moveTo(px, py - 14); ctx.lineTo(px, py + 14); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ===== 局部美型变形（大眼/美牙/小脸/丰唇/瘦鼻）=====
+  // 每个变形 = {id, kind, cx, cy, strength, rx, ry}
+  // kind: 'eye'  向外拉（眼睛放大）
+  //       'teeth' 向上拉（牙齿显露更多，视觉上变白变齐）
+  //       'cheek' 向内收（小脸蛋）
+  //       'lip' 唇中心向外拉（丰满嘴唇）
+  //       'nose' 鼻尖向上 + 鼻翼向内（瘦鼻）
+  function deformMakeKind(kind, strength) {
+    // 根据 kind 给默认 rx / ry（基于 0..1 归一化坐标）
+    const defs = {
+      eye:   { rx: 0.09, ry: 0.07, sign: +1 },   // +1 = 向外拉，-1 = 向内推
+      teeth: { rx: 0.10, ry: 0.06, sign: -1 },   // 向上拉 → y 负方向位移（sy 偏移）
+      cheek: { rx: 0.10, ry: 0.10, sign: -1 },   // 向内收
+      lip:   { rx: 0.08, ry: 0.05, sign: +1 },   // 向外拉
+      nose:  { rx: 0.07, ry: 0.10, sign: -1 },   // 向内收 + 鼻尖上抬
+    };
+    return defs[kind] || defs.eye;
+  }
+  function deformForce(def, nx, ny) {
+    // 归一化高斯作用场，返回 {fx, fy} 位移（单位：归一化坐标量纲）
+    const dx0 = nx - def.cx, dy0 = ny - def.cy;
+    const g = Math.exp(-(dx0 * dx0 * def.invRx2 + dy0 * dy0 * def.invRy2));
+    const K = def.strengthNorm * def.sign;
+    let fx = K * g * dx0;  // 横向：向外正、向内负
+    let fy = K * g * dy0;  // 纵向
+    if (def.kind === 'teeth') { fy = -def.strengthNorm * g * 0.5 * g * 0.5; }  // 向上拉牙齿中心（相对中心 y 更小 = 更靠上）
+    if (def.kind === 'lip')   { fy = -def.strengthNorm * g * 0.3; }           // 唇中心向外 = 向下拉（显露出更多下唇/上唇）
+    if (def.kind === 'nose')  {
+      fx = K * g * dx0;
+      fy = -def.strengthNorm * g * 0.4;  // 鼻尖向上
+    }
+    return { fx, fy };
+  }
+  function deformBuilders(deformList) {
+    // 把 state.deform 数组（存储用）转成可用于采样的 def 对象数组
+    return (deformList || []).map((d) => {
+      const def0 = deformMakeKind(d.kind || 'eye', d.strength || 0);
+      const rx = Math.max(0.03, d.rx || def0.rx);
+      const ry = Math.max(0.03, d.ry || def0.ry);
+      const st = Math.max(0, Math.min(1, (d.strength || 0) / 100));
+      return {
+        kind: d.kind || 'eye',
+        cx: clamp(d.cx == null ? 0.5 : d.cx, 0, 1),
+        cy: clamp(d.cy == null ? 0.5 : d.cy, 0, 1),
+        rx, ry,
+        invRx2: 1 / (rx * rx), invRy2: 1 / (ry * ry),
+        strength: d.strength || 0,
+        strengthNorm: st,
+        sign: def0.sign,
+        on: st > 0.001,
+      };
+    }).filter((d) => d.on);
+  }
+  function deformTotalDisp(defs, slimW, nx, ny) {
+    // 叠加所有变形 + slim，得到最终位移 {sx, sy}
+    let dx = 0, dy = 0;
+    // slim 位移
+    if (slimW && slimW.on) {
+      const p = slimDisp(slimW, nx, ny);
+      dx += p.sx - nx;  // slimDisp 返回的是绝对采样坐标，转成位移量
+      dy += p.sy - ny;
+    }
+    // deform 位移
+    for (const d of defs) {
+      const f = deformForce(d, nx, ny);
+      dx += f.fx; dy += f.fy;
+    }
+    return { sx: nx + dx, sy: ny + dy };
+  }
+  // 全尺寸导出：slim + deform 合并位移场，一次双线性采样
+  function deformCanvas(canvas, deformList, slim) {
+    const defs = deformBuilders(deformList);
+    const sw = slimWarp(slim);
+    if (!defs.length && (!sw || !sw.on)) return null;
+    const ctx = canvas.getContext && canvas.getContext('2d');
+    if (!ctx || !ctx.getImageData || !ctx.createImageData || !ctx.putImageData) return null;
+    let src; try { src = ctx.getImageData(0, 0, canvas.width, canvas.height); } catch (e) { return null; }
+    if (!src || !src.data) return null;
+    const W = canvas.width, H = canvas.height;
+    const out = document.createElement('canvas');
+    out.width = W; out.height = H;
+    const octx = out.getContext('2d');
+    const dst = ctx.createImageData(W, H);
+    if (!dst || !dst.data) return null;
+    const d = dst.data, s = src.data;
+    for (let y = 0; y < H; y++) {
+      const ny = (y + 0.5) / H;
+      for (let x = 0; x < W; x++) {
+        const nx = (x + 0.5) / W;
+        const p = deformTotalDisp(defs, sw, nx, ny);
+        const sxAbs = p.sx * W - 0.5, syAbs = p.sy * H - 0.5;
+        const oi = (y * W + x) * 4;
+        if (sxAbs < 0 || sxAbs >= W || syAbs < 0 || syAbs >= H) {
+          d[oi] = s[oi]; d[oi + 1] = s[oi + 1]; d[oi + 2] = s[oi + 2]; d[oi + 3] = s[oi + 3];
+        } else {
+          bilinear(s, W, H, sxAbs, syAbs, d, oi);
+        }
+      }
+    }
+    try { octx.putImageData(dst, 0, 0); } catch (e) { return null; }
+    return out;
+  }
+  function applyDeformInPlace(ctx, W, H, deformList, slim) {
+    const defs = deformBuilders(deformList);
+    const sw = slimWarp(slim);
+    if (!defs.length && (!sw || !sw.on) || !ctx || !ctx.getImageData || !ctx.putImageData) return;
+    let id; try { id = ctx.getImageData(0, 0, W, H); } catch (e) { return; }
+    if (!id || !id.data) return;
+    const d = id.data;
+    for (let y = 0; y < H; y++) {
+      const ny = (y + 0.5) / H;
+      for (let x = 0; x < W; x++) {
+        const nx = (x + 0.5) / W;
+        const p = deformTotalDisp(defs, sw, nx, ny);
+        const sxAbs = p.sx * W - 0.5, syAbs = p.sy * H - 0.5;
+        const oi = (y * W + x) * 4;
+        if (sxAbs < 0 || sxAbs >= W || syAbs < 0 || syAbs >= H) continue;
+        bilinear(d, W, H, sxAbs, syAbs, d, oi);
+      }
+    }
+    try { ctx.putImageData(id, 0, 0); } catch (e) { /* 跳过 */ }
+  }
+  // ===== deform UI 同步 & 交互 =====
+  function updateDeformUI() {
+    const list = state.deform || [];
+    const counts = { eye: 0, teeth: 0, cheek: 0, lip: 0, nose: 0 };
+    list.forEach((d) => { if (counts[d.kind] != null) counts[d.kind] += 1; });
+    // 已启用变形数量 badge
+    const badge = els.deformCount;
+    if (badge) {
+      const total = list.filter((d) => (d.strength || 0) > 0).length;
+      badge.textContent = total ? `(${total})` : '';
+    }
+    // 类型开关 active 状态
+    ['eye', 'teeth', 'cheek', 'lip', 'nose'].forEach((k) => {
+      const b = document.getElementById('deform_' + k);
+      if (b) b.classList.toggle('active', counts[k] > 0);
+    });
+    // 锚点模式高亮
+    if (els.deformModeBtn) els.deformModeBtn.classList.toggle('active', !!state.deformMode);
+  }
+  // 添加一个新变形（默认定位到脸中心偏上 20%）
+  function addDeform(kind) {
+    // 找同 kind 的一个（允许同 kind 多个？目前只允许每种一个，用 id=kind）
+    const list = state.deform || [];
+    const idx = list.findIndex((d) => d.kind === kind);
+    let d;
+    if (idx >= 0) {
+      d = list[idx]; d.strength = (d.strength || 0) + 5;
+      if (d.strength > 100) d.strength = 100;
+    } else {
+      // 给合理初始位置
+      let cx = 0.5, cy = 0.45;
+      if (kind === 'eye') { cx = 0.38; cy = 0.40; }
+      if (kind === 'teeth') { cx = 0.50; cy = 0.62; }
+      if (kind === 'cheek') { cx = 0.35; cy = 0.55; }
+      if (kind === 'lip') { cx = 0.50; cy = 0.66; }
+      if (kind === 'nose') { cx = 0.50; cy = 0.52; }
+      const def0 = deformMakeKind(kind, 0);
+      d = { kind, cx, cy, strength: 25, rx: def0.rx, ry: def0.ry };
+      list.push(d);
+    }
+    state.deform = list;
+    state.deformMode = { kind };  // 进入该 kind 的锚点模式
+    pushUndo();
+    updateDeformUI();
+    renderEditPreview();
+  }
+  // 清除所有变形
+  function clearAllDeform() {
+    if (!state.deform || !state.deform.length) { toast('没有可清除的变形'); return; }
+    state.deform = [];
+    state.deformMode = null;
+    pushUndo();
+    updateDeformUI();
+    renderEditPreview();
+    toast('已清除所有美型变形');
+  }
+  // 重置某一类变形
+  function resetDeformKind(kind) {
+    const list = (state.deform || []).filter((d) => d.kind !== kind);
+    state.deform = list;
+    if (state.deformMode && state.deformMode.kind === kind) state.deformMode = null;
+    pushUndo();
+    updateDeformUI();
+    renderEditPreview();
+  }
+  // 程序化设置 deform 锚点（测试/拖拽共用）
+  function setDeformAnchor(kind, x, y) {
+    const list = state.deform || [];
+    let d = list.find((dd) => dd.kind === kind);
+    if (!d) {
+      const def0 = deformMakeKind(kind, 0);
+      d = { kind, cx: 0.5, cy: 0.5, strength: 25, rx: def0.rx, ry: def0.ry };
+      list.push(d); state.deform = list;
+    }
+    d.cx = clamp(x, 0, 1); d.cy = clamp(y, 0, 1);
+    if (d.strength > 0) state.deformMode = { kind };
+    renderEditPreview();
+  }
+  function drawDeformMarkers(ctx, W, H) {
+    if (!state.deformMode) return;
+    const list = state.deform || [];
+    const active = list.find((d) => d.kind === state.deformMode.kind);
+    if (!active) return;
+    const px = Math.round(active.cx * W), py = Math.round(active.cy * H);
+    const R = Math.round(active.rx * W);
+    const col = { eye: 'rgba(120,200,255,0.95)', teeth: 'rgba(255,230,120,0.95)', cheek: 'rgba(255,150,200,0.95)', lip: 'rgba(255,120,160,0.95)', nose: 'rgba(180,160,140,0.95)' }[active.kind] || 'rgba(200,200,120,0.95)';
+    ctx.save();
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(px, py, Math.max(8, R), 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(px - 14, py); ctx.lineTo(px + 14, py);
     ctx.moveTo(px, py - 14); ctx.lineTo(px, py + 14); ctx.stroke();
@@ -2307,8 +2530,8 @@
     const matted = state.matting.mask ? { m: state.matting.mask, W: state.matting.mW, H: state.matting.mH } : null;
     if (matted) drawChecker(ctx, canvas.width, canvas.height);
     try { ctx.drawImage(full, 0, 0, canvas.width, canvas.height); } catch (e) { return; }
-    // 瘦身 / 瘦脸（几何形变）：预览分辨率就地应用，与导出同算法（形变先于像素质点）
-    try { applySlimInPlace(ctx, canvas.width, canvas.height, state.slim); } catch (e) { /* 无像素环境跳过 */ }
+    // 瘦身/瘦脸 + 美型变形：合并位移场就地应用
+    try { applyDeformInPlace(ctx, canvas.width, canvas.height, state.deform, state.slim); } catch (e) { /* 无像素环境跳过 */ }
     // 高级像素质点（高光/暗部/褪色/色调分离/颗粒/暗角）：预览分辨率同步应用，与导出算法一致
     try { applyTone(ctx, canvas.width, canvas.height, state.filters); } catch (e) { /* 无像素环境跳过 */ }
     // 美工叠加：马赛克（预览用缩放画布像素化，烘焙在导出用全尺寸重算）与文字层
@@ -2318,6 +2541,7 @@
     drawCropOverlay(ctx, canvas.width, canvas.height);
     drawMatStrokes(ctx, canvas.width, canvas.height);
     try { drawSlimMarker(ctx, canvas.width, canvas.height); } catch (e) { /* 无像素环境跳过 */ }
+    try { drawDeformMarkers(ctx, canvas.width, canvas.height); } catch (e) { /* 无像素环境跳过 */ }
   }
   // 棋盘格透明底（抠图预览用）
   function drawChecker(ctx, W, H) {
@@ -3963,6 +4187,49 @@
     if (els.slimStrength) els.slimStrength.addEventListener('input', () => { state.slim.strength = +els.slimStrength.value; state.slim.enabled = state.slim.strength > 0; if (els.slimStrengthVal) els.slimStrengthVal.textContent = state.slim.strength; renderEditPreview(); });
     if (els.slimRange) els.slimRange.addEventListener('input', () => { const r = +els.slimRange.value; state.slim.rx = r / 100; state.slim.ry = r / 100; if (els.slimRangeVal) els.slimRangeVal.textContent = r; renderEditPreview(); });
     if (els.slimReset) els.slimReset.addEventListener('click', () => { state.slim = { enabled: false, mode: state.slim.mode || 'face', strength: 0, cx: 0.5, cy: 0.5, rx: 0.22, ry: 0.22 }; state.slimMode = false; pushUndo(); updateSlimUI(); renderEditPreview(); });
+    // ===== deform 事件绑定 =====
+    const deformKinds = { deform_eye: 'eye', deform_teeth: 'teeth', deform_cheek: 'cheek', deform_lip: 'lip', deform_nose: 'nose' };
+    Object.entries(deformKinds).forEach(([id, kind]) => {
+      const b = document.getElementById(id);
+      if (b) {
+        b.addEventListener('click', () => {
+          // 已存在则移除（toggle），不存在则添加
+          const list = state.deform || [];
+          const idx = list.findIndex((d) => d.kind === kind);
+          if (idx >= 0) {
+            list.splice(idx, 1); state.deform = list;
+            state.deformMode = null;
+          } else {
+            addDeform(kind); return;
+          }
+          pushUndo(); updateDeformUI(); renderEditPreview();
+        });
+        b.addEventListener('contextmenu', (e) => { e.preventDefault(); resetDeformKind(kind); });
+      }
+    });
+    if (els.deformClearAll) els.deformClearAll.addEventListener('click', clearAllDeform);
+    if (els.deformModeBtn) els.deformModeBtn.addEventListener('click', () => {
+      // 进入锚点模式：如果有当前 kind，切换；否则提示
+      const list = state.deform || [];
+      if (!list.length) { toast('先点上面的按钮添加美型项目'); return; }
+      if (state.deformMode) { state.deformMode = null; }
+      else { state.deformMode = { kind: list[0].kind }; }
+      updateDeformUI(); renderEditPreview();
+    });
+    if (els.deformKindSel) els.deformKindSel.addEventListener('change', () => {
+      const kind = els.deformKindSel.value;
+      state.deformMode = kind ? { kind } : null;
+      updateDeformUI(); renderEditPreview();
+    });
+    if (els.deformStrength) els.deformStrength.addEventListener('input', () => {
+      if (!state.deformMode) return;
+      const list = state.deform || [];
+      const d = list.find((dd) => dd.kind === state.deformMode.kind);
+      if (!d) return;
+      d.strength = +els.deformStrength.value;
+      if (els.deformStrengthVal) els.deformStrengthVal.textContent = d.strength;
+      renderEditPreview();
+    });
     els.navPrev.addEventListener('click', prev);
     els.navNext.addEventListener('click', next);
     // 跳转指定序号 + 缩略图搜索

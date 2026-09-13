@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   /* 青绿炭墨配色规范（2026-09-04）
      主色 #2C9678 青矾绿 · 辅色 #373834 葱油绿 · 浅色 #F5F4F7 灰白 · 深色 #1C1C1C 炭黑 */
   --bg: #F5F4F7;
@@ -275,6 +275,12 @@ body {
 .edit-section:last-child { border-bottom: none; }
 .edit-section h4 { margin: 0 0 12px; font-size: 13px; color: var(--ink); }
 .edit-actions { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
+
+.deform-count { font-size: 12px; color: var(--accent); font-weight: 600; }
+.deform-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 0; }
+.deform-btn { padding: 8px 6px; font-size: 12px; text-align: center; line-height: 1.2; }
+.deform-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.deform-ctrl { margin-top: 10px; padding: 10px; border-radius: 6px; background: var(--bg2); border: 1px solid var(--rule); }
 .style-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .style-grid .style-cell { padding: 8px 4px; font-size: 12px; }
 .edit-actions input[type="text"] { flex: 1; min-width: 120px; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); color: var(--ink); }
