@@ -161,6 +161,7 @@
         <button class="batch-tab" data-tab="tone">添加滤镜</button>
         <button class="batch-tab" data-tab="compress">压缩</button>
         <button class="batch-tab" data-tab="watermark">加水印</button>
+        <button class="batch-tab" data-tab="gif">🎬 制作 GIF</button>
       </div>
       <div class="batch-body" id="batchBody">
 
@@ -368,6 +369,57 @@
               <option value="image/webp">WebP</option>
             </select>
           </label>
+        </section>
+
+        <!-- GIF 制作 -->
+        <section class="batch-pane" data-pane="gif" hidden>
+          <div class="bt-preview">
+            <span class="bt-preview-label" id="gifStatus">待生成 — 选中的图片按顺序组成帧</span>
+            <canvas id="gifPreview" width="200" height="200"></canvas>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>FPS (帧率)</span>
+              <input type="number" id="gifFps" min="1" max="30" value="10"></label>
+            <label class="field"><span>循环次数</span>
+              <select id="gifLoop">
+                <option value="0" selected>无限循环</option>
+                <option value="1">1 次</option>
+                <option value="2">2 次</option>
+                <option value="3">3 次</option>
+                <option value="5">5 次</option>
+              </select>
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>输出宽度</span>
+              <select id="gifWidth">
+                <option value="0">原始尺寸（可能很大）</option>
+                <option value="1280">1280px（大屏）</option>
+                <option value="720" selected>720px（推荐）</option>
+                <option value="480">480px（微信表情）</option>
+                <option value="320">320px（小表情）</option>
+              </select>
+            </label>
+            <label class="field"><span>画质</span>
+              <select id="gifQuality">
+                <option value="10">最佳（慢）</option>
+                <option value="15" selected>高（推荐）</option>
+                <option value="20">中（快）</option>
+                <option value="30">低（极快）</option>
+              </select>
+            </label>
+          </div>
+          <label class="field inline">
+            <input type="checkbox" id="gifQuantize" checked> 色彩量化（256 色，文件更小）
+          </label>
+          <div class="batch-gif-btns" style="margin-top:6px;display:flex;gap:8px">
+            <button class="btn primary" id="gifEncode">🎬 开始编码</button>
+            <button class="btn" id="gifCancel" hidden>⏹ 取消编码</button>
+          </div>
+          <p class="hint" style="margin-top:6px">
+            提示：GIF 单帧最多 256 色。建议选 480px 宽度，10 帧以上通常 1-3MB（微信可发）。<br>
+            选中的图片按缩略图顺序排列 → 每张图 = 一帧。
+          </p>
         </section>
 
       </div>
@@ -903,6 +955,7 @@
   <!-- toast -->
   <div class="toast" id="toast" hidden></div>
 
+  <script src="assets/gif.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

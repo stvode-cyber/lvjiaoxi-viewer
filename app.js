@@ -465,7 +465,7 @@
       'flHighlight', 'flHighlightVal', 'flShadow', 'flShadowVal', 'flFade', 'flFadeVal', 'flGrain', 'flGrainVal', 'flVignette', 'flVignetteVal', 'flTintH', 'flTintS', 'flTintAmt', 'flTintAmtVal',
       'btnAutoEnhance', 'cvDenoise', 'cvBilateral', 'cvSharp', 'opsReset', 'aiScale', 'aiRun',
       'styleGrid', 'beautyVal', 'beautyValVal', 'beautySmooth', 'beautyWhite',
-      'borderMode', 'borderRadius', 'emojiBar', 'emojiSize', 'emojiSizeVal', 'emojiClear', 'stickerUploadBtn', 'stickerUpload', 'posterTitle', 'posterSubtitle', 'posterLayout', 'posterGenerate', 'idPhotoSize', 'idPhotoCanvas', 'idPhotoPad', 'idPhotoBg', 'idPhotoGen', 'idPhotoExport', 'idPhotoReset', 'idPhotoInfo', 'logoWmUploadBtn', 'logoWmUpload', 'logoWmStatus', 'logoWmSize', 'logoWmSizeVal', 'logoWmOpacity', 'logoWmOpacityVal', 'logoWmPos', 'logoWmClear',
+      'borderMode', 'borderRadius', 'emojiBar', 'emojiSize', 'emojiSizeVal', 'emojiClear', 'stickerUploadBtn', 'stickerUpload', 'posterTitle', 'posterSubtitle', 'posterLayout', 'posterGenerate', 'idPhotoSize', 'idPhotoCanvas', 'idPhotoPad', 'idPhotoBg', 'idPhotoGen', 'idPhotoExport', 'idPhotoReset', 'idPhotoInfo', 'logoWmUploadBtn', 'logoWmUpload', 'logoWmStatus', 'logoWmSize', 'logoWmSizeVal', 'logoWmOpacity', 'logoWmOpacityVal', 'logoWmPos', 'logoWmClear', 'gifFps', 'gifLoop', 'gifWidth', 'gifQuality', 'gifQuantize', 'gifEncode', 'gifCancel', 'gifStatus', 'gifPreview',
       'txtInput', 'txtAdd', 'txtFont', 'txtColor', 'txtSize', 'txtSizeVal', 'txtStroke', 'txtStrokeVal', 'txtPos', 'txtDel',
       'mosaicBtn', 'mosaicSize', 'mosaicSizeVal', 'mosaicClear', 'eraserBtn', 'eraserSize', 'eraserSizeVal', 'eraserClear',
       'matFg', 'matBg', 'matRun', 'matClear', 'matExport', 'matSize', 'matSizeVal', 'matStatus',
@@ -5350,6 +5350,138 @@
         if (els.logoWmStatus) els.logoWmStatus.textContent = '未上传';
         renderEditPreview();
         toast('已移除 Logo 水印');
+      });
+    }
+
+    // ===== 制作 GIF（batch tab 🎬）=====
+    let currentGif = null; // 当前正在编码的 GIF 实例（用于 abort）
+    if (els.gifEncode) {
+      els.gifEncode.addEventListener('click', async () => {
+        if (typeof GIF === 'undefined') { toast('gif.js 未加载，请检查 assets/gif.js'); return; }
+        const items = state.items;
+        if (!items || items.length === 0) { toast('请先打开图片文件夹'); return; }
+
+        // 参数读取
+        const fps = Math.max(1, Math.min(30, +(els.gifFps?.value || 10)));
+        const loop = +(els.gifLoop?.value || 0);
+        const width = +(els.gifWidth?.value || 0);
+        const quality = Math.max(1, Math.min(40, +(els.gifQuality?.value || 15)));
+        const quantize = els.gifQuantize?.checked !== false;
+
+        if (items.length > 200) { toast('⚠️ 超过 200 张建议分批，避免内存溢出'); }
+
+        // 先预加载所有帧（缩放到目标宽度）
+        if (els.gifStatus) els.gifStatus.textContent = '⏳ 预加载帧 0 / ' + items.length + ' ...';
+        const frames = [];
+        let lastSrcW = 0, lastSrcH = 0;
+        try {
+          for (let i = 0; i < items.length; i++) {
+            if (els.gifStatus) els.gifStatus.textContent = '⏳ 加载帧 ' + (i + 1) + ' / ' + items.length;
+            const item = items[i];
+            const resolved = await resolveItemSrc(item);
+            const url = resolved.url || resolved.displayUrl;
+            if (!url) continue;
+
+            const img = new Image();
+            await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+
+            // 计算目标尺寸（保持长宽比）
+            const srcW = img.naturalWidth, srcH = img.naturalHeight;
+            let tw = width || srcW;
+            let th = Math.round(srcH * tw / srcW);
+            // 限高防止超大
+            if (th > 1500) { th = 1500; tw = Math.round(srcW * th / srcH); }
+
+            const cv = document.createElement('canvas');
+            cv.width = tw; cv.height = th;
+            cv.getContext('2d').drawImage(img, 0, 0, tw, th);
+            frames.push(cv);
+            lastSrcW = tw; lastSrcH = th;
+          }
+        } catch (e) {
+          toast('❌ 帧加载失败：' + e.message);
+          return;
+        }
+
+        if (frames.length < 2) { toast('至少需要 2 张图片做帧'); return; }
+
+        // 预览第一帧
+        if (els.gifPreview) {
+          els.gifPreview.width = 200; els.gifPreview.height = 200;
+          const pctx = els.gifPreview.getContext('2d');
+          pctx.clearRect(0, 0, 200, 200);
+          const first = frames[0];
+          const scale = Math.min(200 / first.width, 200 / first.height);
+          const dw = first.width * scale, dh = first.height * scale;
+          pctx.drawImage(first, (200 - dw) / 2, (200 - dh) / 2, dw, dh);
+        }
+
+        // 创建 GIF 编码器
+        if (els.gifEncode) els.gifEncode.hidden = true;
+        if (els.gifCancel) els.gifCancel.hidden = false;
+
+        const gif = new GIF({
+          workers: 2,
+          quality: quality,
+          workerScript: 'assets/gif.worker.js',
+          width: frames[0].width,
+          height: frames[0].height,
+          repeat: loop, // 0 = 无限循环
+          background: '#FFFFFF',
+        });
+        currentGif = gif;
+
+        const delay = Math.round(1000 / fps);
+        for (const f of frames) {
+          gif.addFrame(f, { delay, copy: !quantize });
+        }
+
+        gif.on('progress', (p) => {
+          const pct = Math.round(p * 100);
+          if (els.gifStatus) els.gifStatus.textContent = '🎬 编码中 ' + pct + '% (worker LZW 压缩)';
+        });
+
+        gif.on('finished', (blob) => {
+          currentGif = null;
+          if (els.gifEncode) els.gifEncode.hidden = false;
+          if (els.gifCancel) els.gifCancel.hidden = true;
+
+          const kb = Math.round(blob.size / 1024);
+          const fname = 'GIF_' + fps + 'fps_' + frames.length + 'frames_' + Date.now() + '.gif';
+
+          if (els.gifStatus) els.gifStatus.textContent = '✅ 完成！' + kb + ' KB — ' + frames.length + ' 帧 × ' + fps + 'fps';
+
+          // 直接下载（经验 1909947：直接产物，不走预览）
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = fname;
+          document.body.appendChild(a); a.click();
+          setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+
+          toast('✅ GIF 已保存 ' + fname + ' (' + kb + ' KB)');
+        });
+
+        gif.on('abort', () => {
+          currentGif = null;
+          if (els.gifEncode) els.gifEncode.hidden = false;
+          if (els.gifCancel) els.gifCancel.hidden = true;
+          if (els.gifStatus) els.gifStatus.textContent = '⏹ 已取消';
+          toast('已取消 GIF 编码');
+        });
+
+        gif.on('error', (err) => {
+          currentGif = null;
+          if (els.gifEncode) els.gifEncode.hidden = false;
+          if (els.gifCancel) els.gifCancel.hidden = true;
+          toast('❌ GIF 编码失败：' + err.message);
+        });
+
+        gif.render();
+      });
+    }
+    if (els.gifCancel) {
+      els.gifCancel.addEventListener('click', () => {
+        if (currentGif) currentGif.abort();
       });
     }
 
