@@ -628,6 +628,34 @@
         <p class="hint" id="idPhotoInfo" style="margin-top:6px;font-size:11px;color:#868e96"></p>
       </div>
 
+      <!-- Logo 水印（单张编辑器扩展） -->
+      <div class="edit-section">
+        <h4>🏷 Logo 水印（单张）</h4>
+        <p class="hint">上传 PNG Logo 印到图上（透明 PNG 天然保留透明区域）。和批量 tab 独立，单张实时预览。</p>
+        <div class="edit-actions" style="gap:8px;flex-wrap:wrap">
+          <button class="btn" id="logoWmUploadBtn">📁 上传 Logo PNG</button>
+          <input type="file" id="logoWmUpload" accept="image/png,image/svg+xml,image/webp" hidden>
+          <span id="logoWmStatus" style="font-size:11px;color:#868e96">未上传</span>
+        </div>
+        <div class="edit-actions" style="gap:6px;margin-top:6px;flex-wrap:wrap">
+          <label class="field" style="margin:0"><span>大小 <b id="logoWmSizeVal">8</b>%</span>
+            <input type="range" id="logoWmSize" min="2" max="30" step="0.5" value="8"></label>
+          <label class="field" style="margin:0"><span>透明度 <b id="logoWmOpacityVal">80</b>%</span>
+            <input type="range" id="logoWmOpacity" min="10" max="100" value="80"></label>
+          <label class="field" style="margin:0"><span>位置</span>
+            <select id="logoWmPos">
+              <option value="br" selected>右下角</option>
+              <option value="bl">左下角</option>
+              <option value="tr">右上角</option>
+              <option value="tl">左上角</option>
+              <option value="mc">居中</option>
+              <option value="tile">平铺整图</option>
+            </select>
+          </label>
+          <button class="btn" id="logoWmClear">✕ 移除 Logo</button>
+        </div>
+      </div>
+
       <div class="edit-section">
         <h4>文字 / 水印</h4>
         <div class="edit-actions">

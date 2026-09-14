@@ -382,6 +382,7 @@
     cropDrag: null,         // 当前裁剪拖拽 {mode,handle,start,origin}
     matting: { mode: 'none', strokes: { fg: [], bg: [] }, mask: null, mW: 0, mH: 0 },  // 一键抠图：笔刷模式 + 前景/背景笔触 + 分割掩码
     slide: { active: false, paused: false, timer: null, order: 'forward', interval: 5000, raf: null, last: 0, elapsed: 0, played: [] },
+    logoWm: null, // 单张 Logo 水印：{ img: Image, src: dataUrl, size, opacity, pos }
   };
 
   // ============ DOM 引用 ============
@@ -410,7 +411,7 @@
       'flHighlight', 'flHighlightVal', 'flShadow', 'flShadowVal', 'flFade', 'flFadeVal', 'flGrain', 'flGrainVal', 'flVignette', 'flVignetteVal', 'flTintH', 'flTintS', 'flTintAmt', 'flTintAmtVal',
       'btnAutoEnhance', 'cvDenoise', 'cvBilateral', 'cvSharp', 'opsReset', 'aiScale', 'aiRun',
       'styleGrid', 'beautyVal', 'beautyValVal', 'beautySmooth', 'beautyWhite',
-      'borderMode', 'borderRadius', 'emojiBar', 'emojiSize', 'emojiSizeVal', 'emojiClear', 'stickerUploadBtn', 'stickerUpload', 'posterTitle', 'posterSubtitle', 'posterLayout', 'posterGenerate', 'idPhotoSize', 'idPhotoCanvas', 'idPhotoPad', 'idPhotoBg', 'idPhotoGen', 'idPhotoExport', 'idPhotoReset', 'idPhotoInfo',
+      'borderMode', 'borderRadius', 'emojiBar', 'emojiSize', 'emojiSizeVal', 'emojiClear', 'stickerUploadBtn', 'stickerUpload', 'posterTitle', 'posterSubtitle', 'posterLayout', 'posterGenerate', 'idPhotoSize', 'idPhotoCanvas', 'idPhotoPad', 'idPhotoBg', 'idPhotoGen', 'idPhotoExport', 'idPhotoReset', 'idPhotoInfo', 'logoWmUploadBtn', 'logoWmUpload', 'logoWmStatus', 'logoWmSize', 'logoWmSizeVal', 'logoWmOpacity', 'logoWmOpacityVal', 'logoWmPos', 'logoWmClear',
       'txtInput', 'txtAdd', 'txtFont', 'txtColor', 'txtSize', 'txtSizeVal', 'txtStroke', 'txtStrokeVal', 'txtPos', 'txtDel',
       'mosaicBtn', 'mosaicSize', 'mosaicSizeVal', 'mosaicClear', 'eraserBtn', 'eraserSize', 'eraserSizeVal', 'eraserClear',
       'matFg', 'matBg', 'matRun', 'matClear', 'matExport', 'matSize', 'matSizeVal', 'matStatus',
@@ -1693,6 +1694,18 @@
     ctx.filter = filterCss();   // 烘焙滤镜
     ctx.drawImage(img, -w0 / 2, -h0 / 2, w0, h0);
     ctx.restore();
+
+    // Logo 水印（单张编辑器上传的 PNG/Logo）
+    // 放在 bakeFullCanvas 而非 exportCanvasOfCurrent，确保编辑预览/证件照排版/导出全路径都应用
+    if (state.logoWm && state.logoWm.img) {
+      drawWatermarkOnCanvas(ctx, w, h, {
+        image: state.logoWm.img,
+        size: state.logoWm.size,
+        opacity: state.logoWm.opacity,
+        pos: state.logoWm.pos,
+      });
+    }
+
     return canvas;
   }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -4013,10 +4026,62 @@
     if (els.wmOpacityVal) els.wmOpacityVal.textContent = els.wmOpacity.value;
     if (els.wmMarginVal) els.wmMarginVal.textContent = els.wmMargin.value;
   }
-  // 纯函数：在 canvas ctx 上画文字水印，返回同 ctx（可链式调用）
-  // 参考：drawTexts(ctx, W, H)（state.texts 版），这里是批量独立参数版
+  // 纯函数：在 canvas ctx 上画水印（支持文字 + Logo 图片两种模式）
+  // 文字模式：opts.text + opts.size/opacity/color/pos/margin
+  // 图片模式：opts.image(Image|Canvas) + opts.size/opacity/pos/margin + opts.imageSrc(dataUrl)
   function drawWatermarkOnCanvas(ctx, W, H, opts) {
     const text = opts.text || '';
+    const img = opts.image;
+
+    // ===== 图片水印（Logo PNG 叠加）=====
+    if (img && (img.naturalWidth || img.width)) {
+      const sizePct = opts.size !== undefined ? opts.size : 8;       // 短边百分比（Logo 默认比文字大）
+      const opacity = opts.opacity !== undefined ? opts.opacity / 100 : 0.8; // Logo 默认更清晰
+      const pos = opts.pos || 'br';
+      const marginPct = opts.margin !== undefined ? opts.margin / 100 : 0.03;
+      const minEdge = Math.min(W, H);
+      const margin = Math.max(4, marginPct * minEdge);
+
+      // 目标高度（和文字水印用同样 size 百分比口径）
+      const targetH = Math.max(8, sizePct / 100 * minEdge);
+      const ratio = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
+      const targetW = targetH * ratio;
+
+      ctx.save();
+      ctx.globalAlpha = opacity;
+
+      let dx, dy;
+      if (pos === 'tl') { dx = margin; dy = margin; }
+      else if (pos === 'tc') { dx = (W - targetW) / 2; dy = margin; }
+      else if (pos === 'tr') { dx = W - margin - targetW; dy = margin; }
+      else if (pos === 'ml') { dx = margin; dy = (H - targetH) / 2; }
+      else if (pos === 'mc') { dx = (W - targetW) / 2; dy = (H - targetH) / 2; }
+      else if (pos === 'mr') { dx = W - margin - targetW; dy = (H - targetH) / 2; }
+      else if (pos === 'bl') { dx = margin; dy = H - margin - targetH; }
+      else if (pos === 'bc') { dx = (W - targetW) / 2; dy = H - margin - targetH; }
+      else if (pos === 'br') { dx = W - margin - targetW; dy = H - margin - targetH; }
+      else if (pos === 'tile') {
+        // 平铺 Logo：每 3 个位置一格，适当缩小
+        const tileH = targetH * 0.7;
+        const tileW = targetW * 0.7;
+        const gapX = tileW * 2.5, gapY = tileH * 2.5;
+        ctx.globalAlpha = opacity * 0.4;
+        for (let gy = gapY / 2; gy < H; gy += gapY) {
+          for (let gx = gapX / 2; gx < W; gx += gapX) {
+            ctx.drawImage(img, gx - tileW / 2, gy - tileH / 2, tileW, tileH);
+          }
+        }
+        ctx.restore();
+        return ctx;
+      }
+
+      // 单点 Logo 叠加（保持长宽比，透明 PNG 天然保留透明区域）
+      ctx.drawImage(img, dx, dy, targetW, targetH);
+      ctx.restore();
+      return ctx;
+    }
+
+    // ===== 文字水印（原有逻辑不变）=====
     if (!text) return ctx;
     const sizePct = opts.size !== undefined ? opts.size : 5;      // 短边百分比
     const opacity = opts.opacity !== undefined ? opts.opacity / 100 : 0.6;
@@ -5174,6 +5239,66 @@
         }
       }));
     }
+
+    // ===== Logo 水印事件绑定 =====
+    if (els.logoWmUploadBtn && els.logoWmUpload) {
+      els.logoWmUploadBtn.addEventListener('click', () => els.logoWmUpload.click());
+      els.logoWmUpload.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) { e.target.value = ''; return; }
+        if (!/^image\//.test(file.type)) { toast('请选 PNG/SVG/WebP 图片'); e.target.value = ''; return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target.result;
+          const img = new Image();
+          img.onload = () => {
+            state.logoWm = {
+              img: img,
+              src: dataUrl,
+              size: +(els.logoWmSize?.value || 8),
+              opacity: +(els.logoWmOpacity?.value || 80),
+              pos: els.logoWmPos?.value || 'br',
+            };
+            if (els.logoWmStatus) els.logoWmStatus.textContent = '✅ ' + file.name + ' (' + img.naturalWidth + '×' + img.naturalHeight + ')';
+            renderEditPreview();
+            toast('🏷 Logo 水印已加载 — 可调整大小/透明度/位置');
+          };
+          img.onerror = () => toast('Logo 解码失败');
+          img.src = dataUrl;
+        };
+        reader.onerror = () => toast('读取文件失败');
+        reader.readAsDataURL(file);
+        e.target.value = '';
+      });
+    }
+    // Logo 水印参数变化 → 实时预览
+    ['logoWmSize', 'logoWmOpacity', 'logoWmPos'].forEach(id => {
+      const el = els[id];
+      if (!el) return;
+      const evt = (id === 'logoWmPos') ? 'change' : 'input';
+      el.addEventListener(evt, () => {
+        if (!state.logoWm) return; // 没上传就不更新
+        state.logoWm.size = +(els.logoWmSize?.value || 8);
+        state.logoWm.opacity = +(els.logoWmOpacity?.value || 80);
+        state.logoWm.pos = els.logoWmPos?.value || 'br';
+        renderEditPreview();
+      });
+    });
+    if (els.logoWmSize && els.logoWmSizeVal) {
+      els.logoWmSize.addEventListener('input', () => { els.logoWmSizeVal.textContent = els.logoWmSize.value; });
+    }
+    if (els.logoWmOpacity && els.logoWmOpacityVal) {
+      els.logoWmOpacity.addEventListener('input', () => { els.logoWmOpacityVal.textContent = els.logoWmOpacity.value; });
+    }
+    if (els.logoWmClear) {
+      els.logoWmClear.addEventListener('click', () => {
+        state.logoWm = null;
+        if (els.logoWmStatus) els.logoWmStatus.textContent = '未上传';
+        renderEditPreview();
+        toast('已移除 Logo 水印');
+      });
+    }
+
     // 新手快速入口：一键出海报 / 一键加边框
     if (els.quickPosterBtn) els.quickPosterBtn.addEventListener('click', () => {
       // 自动填默认示例 + 用 price 布局（最有视觉冲击力）
