@@ -16,12 +16,18 @@ trigger: 要实现海报制作、边框效果、emoji 贴纸、标题一键生�
 ### 100% 复用现有 state.texts
 
 ```
-emoji 贴纸 → { type: 'emoji', ...state.texts 字段 }  → drawTexts 渲染（emoji 当文字 fillText）
+emoji 贴纸  → { type: 'emoji', ...state.texts 字段 }  → drawTexts fillText 渲染（emoji 当文字）
+🆕 image 贴纸 → { type: 'image', img: Image, src: dataUrl, ... } → drawTexts drawImage 渲染（保持长宽比）
 poster 标题 → { type: 'poster', ...state.texts 字段 } → drawTexts 渲染（和普通文字一样）
-普通文字   → { type: undefined, ...state.texts 字段 } → drawTexts 渲染
+普通文字    → { type: undefined, ...state.texts 字段 } → drawTexts 渲染
 ```
 
-**零新增 state 数组 / 零新增渲染函数** — drawTexts 原生支持 emoji（Canvas 2D fillText 自动识别 Unicode emoji 并用系统 emoji 字体渲染）。
+**零新增 state 数组 / 零新增渲染函数** — drawTexts 统一入口，type 分支处理不同渲染。
+
+**图片贴纸特殊点**：
+- `img: Image` 对象不能 JSON 序列化（undo/redo 会丢）→ drawTexts 内懒恢复：检测 `!t.img` 时从 `t.src`（data URL）重新 `new Image()` 并 onload 后自动 `renderEditPreview()`
+- `src: dataUrl` 字段持久化保存，确保跨 undo/redo / 导出后可恢复
+- 尺寸和 emoji 共用 `size` 百分比高度，保持视觉一致
 
 ## 边框预设配置化
 
