@@ -558,14 +558,16 @@
         </div>
       </div>
       <div class="edit-section">
-        <h4>Emoji 贴纸</h4>
-        <p class="hint">点击 emoji 快速贴到图上（出现在中央，可拖拽移动）。</p>
+        <h4>贴纸</h4>
+        <p class="hint">emoji 快速贴 + 上传 PNG Logo/图片贴纸（都可拖拽移动）。</p>
         <div class="edit-actions emoji-bar" id="emojiBar" style="flex-wrap:wrap;gap:6px">
-          <!-- JS 动态填充 -->
+          <!-- JS 动态填充 emoji -->
         </div>
         <div class="edit-actions">
           <label class="field" style="margin:0"><span>贴纸大小 <b id="emojiSizeVal">8</b>%</span>
             <input type="range" id="emojiSize" min="3" max="20" value="8"></label>
+          <button class="btn" id="stickerUploadBtn">🖼 上传贴纸/Logo</button>
+          <input type="file" id="stickerUpload" accept="image/png,image/jpeg,image/svg+xml,image/webp" hidden>
           <button class="btn" id="emojiClear">清空贴纸</button>
         </div>
       </div>

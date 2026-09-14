@@ -410,7 +410,7 @@
       'flHighlight', 'flHighlightVal', 'flShadow', 'flShadowVal', 'flFade', 'flFadeVal', 'flGrain', 'flGrainVal', 'flVignette', 'flVignetteVal', 'flTintH', 'flTintS', 'flTintAmt', 'flTintAmtVal',
       'btnAutoEnhance', 'cvDenoise', 'cvBilateral', 'cvSharp', 'opsReset', 'aiScale', 'aiRun',
       'styleGrid', 'beautyVal', 'beautyValVal', 'beautySmooth', 'beautyWhite',
-      'borderMode', 'borderRadius', 'emojiBar', 'emojiSize', 'emojiSizeVal', 'emojiClear', 'posterTitle', 'posterSubtitle', 'posterLayout', 'posterGenerate',
+      'borderMode', 'borderRadius', 'emojiBar', 'emojiSize', 'emojiSizeVal', 'emojiClear', 'stickerUploadBtn', 'stickerUpload', 'posterTitle', 'posterSubtitle', 'posterLayout', 'posterGenerate',
       'txtInput', 'txtAdd', 'txtFont', 'txtColor', 'txtSize', 'txtSizeVal', 'txtStroke', 'txtStrokeVal', 'txtPos', 'txtDel',
       'mosaicBtn', 'mosaicSize', 'mosaicSizeVal', 'mosaicClear', 'eraserBtn', 'eraserSize', 'eraserSizeVal', 'eraserClear',
       'matFg', 'matBg', 'matRun', 'matClear', 'matExport', 'matSize', 'matSizeVal', 'matStatus',
@@ -2676,9 +2676,31 @@
     state.textSel = t.id;
     renderEditPreview();
   }
+  // 图片贴纸：上传 PNG/SVG/PNG Logo，复用 state.texts 架构
+  function addImageSticker(img, dataUrl, name) {
+    pushUndo();
+    const size = els.emojiSize ? +els.emojiSize.value : 8;
+    const t = {
+      id: 'i' + Date.now() + Math.random().toString(36).slice(2, 6),
+      text: name || '贴纸',
+      x: 0.5, y: 0.5,
+      size,           // 百分比高度（和 emoji 一致）
+      font: 'sans-serif',
+      color: '#1c1c1c',
+      stroke: 0,
+      anchor: 'c',
+      type: 'image',
+      img: img,       // Image 对象（drawImage 用）
+      src: dataUrl,   // data URL（持久化用）
+    };
+    state.texts.push(t);
+    state.textSel = t.id;
+    renderEditPreview();
+    toast('🖼 图片贴纸已添加（可拖拽调整）');
+  }
   function clearStickers() {
     pushUndo();
-    state.texts = state.texts.filter((t) => t.type !== 'emoji');
+    state.texts = state.texts.filter((t) => t.type !== 'emoji' && t.type !== 'image');
     state.textSel = null;
     renderEditPreview();
     toast('已清空贴纸');
@@ -2764,16 +2786,46 @@
     for (const t of state.texts) {
       const fs = Math.max(8, t.size / 100 * Math.min(W, H));
       ctx.save();
-      ctx.font = fs + 'px ' + t.font;
-      ctx.textAlign = t.anchor === 'bl' || t.anchor === 'tl' || t.anchor === 'c' ? 'center' : 'right';
-      ctx.textBaseline = 'alphabetic';
-      if (t.stroke > 0) { ctx.lineWidth = t.stroke; ctx.strokeStyle = 'rgba(28,28,28,.75)'; ctx.strokeText(t.text, t.x * W, t.y * H); }
-      ctx.fillStyle = t.color;
-      ctx.fillText(t.text, t.x * W, t.y * H);
-      if (state.textSel === t.id) {
-        const w = ctx.measureText ? ctx.measureText(t.text).width : t.text.length * fs;
-        ctx.strokeStyle = '#2C9678'; ctx.lineWidth = 1;
-        ctx.strokeRect(t.x * W - (ctx.textAlign === 'center' ? w / 2 : w), t.y * H - fs * 1.1, w, fs * 1.3);
+      if (t.type === 'image') {
+        // 图片贴纸（Logo/PNG）：用 drawImage 替代 fillText
+        // img 可能因为 undo/redo JSON 序列化丢失 → 从 src data URL 懒恢复
+        if (!t.img || !t.img.complete) {
+          if (t.src) {
+            const img = new Image();
+            img.onload = () => { t.img = img; renderEditPreview(); }; // 补回后自动重绘
+            img.src = t.src;
+          }
+          ctx.restore(); continue; // 本轮跳过，下一轮重绘
+        }
+        const imgW = t.img.naturalWidth || 100;
+        const imgH = t.img.naturalHeight || 100;
+        const ratio = imgW / imgH;
+        const targetH = fs;           // 和 emoji 一样的 size 百分比高度
+        const targetW = targetH * ratio;
+        const cx = t.x * W, cy = t.y * H;
+        if (t.anchor === 'c') {
+          ctx.drawImage(t.img, cx - targetW / 2, cy - targetH / 2, targetW, targetH);
+        } else {
+          ctx.drawImage(t.img, cx, cy - targetH, targetW, targetH);
+        }
+        if (state.textSel === t.id) {
+          ctx.strokeStyle = '#2C9678'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+          ctx.strokeRect(cx - targetW / 2, cy - targetH / 2, targetW, targetH);
+          ctx.setLineDash([]);
+        }
+      } else {
+        // 普通文字 / emoji：fillText + strokeText
+        ctx.font = fs + 'px ' + t.font;
+        ctx.textAlign = t.anchor === 'bl' || t.anchor === 'tl' || t.anchor === 'c' ? 'center' : 'right';
+        ctx.textBaseline = 'alphabetic';
+        if (t.stroke > 0) { ctx.lineWidth = t.stroke; ctx.strokeStyle = 'rgba(28,28,28,.75)'; ctx.strokeText(t.text, t.x * W, t.y * H); }
+        ctx.fillStyle = t.color;
+        ctx.fillText(t.text, t.x * W, t.y * H);
+        if (state.textSel === t.id) {
+          const w = ctx.measureText ? ctx.measureText(t.text).width : t.text.length * fs;
+          ctx.strokeStyle = '#2C9678'; ctx.lineWidth = 1;
+          ctx.strokeRect(t.x * W - (ctx.textAlign === 'center' ? w / 2 : w), t.y * H - fs * 1.1, w, fs * 1.3);
+        }
       }
       ctx.restore();
     }
@@ -4881,6 +4933,26 @@
     initEmojiBar();
     if (els.emojiSize) els.emojiSize.addEventListener('input', () => { els.emojiSizeVal.textContent = els.emojiSize.value; });
     if (els.emojiClear) els.emojiClear.addEventListener('click', clearStickers);
+    // 图片贴纸上传
+    if (els.stickerUploadBtn && els.stickerUpload) {
+      els.stickerUploadBtn.addEventListener('click', () => els.stickerUpload.click());
+      els.stickerUpload.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) { e.target.value = ''; return; }
+        if (!/^image\//.test(file.type)) { toast('请选 PNG/JPG/SVG 图片文件'); e.target.value = ''; return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target.result;
+          const img = new Image();
+          img.onload = () => { addImageSticker(img, dataUrl, file.name); };
+          img.onerror = () => toast('图片解码失败');
+          img.src = dataUrl;
+        };
+        reader.onerror = () => toast('读取文件失败');
+        reader.readAsDataURL(file);
+        e.target.value = ''; // 重置，允许重复选同一张
+      });
+    }
     if (els.posterGenerate) els.posterGenerate.addEventListener('click', generatePoster);
     // 新手快速入口：一键出海报 / 一键加边框
     if (els.quickPosterBtn) els.quickPosterBtn.addEventListener('click', () => {
