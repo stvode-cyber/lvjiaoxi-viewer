@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -75,7 +75,13 @@
     <button class="btn sm" id="miRecipe" title="风格配方：一键套用 25 套预设风格">🪄 风格配方</button>
     <button class="btn sm" id="miRecipeRandom" title="随机套用一套风格配方">🎲 随机配方</button>
     <span class="beauty-sep"></span>
-    <button class="btn sm accent" id="miMore" title="更多：风格 / 特效 / 高级 / 导出">🎨 更多工具</button>
+    
+    <span class="beauty-sep"></span>
+    <span class="mini-lbl mini-oneclick">一键海报</span>
+    <button class="btn sm primary" id="quickPosterBtn" title="📣 一键生成示例海报（限时特惠）">📣 海报</button>
+    <button class="btn sm" id="quickPolaroidBtn" title="📷 加拍立得边框（底部留白 18%）">📷 拍立得</button>
+    <button class="btn sm" id="quickVintageBtn" title="🖼️ 加复古边框（米黄背景 + 内阴影）">🖼️ 复古</button>
+<button class="btn sm accent" id="miMore" title="更多：风格 / 特效 / 高级 / 导出">🎨 更多工具</button>
   </div>
 
   <!-- 主工作区：左侧缩略图栏 + 右侧主画布 -->
@@ -582,15 +588,6 @@
       </div><!-- /beauty pane -->
 
       <div class="edit-pane" data-pane="decor">
-      <!-- 新手快速入口：一键出海报 + 一键加边框 -->
-      <div class="edit-section" style="background:linear-gradient(135deg,#fff5f5 0%,#fff0f8 100%);border:1px solid #ffd0e0;border-radius:10px;padding:10px;margin-bottom:8px">
-        <h4 style="margin:0 0 6px 0;color:#d6336c">✨ 快速出海报（新手点我）</h4>
-        <div class="edit-actions" style="flex-wrap:wrap;gap:6px">
-          <button class="btn primary" id="quickPosterBtn">📣 一键生成示例海报</button>
-          <button class="btn" id="quickPolaroidBtn">📷 加拍立得边框</button>
-          <button class="btn" id="quickVintageBtn">🖼️ 加复古边框</button>
-        </div>
-        <p style="margin:6px 0 0 0;font-size:11px;color:#868e96">点了试试效果！不满意可以改文字/布局/边框</p>
       </div>
 
       <div class="edit-section">
