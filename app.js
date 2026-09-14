@@ -328,7 +328,61 @@
     for (const a in keymap) (keymap[a] || []).forEach((c) => { if (c) comboLookup[c] = a; });
   }
   buildComboLookup();
-  let capturingAction = null;
+  let capturingAction = null; // 当前正在录制键位的 action（全局声明，监听函数会引用它）
+
+  // ===== 全局快捷键监听（把键盘事件接到已有的 runAction switch-case）=====
+  document.addEventListener('keydown', (e) => {
+    // 1. 输入控件豁免（用户在 input/textarea 里打字不触发）
+    const tag = (e.target && e.target.tagName || '').toLowerCase();
+    const isEditable = tag === 'input' || tag === 'textarea' || tag === 'select';
+    // 但 Esc / Ctrl+C 这类系统级快捷键仍允许
+    const combo = keyCombo(e);
+    const isSystemKey = combo === 'escape' || combo === 'ctrl+c' || combo === 'meta+c';
+
+    // 2. 录制模式（capturingAction 不为空时监听按键）
+    if (capturingAction) {
+      if (combo === 'escape') { capturingAction = null; toast('录制已取消'); return; }
+      // 冲突检测
+      for (const a in keymap) {
+        if (keymap[a] && keymap[a].includes(combo)) {
+          const label = KEYMAP_SCHEMA.find(s => s.action === a)?.label || a;
+          toast('❌ 键「' + prettyCombo(combo) + '」已被「' + label + '」占用');
+          return;
+        }
+      }
+      // 保存（简化：每个 action 只保留一个主键）
+      keymap[capturingAction] = [combo];
+      saveKeymap(); buildComboLookup();
+      const label = KEYMAP_SCHEMA.find(s => s.action === capturingAction)?.label || capturingAction;
+      toast('✅ 「' + label + '」已改为 ' + prettyCombo(combo));
+      capturingAction = null;
+      return;
+    }
+
+    if (isEditable && !isSystemKey) return;
+
+    // 3. 弹窗优先级：Esc 显式栈（不用 DOM 猜测 — 经验 1598737）
+    if (combo === 'escape') {
+      if (els.settingsMask && !els.settingsMask.hidden) { els.settingsMask.hidden = true; e.preventDefault(); return; }
+      if (els.batchMask && !els.batchMask.hidden) { els.batchMask.hidden = true; e.preventDefault(); return; }
+      if (els.authMask && !els.authMask.hidden) { els.authMask.hidden = true; e.preventDefault(); return; }
+      if (els.cloudMask && !els.cloudMask.hidden) { els.cloudMask.hidden = true; e.preventDefault(); return; }
+      if (els.aboutMask && !els.aboutMask.hidden) { els.aboutMask.hidden = true; e.preventDefault(); return; }
+      if (els.infoPanel && !els.infoPanel.hidden) { els.infoPanel.hidden = true; e.preventDefault(); return; }
+      if (state.slide && state.slide.active) { stopSlideshow(); e.preventDefault(); return; }
+      return;
+    }
+
+    // 4. comboLookup 查找 → runAction
+    const action = comboLookup[combo];
+    if (!action) return;
+    e.preventDefault();
+    e.stopPropagation();
+    // disabled 门禁
+    const needImage = ['prev', 'next', 'home', 'end', 'zoomIn', 'zoomOut', 'rotateL', 'rotateR', 'flipH', 'flipV', 'info', 'slideshow', 'fullscreen', 'copy', 'edit'].includes(action);
+    if (needImage && state.items.length === 0) { toast('请先打开图片'); return; }
+    runAction(action);
+  });
   function runAction(a) {
     switch (a) {
       case 'prev': prev(); break;
