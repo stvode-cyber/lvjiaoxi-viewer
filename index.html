@@ -96,8 +96,9 @@
         <div class="empty-hint" id="emptyHint">
           <div class="empty-icon">🖼️</div>
           <h2>绿角犀看图</h2>
-          <p>拖入图片或文件夹，或点击左上角「图片 / 文件夹」</p>
-          <p class="empty-sub">原生支持 JPG · PNG · GIF · WebP · AVIF · SVG · BMP · ICO · APNG</p>
+          <p>拖入图片 / 文件夹 / <b>漫画包 .zip .cbz</b>，或点击左上角打开</p>
+          <p class="empty-sub">支持 JPG · PNG · GIF · WebP · AVIF · SVG · BMP · ICO · TIFF · TGA · <b>HEIC</b></p>
+          <p class="empty-tip">💡 想做海报？打开图 → 点底部「特效」tab → 滑到最下「海报标题」</p>
           <div class="recent-inline" id="recentInline" hidden></div>
         </div>
         <div class="loading" id="loading" hidden><div class="spinner"></div><span class="loading-text">解码中…</span></div>
@@ -136,7 +137,7 @@
   <!-- 设置弹窗 -->
   <div class="modal-mask" id="settingsMask" hidden>
     <div class="modal settings-modal">
-      <div class="modal-head"><span>设置</span><button class="btn icon sm" id="settingsClose">✕</button></div>
+      <div class="modal-head"><span>设置</span><button class="btn icon sm" id="settingsClose" title="关闭">✕</button></div>
       <div class="settings-body">
         <nav class="settings-nav" id="settingsNav"></nav>
         <div class="settings-form" id="settingsForm"></div>
@@ -151,7 +152,7 @@
       <div class="modal-head">
         <span>批量处理</span>
         <span class="batch-scope" id="batchScope"></span>
-        <button class="btn icon sm" id="batchClose">✕</button>
+        <button class="btn icon sm" id="batchClose" title="关闭">✕</button>
       </div>
       <div class="batch-tabs" id="batchTabs">
         <button class="batch-tab active" data-tab="convert">格式转换</button>
@@ -387,7 +388,7 @@
     <div class="modal recent-modal">
       <div class="modal-head">
         <span>最近打开</span>
-        <button class="btn icon sm" id="recentClose">✕</button>
+        <button class="btn icon sm" id="recentClose" title="关闭">✕</button>
       </div>
       <ul class="recent-list" id="recentList"></ul>
       <div class="recent-foot">
@@ -403,12 +404,12 @@
       <span>图片工具</span>
       <span class="edit-name" id="editName"></span>
       <button class="btn icon sm" id="editHistoryBtn" title="编辑历史时间线">⏱</button>
-      <button class="btn icon sm" id="editClose">✕</button>
+      <button class="btn icon sm" id="editClose" title="关闭">✕</button>
     </div>
     <div class="edit-history-panel" id="editHistoryPanel" hidden>
       <div class="eh-head">
         <span>编辑历史</span>
-        <button class="btn icon sm" id="editHistoryClose">✕</button>
+        <button class="btn icon sm" id="editHistoryClose" title="关闭">✕</button>
       </div>
       <div class="eh-timeline" id="editTimeline">
         <!-- 由 renderEditTimeline() 填充 -->
@@ -520,6 +521,17 @@
       </div><!-- /beauty pane -->
 
       <div class="edit-pane" data-pane="decor">
+      <!-- 新手快速入口：一键出海报 + 一键加边框 -->
+      <div class="edit-section" style="background:linear-gradient(135deg,#fff5f5 0%,#fff0f8 100%);border:1px solid #ffd0e0;border-radius:10px;padding:10px;margin-bottom:8px">
+        <h4 style="margin:0 0 6px 0;color:#d6336c">✨ 快速出海报（新手点我）</h4>
+        <div class="edit-actions" style="flex-wrap:wrap;gap:6px">
+          <button class="btn primary" id="quickPosterBtn">📣 一键生成示例海报</button>
+          <button class="btn" id="quickPolaroidBtn">📷 加拍立得边框</button>
+          <button class="btn" id="quickVintageBtn">🖼️ 加复古边框</button>
+        </div>
+        <p style="margin:6px 0 0 0;font-size:11px;color:#868e96">点了试试效果！不满意可以改文字/布局/边框</p>
+      </div>
+
       <div class="edit-section">
         <h4>边框</h4>
         <div class="edit-actions">
@@ -744,7 +756,7 @@
   <!-- 帮助 / 关于 / 系统集成说明 -->
   <div class="modal-mask" id="aboutMask" hidden>
     <div class="modal about-modal">
-      <div class="modal-head"><span>关于绿角犀看图 · Web 原型</span><button class="btn icon sm" id="aboutClose">✕</button></div>
+      <div class="modal-head"><span>关于绿角犀看图 · Web 原型</span><button class="btn icon sm" id="aboutClose" title="关闭">✕</button></div>
       <div class="about-body" id="aboutBody"></div>
     </div>
   </div>
@@ -752,7 +764,7 @@
   <!-- 使用说明（应用内嵌） -->
   <div class="modal-mask" id="manualMask" hidden>
     <div class="modal about-modal">
-      <div class="modal-head"><span>使用说明</span><button class="btn icon sm" id="manualClose">✕</button></div>
+      <div class="modal-head"><span>使用说明</span><button class="btn icon sm" id="manualClose" title="关闭">✕</button></div>
       <div class="about-body" id="manualBody"></div>
     </div>
   </div>
@@ -760,7 +772,7 @@
   <!-- 登录 / 注册 -->
   <div class="modal-mask" id="authMask" hidden>
     <div class="modal auth-modal">
-      <div class="modal-head"><span id="authTitle">登录账户</span><button class="btn icon sm" id="authClose">✕</button></div>
+      <div class="modal-head"><span id="authTitle">登录账户</span><button class="btn icon sm" id="authClose" title="关闭">✕</button></div>
       <div class="auth-body">
         <label class="field"><span>用户名</span><input type="text" id="authUser" placeholder="至少 3 个字符" autocomplete="username"></label>
         <label class="field"><span>昵称</span><input type="text" id="authNick" placeholder="注册时填写" hidden></label>
@@ -781,7 +793,7 @@
   <!-- 云端面板：收藏 / 历史 / 资料 -->
   <div class="modal-mask" id="cloudMask" hidden>
     <div class="modal cloud-modal">
-      <div class="modal-head"><span>我的云端</span><button class="btn icon sm" id="cloudClose">✕</button></div>
+      <div class="modal-head"><span>我的云端</span><button class="btn icon sm" id="cloudClose" title="关闭">✕</button></div>
       <div class="cloud-body">
         <div class="cloud-status" id="cloudStatus">未登录</div>
         <div class="cloud-tabs">

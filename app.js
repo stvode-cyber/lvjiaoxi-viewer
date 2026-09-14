@@ -1,4 +1,4 @@
-﻿/* 绿角犀看图 · Web 原型 — 核心逻辑
+/* 绿角犀看图 · Web 原型 — 核心逻辑
  * 覆盖 PRD 5.2~5.6；5.1 系统集成层以 Web 能力替代并在「关于」中标注。
  * 纯前端、零依赖、离线可用（双击 index.html 即可运行）。
  */
@@ -4882,6 +4882,27 @@
     if (els.emojiSize) els.emojiSize.addEventListener('input', () => { els.emojiSizeVal.textContent = els.emojiSize.value; });
     if (els.emojiClear) els.emojiClear.addEventListener('click', clearStickers);
     if (els.posterGenerate) els.posterGenerate.addEventListener('click', generatePoster);
+    // 新手快速入口：一键出海报 / 一键加边框
+    if (els.quickPosterBtn) els.quickPosterBtn.addEventListener('click', () => {
+      // 自动填默认示例 + 用 price 布局（最有视觉冲击力）
+      if (els.posterTitle) els.posterTitle.value = '限时特惠';
+      if (els.posterSubtitle) els.posterSubtitle.value = '全场 5 折起';
+      if (els.posterLayout) els.posterLayout.value = 'price';
+      generatePoster();
+      toast('✨ 示例海报已生成 —— 拖拽文字试试位置');
+    });
+    if (els.quickPolaroidBtn) els.quickPolaroidBtn.addEventListener('click', () => {
+      if (els.borderMode) els.borderMode.value = 'polaroid';
+      applyBorder(state.items[state.index]?.canvas || null);
+      renderEditPreview();
+      toast('📷 已加拍立得边框');
+    });
+    if (els.quickVintageBtn) els.quickVintageBtn.addEventListener('click', () => {
+      if (els.borderMode) els.borderMode.value = 'vintage';
+      applyBorder(state.items[state.index]?.canvas || null);
+      renderEditPreview();
+      toast('🖼️ 已加复古边框');
+    });
     // 瘦身 / 瘦脸（局部液化）：模式 / 锚点 / 强度 / 作用范围 / 重置
     if (els.slimFace) els.slimFace.addEventListener('click', () => { if (state.slim.mode === 'face') return; state.slim.mode = 'face'; state.slim.enabled = true; state.slimMode = false; pushUndo(); updateSlimUI(); renderEditPreview(); });
     if (els.slimBody) els.slimBody.addEventListener('click', () => { if (state.slim.mode === 'body') return; state.slim.mode = 'body'; state.slim.enabled = true; state.slimMode = false; pushUndo(); updateSlimUI(); renderEditPreview(); });
