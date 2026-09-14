@@ -1,4 +1,4 @@
-/* 绿角犀看图 · Web 原型 — 核心逻辑
+﻿/* 绿角犀看图 · Web 原型 — 核心逻辑
  * 覆盖 PRD 5.2~5.6；5.1 系统集成层以 Web 能力替代并在「关于」中标注。
  * 纯前端、零依赖、离线可用（双击 index.html 即可运行）。
  */
@@ -328,6 +328,44 @@
     for (const a in keymap) (keymap[a] || []).forEach((c) => { if (c) comboLookup[c] = a; });
   }
   buildComboLookup();
+
+  // ===== tooltip 动态显示快捷键（与用户自定义键绑定联动）=====
+  // 按钮 id → action id 映射表（只列有可视按钮 + 需要显示快捷键的）
+  const ACTION_TOOLTIP_MAP = {
+    btnPrev: 'prev', btnNext: 'next', btnHome: 'home', btnEnd: 'end',
+    btnZoomIn: 'zoomIn', btnZoomOut: 'zoomOut',
+    btnRotL: 'rotateL', btnRotR: 'rotateR',
+    btnFlipH: 'flipH', btnFlipV: 'flipV',
+    btnInfo: 'info', btnSlide: 'slideshow', btnFull: 'fullscreen',
+    btnCopy: 'copy', btnEdit: 'edit',
+  };
+  // 记录原始 title（首次调用时缓存，后续更新时用）
+  const _origTitles = {};
+
+  function updateActionTooltips() {
+    for (const btnId in ACTION_TOOLTIP_MAP) {
+      const el = document.getElementById(btnId);
+      if (!el) continue;
+      const action = ACTION_TOOLTIP_MAP[btnId];
+      // 缓存原始 title
+      if (!(btnId in _origTitles)) {
+        _origTitles[btnId] = el.getAttribute('title') || '';
+      }
+      const orig = _origTitles[btnId];
+      // 取当前绑定的快捷键（用户可能改过）
+      const combos = keymap[action] || [];
+      const primary = combos[0];
+      if (!orig) continue;
+      if (primary) {
+        el.setAttribute('title', orig + '  (' + prettyCombo(primary) + ')');
+      } else {
+        el.setAttribute('title', orig); // 用户取消了键绑定 → 清掉
+      }
+    }
+  }
+  // 启动时调用一次
+  updateActionTooltips();
+
   let capturingAction = null; // 当前正在录制键位的 action（全局声明，监听函数会引用它）
 
   // ===== 全局快捷键监听（把键盘事件接到已有的 runAction switch-case）=====
@@ -4002,7 +4040,7 @@
     });
     const reset = document.createElement('button'); reset.className = 'btn'; reset.textContent = '恢复默认快捷键';
     reset.style.marginTop = '10px';
-    reset.addEventListener('click', () => { keymap = JSON.parse(JSON.stringify(DEFAULT_KEYMAP)); saveKeymap(); buildComboLookup(); renderKeymapForm(); toast('已恢复默认快捷键'); });
+    reset.addEventListener('click', () => { keymap = JSON.parse(JSON.stringify(DEFAULT_KEYMAP)); saveKeymap(); buildComboLookup(); updateActionTooltips(); renderKeymapForm(); toast('已恢复默认快捷键'); });
     form.appendChild(reset);
   }
   function startCapture(action) { capturingAction = action; renderKeymapForm(); }
@@ -5788,7 +5826,7 @@
       if (combo === 'escape') { capturingAction = null; renderKeymapForm(); return; }
       for (const a in keymap) if (Array.isArray(keymap[a]) && keymap[a].includes(combo)) keymap[a] = keymap[a].filter((c) => c !== combo);
       keymap[capturingAction] = [combo];
-      saveKeymap(); buildComboLookup(); capturingAction = null; renderKeymapForm();
+      saveKeymap(); buildComboLookup(); updateActionTooltips(); capturingAction = null; renderKeymapForm();
     }, true);
 
     // 窗口尺寸变化 → 重新 fit
