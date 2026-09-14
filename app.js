@@ -457,7 +457,7 @@
       'cvQuality', 'cvQualityVal', 'cvNaming', 'cvOutput', 'cvFormat', 'cvQualityField', 'cvPreview', 'cvPreviewLabel',
       'rsMode', 'rsPercent', 'rsPercentVal', 'rsPercentField', 'rsExactField', 'rsWidth', 'rsHeight', 'rsLockRatio', 'rsResample', 'rsFormat', 'rsDpi', 'rsPreview', 'rsPreviewLabel',
       'rnTemplate', 'rnPreview', 'batchProgress', 'batchBarFill', 'batchProgressText', 'batchRun', 'batchCancel', 'batchReport', 'btPreset', 'btFormat', 'btKeepName', 'btPreview', 'btPreviewLabel',
-      'cpFormat', 'cpQuality', 'cpQualityVal', 'cpQualityField', 'cpMaxEdge', 'cpPreview', 'cpPreviewLabel', 'wmText', 'wmSize', 'wmSizeVal', 'wmOpacity', 'wmOpacityVal', 'wmColor', 'wmPos', 'wmMargin', 'wmMarginVal', 'wmFormat', 'wmPreview', 'wmPreviewLabel',
+      'cpFormat', 'cpQuality', 'cpQualityVal', 'cpQualityField', 'cpMaxEdge', 'cpPreview', 'cpPreviewLabel', 'wmText', 'wmSize', 'wmSizeVal', 'wmOpacity', 'wmOpacityVal', 'wmColor', 'wmPos', 'wmMargin', 'wmMarginVal', 'wmFormat', 'wmPreview', 'wmPreviewLabel', 'wmPresetCopyright', 'wmPresetPhotographer',
       'aboutMask', 'aboutClose', 'aboutBody',
       'editMask', 'editClose', 'editName', 'editPreview', 'cropReset',
       'flBrightness', 'flBrightnessVal', 'flContrast', 'flContrastVal', 'flSaturate', 'flSaturateVal', 'flGray', 'flGrayVal', 'flReset',
@@ -465,7 +465,7 @@
       'flHighlight', 'flHighlightVal', 'flShadow', 'flShadowVal', 'flFade', 'flFadeVal', 'flGrain', 'flGrainVal', 'flVignette', 'flVignetteVal', 'flTintH', 'flTintS', 'flTintAmt', 'flTintAmtVal',
       'btnAutoEnhance', 'cvDenoise', 'cvBilateral', 'cvSharp', 'opsReset', 'aiScale', 'aiRun',
       'styleGrid', 'beautyVal', 'beautyValVal', 'beautySmooth', 'beautyWhite',
-      'borderMode', 'borderRadius', 'emojiBar', 'emojiSize', 'emojiSizeVal', 'emojiClear', 'stickerUploadBtn', 'stickerUpload', 'posterTitle', 'posterSubtitle', 'posterLayout', 'posterGenerate', 'idPhotoSize', 'idPhotoCanvas', 'idPhotoPad', 'idPhotoBg', 'idPhotoGen', 'idPhotoExport', 'idPhotoReset', 'idPhotoInfo', 'logoWmUploadBtn', 'logoWmUpload', 'logoWmStatus', 'logoWmSize', 'logoWmSizeVal', 'logoWmOpacity', 'logoWmOpacityVal', 'logoWmPos', 'logoWmClear', 'gifFps', 'gifLoop', 'gifWidth', 'gifQuality', 'gifQuantize', 'gifEncode', 'gifCancel', 'gifStatus', 'gifPreview',
+      'borderMode', 'borderRadius', 'emojiBar', 'emojiSize', 'emojiSizeVal', 'emojiClear', 'stickerUploadBtn', 'stickerUpload', 'posterTitle', 'posterSubtitle', 'posterLayout', 'posterGenerate', 'idPhotoSize', 'idPhotoCanvas', 'idPhotoPad', 'idPhotoBg', 'idPhotoGen', 'idPhotoExport', 'idPhotoReset', 'idPhotoInfo', 'logoWmUploadBtn', 'logoWmUpload', 'logoWmStatus', 'logoWmSize', 'logoWmSizeVal', 'logoWmOpacity', 'logoWmOpacityVal', 'logoWmPos', 'logoWmClear', 'gifFps', 'gifLoop', 'gifWidth', 'gifQuality', 'gifQuantize', 'gifEncode', 'gifCancel', 'gifStatus', 'gifPreview', 'gifPresetWeChat', 'gifPresetVideo', 'gifPresetMeme', 'idPhotoPresetStandard', 'idPhotoPresetPassport',
       'txtInput', 'txtAdd', 'txtFont', 'txtColor', 'txtSize', 'txtSizeVal', 'txtStroke', 'txtStrokeVal', 'txtPos', 'txtDel',
       'mosaicBtn', 'mosaicSize', 'mosaicSizeVal', 'mosaicClear', 'eraserBtn', 'eraserSize', 'eraserSizeVal', 'eraserClear',
       'matFg', 'matBg', 'matRun', 'matClear', 'matExport', 'matSize', 'matSizeVal', 'matStatus',
@@ -2459,8 +2459,8 @@
     const op = type === 'median' ? { type: 'median', k: 5 }
       : type === 'bilateral' ? { type: 'bilateral', d: 5, sigma: 75 }
       : { type: 'unsharp', sigma: 2, amount: 0.6 };
-    toast('正在加载 OpenCV…（首次约 8MB）');
-    try { await loadOpenCV(); } catch (e) { toast('OpenCV 加载失败：' + (e.message || e)); return; }
+    toast('正在加载 AI 画笔引擎…（首次约 8MB）');
+    try { await loadOpenCV(); } catch (e) { toast('AI 画笔引擎初始化失败：' + (e.message || e)); return; }
     pushUndo();
     state.ops.push(op);
     updateOpsUI();
@@ -2549,7 +2549,7 @@
       state.ops.push({ type: 'bilateral', d: Math.round(3 + 7 * a), sigma: Math.round(40 + 60 * a) });
       updateOpsUI();
       toast('磨皮已加入处理队列（导出时应用，共 ' + state.ops.length + ' 步）');
-    } catch (e) { toast('OpenCV 加载失败：' + (e.message || e)); }
+    } catch (e) { toast('AI 画笔引擎初始化失败：' + (e.message || e)); }
   }
 
   // 一键美颜多档：轻度/自然/精致 — 每档联动「提亮 + 磨皮」参数，单次快照
@@ -2575,7 +2575,7 @@
         const a = p.smooth / 100;
         state.ops.push({ type: 'bilateral', d: Math.round(3 + 7 * a), sigma: Math.round(40 + 60 * a) });
         updateOpsUI();
-      } catch (e) { toast('OpenCV 加载失败：' + (e.message || e)); }
+      } catch (e) { toast('AI 画笔引擎初始化失败：' + (e.message || e)); }
     }
     syncBeautyBar();
     toast('一键美颜「' + p.name + '」已应用');
@@ -5277,6 +5277,17 @@
       renderEditPreview();
       toast('已还原单张预览');
     });
+
+    // 证件照一键预设 — 2 个高频场景
+    function applyIdPhotoPreset(p) {
+      if (els.idPhotoSize) els.idPhotoSize.value = p.size;
+      if (els.idPhotoCanvas) els.idPhotoCanvas.value = p.canvas;
+      if (els.idPhotoPad) els.idPhotoPad.value = p.pad;
+      toast('✅ 已应用：' + p.label + ' — 点「🖼 生成排版预览」出图');
+    }
+    if (els.idPhotoPresetStandard) els.idPhotoPresetStandard.addEventListener('click', () => applyIdPhotoPreset({ label: '标准一寸 A4（49 张）', size: '1inch',   canvas: 'A4',     pad: 2 }));
+    if (els.idPhotoPresetPassport) els.idPhotoPresetPassport.addEventListener('click', () => applyIdPhotoPreset({ label: '护照签证 6 寸（4 张）', size: 'passport', canvas: '6inch', pad: 2 }));
+
     // 参数实时联动：尺寸/画布变化时更新信息（不自动重排，等用户点生成）
     if (els.idPhotoSize && els.idPhotoCanvas) {
       [els.idPhotoSize, els.idPhotoCanvas].forEach(el => el.addEventListener('change', () => {
@@ -5484,6 +5495,18 @@
         if (currentGif) currentGif.abort();
       });
     }
+
+    // GIF 一键预设 — 3 个高频场景（覆盖 80% 用户需求）
+    function applyGifPreset(p) {
+      if (els.gifFps) els.gifFps.value = p.fps;
+      if (els.gifLoop) els.gifLoop.value = p.loop;
+      if (els.gifWidth) els.gifWidth.value = p.width;
+      if (els.gifQuality) els.gifQuality.value = p.quality;
+      toast('✅ 已应用：' + p.label);
+    }
+    if (els.gifPresetWeChat) els.gifPresetWeChat.addEventListener('click', () => applyGifPreset({ label: '微信表情 480px', fps: 10, loop: 0, width: 480, quality: 20 }));
+    if (els.gifPresetVideo)  els.gifPresetVideo .addEventListener('click', () => applyGifPreset({ label: '短视频 720p',   fps: 15, loop: 0, width: 720, quality: 15 }));
+    if (els.gifPresetMeme)   els.gifPresetMeme  .addEventListener('click', () => applyGifPreset({ label: '表情包 320px',   fps: 12, loop: 0, width: 320, quality: 25 }));
 
     // 新手快速入口：一键出海报 / 一键加边框
     if (els.quickPosterBtn) els.quickPosterBtn.addEventListener('click', () => {
@@ -5824,6 +5847,19 @@
       el.addEventListener('input', () => { updateWmUI(); renderWmPreview(); });
       el.addEventListener('change', () => { updateWmUI(); renderWmPreview(); });
     });
+
+    // 批量水印一键预设 — 2 个高频场景
+    function applyWmPreset(p) {
+      if (els.wmText) els.wmText.value = p.text;
+      if (els.wmSize) els.wmSize.value = p.size;
+      if (els.wmOpacity) els.wmOpacity.value = p.opacity;
+      if (els.wmColor) els.wmColor.value = p.color;
+      if (els.wmPos) els.wmPos.value = p.pos;
+      updateWmUI(); renderWmPreview();
+      toast('✅ 已应用：' + p.label);
+    }
+    if (els.wmPresetCopyright) els.wmPresetCopyright.addEventListener('click', () => applyWmPreset({ label: '版权水印',      text: '© 2026 All Rights Reserved', size: 5, opacity: 60, color: '#ffffff', pos: 'br' }));
+    if (els.wmPresetPhotographer) els.wmPresetPhotographer.addEventListener('click', () => applyWmPreset({ label: '摄影师署名', text: '📷 摄影师署名',             size: 4, opacity: 40, color: '#888888', pos: 'bl' }));
 
     // 关于弹窗
     els.aboutClose.addEventListener('click', () => els.aboutMask.hidden = true);

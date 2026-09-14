@@ -322,6 +322,10 @@
 
         <!-- 加水印 -->
         <section class="batch-pane" data-pane="watermark" hidden>
+          <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+            <button class="btn sm preset-btn" id="wmPresetCopyright" title="一键设为版权水印">©️ 版权水印（白色 60% 右下）</button>
+            <button class="btn sm preset-btn" id="wmPresetPhotographer" title="一键设为摄影师署名">📷 摄影师署名（灰色 40% 左下）</button>
+          </div>
           <div class="bt-preview">
             <span class="bt-preview-label" id="wmPreviewLabel">水印预览：未选中</span>
             <canvas id="wmPreview" width="200" height="200"></canvas>
@@ -373,6 +377,11 @@
 
         <!-- GIF 制作 -->
         <section class="batch-pane" data-pane="gif" hidden>
+          <div class="batch-gif-presets" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+            <button class="btn sm preset-btn" id="gifPresetWeChat" title="一键设为微信表情">🎯 微信表情 480px</button>
+            <button class="btn sm preset-btn" id="gifPresetVideo" title="一键设为短视频 GIF">🎬 短视频 720p</button>
+            <button class="btn sm preset-btn" id="gifPresetMeme" title="一键设为表情包">😂 表情包 320px</button>
+          </div>
           <div class="bt-preview">
             <span class="bt-preview-label" id="gifStatus">待生成 — 选中的图片按顺序组成帧</span>
             <canvas id="gifPreview" width="200" height="200"></canvas>
@@ -647,6 +656,10 @@
       <div class="edit-section">
         <h4>📇 证件照自动排版</h4>
         <p class="hint">自动按标准尺寸在 A4/照片纸上排 N 张，300DPI 打印清晰。</p>
+        <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+          <button class="btn sm preset-btn" id="idPhotoPresetStandard" title="一键设为最常用标准一寸 A4 排版">📌 标准一寸 A4（49 张）</button>
+          <button class="btn sm preset-btn" id="idPhotoPresetPassport" title="一键设为护照签证 6 寸排版">🛂 护照签证 6 寸（4 张）</button>
+        </div>
         <div class="edit-actions" style="gap:8px;flex-wrap:wrap">
           <label class="field" style="margin:0"><span>证件尺寸</span>
             <select id="idPhotoSize">
@@ -752,8 +765,8 @@
           <p class="edit-section-title">🩹 消除笔（内容感知填充）</p>
           <p class="hint">涂抹要消除的物体（文字/水印/路人），算法从周围纹理自动采样填充。纹理重复区域效果最佳。</p>
           <button class="btn" id="eraserBtn">🩹 进入消除笔模式</button>
-          <label class="field" style="margin:0"><span>笔刷 <b id="eraserSizeVal">20</b></span>
-            <input type="range" id="eraserSize" min="10" max="80" value="20"></label>
+          <label class="field" style="margin:0"><span>笔刷 <b id="eraserSizeVal">30</b></span>
+            <input type="range" id="eraserSize" min="15" max="80" value="30"></label>
           <button class="btn" id="eraserClear">清空消除笔</button>
         </div>
       </div>

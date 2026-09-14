@@ -1,7 +1,7 @@
 ﻿// 绿角犀看图 · Service Worker
 // 仅缓存 app shell（index.html / styles.css / app.js / manifest / icon）。
 // 用户图片来自 <input type=file> / 拖放，不经过 http fetch，故不会被缓存，离线刷新应用壳后仍可浏览已选图片。
-const CACHE = 'lvjiaoxi-viewer-v36';
+const CACHE = 'lvjiaoxi-viewer-v37';
 const SHELL = [
   './',
   './index.html',
