@@ -590,6 +590,44 @@
           <button class="btn primary" id="posterGenerate">生成海报文字</button>
         </div>
       </div>
+
+      <!-- 证件照自动排版 -->
+      <div class="edit-section">
+        <h4>📇 证件照自动排版</h4>
+        <p class="hint">自动按标准尺寸在 A4/照片纸上排 N 张，300DPI 打印清晰。</p>
+        <div class="edit-actions" style="gap:8px;flex-wrap:wrap">
+          <label class="field" style="margin:0"><span>证件尺寸</span>
+            <select id="idPhotoSize">
+              <option value="1inch" selected>一寸 (25×35mm)</option>
+              <option value="2inch">二寸 (35×49mm)</option>
+              <option value="s1inch">小一寸 (22×32mm)</option>
+              <option value="s2inch">小二寸 (35×45mm)</option>
+              <option value="passport">护照签证 (33×48mm)</option>
+            </select>
+          </label>
+          <label class="field" style="margin:0"><span>输出画布</span>
+            <select id="idPhotoCanvas">
+              <option value="A4" selected>A4 纸 (210×297mm)</option>
+              <option value="4R">4R(7寸) (178×127mm)</option>
+              <option value="6inch">6寸照片 (152×102mm)</option>
+              <option value="5inch">5寸照片 (127×89mm)</option>
+            </select>
+          </label>
+          <label class="field" style="margin:0"><span>白边 mm</span>
+            <input type="number" id="idPhotoPad" min="0" max="10" step="0.5" value="2" style="width:50px">
+          </label>
+          <label class="field" style="margin:0"><span>底色</span>
+            <input type="color" id="idPhotoBg" value="#FFFFFF" style="width:36px;height:30px">
+          </label>
+        </div>
+        <div class="edit-actions" style="margin-top:6px;gap:6px">
+          <button class="btn primary" id="idPhotoGen">🖼 生成排版预览</button>
+          <button class="btn" id="idPhotoExport">💾 保存排版 JPG</button>
+          <button class="btn" id="idPhotoReset">↺ 还原单张预览</button>
+        </div>
+        <p class="hint" id="idPhotoInfo" style="margin-top:6px;font-size:11px;color:#868e96"></p>
+      </div>
+
       <div class="edit-section">
         <h4>文字 / 水印</h4>
         <div class="edit-actions">

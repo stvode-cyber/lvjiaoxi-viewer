@@ -410,7 +410,7 @@
       'flHighlight', 'flHighlightVal', 'flShadow', 'flShadowVal', 'flFade', 'flFadeVal', 'flGrain', 'flGrainVal', 'flVignette', 'flVignetteVal', 'flTintH', 'flTintS', 'flTintAmt', 'flTintAmtVal',
       'btnAutoEnhance', 'cvDenoise', 'cvBilateral', 'cvSharp', 'opsReset', 'aiScale', 'aiRun',
       'styleGrid', 'beautyVal', 'beautyValVal', 'beautySmooth', 'beautyWhite',
-      'borderMode', 'borderRadius', 'emojiBar', 'emojiSize', 'emojiSizeVal', 'emojiClear', 'stickerUploadBtn', 'stickerUpload', 'posterTitle', 'posterSubtitle', 'posterLayout', 'posterGenerate',
+      'borderMode', 'borderRadius', 'emojiBar', 'emojiSize', 'emojiSizeVal', 'emojiClear', 'stickerUploadBtn', 'stickerUpload', 'posterTitle', 'posterSubtitle', 'posterLayout', 'posterGenerate', 'idPhotoSize', 'idPhotoCanvas', 'idPhotoPad', 'idPhotoBg', 'idPhotoGen', 'idPhotoExport', 'idPhotoReset', 'idPhotoInfo',
       'txtInput', 'txtAdd', 'txtFont', 'txtColor', 'txtSize', 'txtSizeVal', 'txtStroke', 'txtStrokeVal', 'txtPos', 'txtDel',
       'mosaicBtn', 'mosaicSize', 'mosaicSizeVal', 'mosaicClear', 'eraserBtn', 'eraserSize', 'eraserSizeVal', 'eraserClear',
       'matFg', 'matBg', 'matRun', 'matClear', 'matExport', 'matSize', 'matSizeVal', 'matStatus',
@@ -2520,6 +2520,27 @@
     const rad = els.borderRadius ? +els.borderRadius.value : 0;
     return { mode, rad };
   }
+  // ============================================================
+  // 证件照自动排版 — 尺寸 + 输出画布常量（@300 DPI 打印标准）
+  // ============================================================
+  const ID_DPI = 300;
+  const ID_MM2PX = (mm) => Math.round(mm / 25.4 * ID_DPI);
+  // 中国标准证件照尺寸（mm）
+  const ID_PHOTO_SIZES = {
+    '1inch':   { name: '一寸',     w: 25, h: 35 },
+    '2inch':   { name: '二寸',     w: 35, h: 49 },
+    's1inch':  { name: '小一寸',   w: 22, h: 32 },
+    's2inch':  { name: '小二寸',   w: 35, h: 45 },
+    'passport':{ name: '护照签证',  w: 33, h: 48 },
+  };
+  // 输出画布（mm）
+  const ID_CANVAS_SIZES = {
+    'A4':     { name: 'A4 纸',      w: 210, h: 297 },
+    '6inch':  { name: '6寸照片',    w: 152, h: 102 },
+    '5inch':  { name: '5寸照片',    w: 127, h: 89  },
+    '4R':     { name: '4R(7寸)',    w: 178, h: 127 },
+  };
+
   // 边框预设配置：每个 mode 有独立的渲染逻辑
   const BORDER_PRESETS = {
     none:       { padPct: 0,      bg: '#F5F4F7', rad: 0 },
@@ -2705,6 +2726,170 @@
     renderEditPreview();
     toast('已清空贴纸');
   }
+
+  // ============================================================
+  // 证件照自动排版 — 核心 + 预览 + 导出
+  // ============================================================
+  let idPhotoResultCanvas = null; // 最近一次生成的排版画布（供导出）
+
+  // 根据源图 + 证件尺寸 + 输出画布 + 白边 → 生成排版 canvas
+  // src: HTMLCanvasElement | HTMLImageElement | {canvas} — 源图
+  // sizeKey: '1inch' | '2inch' | ...
+  // canvasKey: 'A4' | '6inch' | '5inch' | '4R'
+  // padMM: 白边 mm
+  // bgColor: 背景色（如 '#FFFFFF'）
+  function buildIdPhotoCanvas(src, sizeKey, canvasKey, padMM, bgColor) {
+    const ph = ID_PHOTO_SIZES[sizeKey];
+    const ch = ID_CANVAS_SIZES[canvasKey];
+    if (!ph || !ch) return null;
+
+    // px 转换
+    const pw = ID_MM2PX(ph.w);
+    const phh = ID_MM2PX(ph.h);   // 避免和 BORDER_PRESETS 的 'none' 字段冲突
+    const cw = ID_MM2PX(ch.w);
+    const chh = ID_MM2PX(ch.h);
+    const pad = ID_MM2PX(padMM || 2); // 默认 2mm 白边
+
+    // 创建目标 canvas
+    const out = document.createElement('canvas');
+    out.width = cw; out.height = chh;
+    const ctx = out.getContext('2d');
+    if (!ctx) return null;
+
+    // 1. 填底色
+    ctx.fillStyle = bgColor || '#FFFFFF';
+    ctx.fillRect(0, 0, cw, chh);
+
+    // 2. 计算平铺网格（白边间距）
+    const cols = Math.floor((cw - pad * 2 + pad) / (pw + pad));
+    const rows = Math.floor((chh - pad * 2 + pad) / (phh + pad));
+    const total = cols * rows;
+    if (cols <= 0 || rows <= 0) return null;
+
+    // 3. 把源图按证件照比例裁剪（短边对齐，居中）
+    // 先把源图缩放到 "证件照目标尺寸的倍数"（保证清晰）
+    const srcW = src.naturalWidth || src.width;
+    const srcH = src.naturalHeight || src.height;
+
+    // 证件照是 portrait（竖版），src 裁剪成相同长宽比
+    const targetRatio = pw / phh;
+    let sx = 0, sy = 0, sw = srcW, sh = srcH;
+    const srcRatio = srcW / srcH;
+    if (srcRatio > targetRatio) {
+      // 源图太宽 → 裁左右
+      sw = srcH * targetRatio;
+      sx = (srcW - sw) / 2;
+    } else {
+      // 源图太矮 → 裁上下
+      sh = srcW / targetRatio;
+      sy = (srcH - sh) / 2;
+    }
+
+    // 4. 循环平铺 drawImage
+    const offsetX = pad;
+    const offsetY = pad;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const dx = offsetX + c * (pw + pad);
+        const dy = offsetY + r * (phh + pad);
+        try {
+          ctx.drawImage(src, sx, sy, sw, sh, dx, dy, pw, phh);
+        } catch (e) { /* 某格 drawImage 失败不影响其他格 */ }
+      }
+    }
+
+    // 5. 可选：画裁切线（虚线灰色，方便打印后裁剪）
+    // 为了简洁默认不画，需要再加 UI 开关
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    for (let r = 0; r <= rows; r++) {
+      for (let c = 0; c <= cols; c++) {
+        const x = offsetX + c * (pw + pad) - pad / 2;
+        const y = offsetY + r * (phh + pad) - pad / 2;
+        ctx.beginPath();
+        if (c < cols && r < rows) {
+          // 只在格子边界画短线（不画完整线避免太密）
+          ctx.moveTo(x + pad / 4, y);
+          ctx.lineTo(x + pad * 3 / 4, y);
+          ctx.moveTo(x, y + pad / 4);
+          ctx.lineTo(x, y + pad * 3 / 4);
+        }
+      }
+    }
+    ctx.setLineDash([]);
+
+    // 在右下角标注尺寸信息（小字号，方便后续识别）
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(ph.name + ' ' + ph.w + '×' + ph.h + 'mm  ' + total + '张  @300DPI', cw - 10, chh - 8);
+
+    return { canvas: out, cols, rows, total };
+  }
+
+  // 实时预览：把排版结果显示在编辑预览 canvas（缩放到适合的小图）
+  function renderIdPhotoPreview() {
+    if (!els.idPhotoSize) return;
+    const item = state.items[state.index];
+    if (!item) { toast('请先打开一张照片'); return; }
+
+    const sizeKey = els.idPhotoSize.value;
+    const canvasKey = els.idPhotoCanvas.value;
+    const padMM = +(els.idPhotoPad?.value || 2);
+    const bg = els.idPhotoBg?.value || '#FFFFFF';
+
+    // 用全尺寸烘焙图（包含滤镜/裁剪/旋转）
+    const full = bakeFullCanvas();
+    if (!full) { toast('无法处理当前图片'); return; }
+
+    const result = buildIdPhotoCanvas(full, sizeKey, canvasKey, padMM, bg);
+    if (!result) { toast('排版失败，画布/尺寸不兼容'); return; }
+
+    idPhotoResultCanvas = result.canvas;
+    state.idPhotoInfo = { sizeKey, canvasKey, total: result.total };
+
+    // 缩放到 editPreview 大小显示（保持长宽比，居中）
+    const canvas = els.editPreview;
+    if (!canvas) return;
+    const pv = canvas.parentElement;
+    if (!pv) return;
+
+    const maxW = (pv.clientWidth || 420) * 0.95;
+    const maxH = Math.max(160, Math.round(window.innerHeight * 0.46));
+    const ratio = result.canvas.width / result.canvas.height;
+    let dispW = maxW, dispH = maxW / ratio;
+    if (dispH > maxH) { dispH = maxH; dispW = maxH * ratio; }
+
+    // 设置 canvas 为排版尺寸（这样导出的分辨率就是 300DPI 标准）
+    canvas.width = result.canvas.width;
+    canvas.height = result.canvas.height;
+    canvas.style.width = dispW + 'px';
+    canvas.style.height = dispH + 'px';
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.drawImage(result.canvas, 0, 0);
+
+    toast('排版预览：' + ID_PHOTO_SIZES[sizeKey].name + ' × ' + ID_CANVAS_SIZES[canvasKey].name + ' = ' + result.total + ' 张');
+  }
+
+  // 导出排版结果
+  function exportIdPhoto() {
+    if (!idPhotoResultCanvas) { toast('请先生成排版预览'); return; }
+    const info = state.idPhotoInfo || {};
+    const fname = '证件照_' + (ID_PHOTO_SIZES[info.sizeKey]?.name || '') + '_' + (ID_CANVAS_SIZES[info.canvasKey]?.name || '') + '_' + Date.now() + '.jpg';
+
+    idPhotoResultCanvas.toBlob((blob) => {
+      if (!blob) { toast('导出失败'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fname;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+      toast('✅ 已保存 ' + fname);
+    }, 'image/jpeg', 0.95);
+  }
+
   function generatePoster() {
     const title = (els.posterTitle.value || '').trim();
     const subtitle = (els.posterSubtitle.value || '').trim();
@@ -4954,6 +5139,41 @@
       });
     }
     if (els.posterGenerate) els.posterGenerate.addEventListener('click', generatePoster);
+
+    // 证件照自动排版事件绑定
+    if (els.idPhotoGen) els.idPhotoGen.addEventListener('click', () => {
+      renderIdPhotoPreview();
+      // 更新信息行
+      if (els.idPhotoInfo && state.idPhotoInfo) {
+        const phName = ID_PHOTO_SIZES[state.idPhotoInfo.sizeKey].name;
+        const cnName = ID_CANVAS_SIZES[state.idPhotoInfo.canvasKey].name;
+        els.idPhotoInfo.textContent = phName + ' × ' + cnName + ' → 共 ' + state.idPhotoInfo.total + ' 张（含白边裁切线）';
+      }
+    });
+    if (els.idPhotoExport) els.idPhotoExport.addEventListener('click', exportIdPhoto);
+    if (els.idPhotoReset) els.idPhotoReset.addEventListener('click', () => {
+      idPhotoResultCanvas = null;
+      state.idPhotoInfo = null;
+      if (els.idPhotoInfo) els.idPhotoInfo.textContent = '';
+      renderEditPreview();
+      toast('已还原单张预览');
+    });
+    // 参数实时联动：尺寸/画布变化时更新信息（不自动重排，等用户点生成）
+    if (els.idPhotoSize && els.idPhotoCanvas) {
+      [els.idPhotoSize, els.idPhotoCanvas].forEach(el => el.addEventListener('change', () => {
+        const ph = ID_PHOTO_SIZES[els.idPhotoSize.value];
+        const cn = ID_CANVAS_SIZES[els.idPhotoCanvas.value];
+        if (ph && cn) {
+          const pad = +(els.idPhotoPad?.value || 2);
+          const pw = ID_MM2PX(ph.w), phh = ID_MM2PX(ph.h);
+          const cw = ID_MM2PX(cn.w), chh = ID_MM2PX(cn.h);
+          const padPx = ID_MM2PX(pad);
+          const cols = Math.floor((cw - padPx * 2 + padPx) / (pw + padPx));
+          const rows = Math.floor((chh - padPx * 2 + padPx) / (phh + padPx));
+          if (els.idPhotoInfo) els.idPhotoInfo.textContent = '预计：' + cols + '列 × ' + rows + '行 = ' + (cols * rows) + ' 张';
+        }
+      }));
+    }
     // 新手快速入口：一键出海报 / 一键加边框
     if (els.quickPosterBtn) els.quickPosterBtn.addEventListener('click', () => {
       // 自动填默认示例 + 用 price 布局（最有视觉冲击力）
