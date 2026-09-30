@@ -39,7 +39,8 @@ Thumbs.db
 
 # === 项目内临时 ===
 .verif/
-.trae/
+.trae/*                # 忽略 .trae 下所有（TRAE IDE 本地配置）
+!.trae/ledger/          # 但台帐目录必须跟项目走，git 可提交（见 AGENTS.md §6）
 .workbuddy/
 
 # === NSIS 临时 ===
