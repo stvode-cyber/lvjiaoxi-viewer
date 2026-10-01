@@ -51,3 +51,14 @@
   - `sw.js` ← CACHE v40→v41（硬约束 §3：改 index.html 必须 +1）
 - **验证**：regression.cjs 404/0 全绿；app.js 事件绑定全靠 getElementById 无位置依赖
 - **关联**：↔Dc-003（内嵌底部栏形态） ↔Chg-003（上一轮顶栏减半 + bottom-nav 新增）
+
+#### Chg-005（2026-10-01 · 重构建 Setup.exe + MSI）
+
+- **批次主题**：两次 UI 改动（顶栏减半 + 美颜下移 + bottom-nav 新增）后，重新 release 构建打包
+- **构建命令**：node scripts/sync-dist.cjs → npm run tauri build
+- **构建结果**：Success，42.34s，Rust 4 warnings（unused imports，不影响运行）
+- **产物**：
+  - `nsis_x/绿角犀看图_0.1.0_x64-setup.exe` ← 211MB，刚构建 10:35
+  - `nsis_x/绿角犀看图_0.1.0_x64_zh-CN.msi` ← 209.9MB，刚构建 10:35
+- **版本号**：0.1.0 全落点一致（tauri.conf.json / Cargo.toml / EXE 元数据 / manifest / about 标题 / sw.js CACHE v41）
+- **关联**：↔Chg-003（顶栏减半） ↔Chg-004（美颜下移） ↔Iss-002（PS5 GBK）
