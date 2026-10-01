@@ -43,42 +43,6 @@
     </div>
   </header>
 
-  <!-- 美图常规条：主界面直接可用的核心美图控件（高级工具仍走 🎨 弹窗） -->
-  <div class="beauty-bar" id="beautyBar">
-    <span class="beauty-title">美图</span>
-    <label class="mini-field"><span class="mini-lbl">亮度</span>
-      <input type="range" id="miBrightness" min="0" max="200" value="100"><b id="miBrightnessVal">100</b></label>
-    <label class="mini-field"><span class="mini-lbl">对比</span>
-      <input type="range" id="miContrast" min="0" max="200" value="100"><b id="miContrastVal">100</b></label>
-    <label class="mini-field"><span class="mini-lbl">饱和</span>
-      <input type="range" id="miSaturate" min="0" max="200" value="100"><b id="miSaturateVal">100</b></label>
-    <label class="mini-field"><span class="mini-lbl">色温</span>
-      <input type="range" id="miTemp" min="-100" max="100" value="0"><b id="miTempVal">0</b></label>
-    <label class="mini-field"><span class="mini-lbl">锐化</span>
-      <input type="range" id="miSharp" min="0" max="100" value="0"><b id="miSharpVal">0</b></label>
-    <span class="beauty-sep"></span>
-    <label class="mini-field mini-beauty"><span class="mini-lbl">美白强度</span>
-      <input type="range" id="miBeautyVal" min="0" max="100" value="50"></label>
-    <span class="beauty-sep"></span>
-    <span class="mini-lbl mini-oneclick">一键美颜</span>
-    <button class="btn sm" id="miBeautyLight" title="一键美颜：轻度（提亮 + 轻磨皮）">轻度</button>
-    <button class="btn sm" id="miBeautyNatural" title="一键美颜：自然（推荐，提亮 + 中度磨皮）">自然</button>
-    <button class="btn sm accent" id="miBeautyFancy" title="一键美颜：精致（强提亮 + 强磨皮）">精致</button>
-    <button class="btn sm" id="miBeautySmooth" title="磨皮（OpenCV 双边滤波，导出时应用）">磨皮</button>
-    <button class="btn sm" id="miBeautyWhite" title="美白（提亮 + 轻磨皮）">美白</button>
-    <button class="btn sm" id="miEnhance" title="自动增强：直方图分析自动调亮度/对比/饱和">✨ 自动增强</button>
-    <button class="btn sm" id="miRecipe" title="风格配方：一键套用 25 套预设风格">🪄 风格配方</button>
-    <button class="btn sm" id="miRecipeRandom" title="随机套用一套风格配方">🎲 随机配方</button>
-    <span class="beauty-sep"></span>
-    
-    <span class="beauty-sep"></span>
-    <span class="mini-lbl mini-oneclick">一键海报</span>
-    <button class="btn sm primary" id="quickPosterBtn" title="📣 一键生成示例海报（限时特惠）">📣 海报</button>
-    <button class="btn sm" id="quickPolaroidBtn" title="📷 加拍立得边框（底部留白 18%）">📷 拍立得</button>
-    <button class="btn sm" id="quickVintageBtn" title="🖼️ 加复古边框（米黄背景 + 内阴影）">🖼️ 复古</button>
-<button class="btn sm accent" id="miMore" title="更多：风格 / 特效 / 高级 / 导出">🎨 更多工具</button>
-  </div>
-
   <!-- 主工作区：左侧缩略图栏 + 右侧主画布 -->
   <div class="app-row">
 
@@ -122,6 +86,40 @@
       <div class="info-body" id="infoBody"></div>
     </aside>
 
+  </div>
+
+  <!-- 美颜工具条：移到底部内嵌栏（主画布下方，符合 AGENTS.md §1 内嵌底部栏硬约束） -->
+  <div class="beauty-bar" id="beautyBar">
+    <span class="beauty-title">美图</span>
+    <label class="mini-field"><span class="mini-lbl">亮度</span>
+      <input type="range" id="miBrightness" min="0" max="200" value="100"><b id="miBrightnessVal">100</b></label>
+    <label class="mini-field"><span class="mini-lbl">对比</span>
+      <input type="range" id="miContrast" min="0" max="200" value="100"><b id="miContrastVal">100</b></label>
+    <label class="mini-field"><span class="mini-lbl">饱和</span>
+      <input type="range" id="miSaturate" min="0" max="200" value="100"><b id="miSaturateVal">100</b></label>
+    <label class="mini-field"><span class="mini-lbl">色温</span>
+      <input type="range" id="miTemp" min="-100" max="100" value="0"><b id="miTempVal">0</b></label>
+    <label class="mini-field"><span class="mini-lbl">锐化</span>
+      <input type="range" id="miSharp" min="0" max="100" value="0"><b id="miSharpVal">0</b></label>
+    <span class="beauty-sep"></span>
+    <label class="mini-field mini-beauty"><span class="mini-lbl">美白强度</span>
+      <input type="range" id="miBeautyVal" min="0" max="100" value="50"></label>
+    <span class="beauty-sep"></span>
+    <span class="mini-lbl mini-oneclick">一键美颜</span>
+    <button class="btn sm" id="miBeautyLight" title="一键美颜：轻度（提亮 + 轻磨皮）">轻度</button>
+    <button class="btn sm" id="miBeautyNatural" title="一键美颜：自然（推荐，提亮 + 中度磨皮）">自然</button>
+    <button class="btn sm accent" id="miBeautyFancy" title="一键美颜：精致（强提亮 + 强磨皮）">精致</button>
+    <button class="btn sm" id="miBeautySmooth" title="磨皮（OpenCV 双边滤波，导出时应用）">磨皮</button>
+    <button class="btn sm" id="miBeautyWhite" title="美白（提亮 + 轻磨皮）">美白</button>
+    <button class="btn sm" id="miEnhance" title="自动增强：直方图分析自动调亮度/对比/饱和">✨ 自动增强</button>
+    <button class="btn sm" id="miRecipe" title="风格配方：一键套用 25 套预设风格">🪄 风格配方</button>
+    <button class="btn sm" id="miRecipeRandom" title="随机套用一套风格配方">🎲 随机配方</button>
+    <span class="beauty-sep"></span>
+    <span class="mini-lbl mini-oneclick">一键海报</span>
+    <button class="btn sm primary" id="quickPosterBtn" title="📣 一键生成示例海报（限时特惠）">📣 海报</button>
+    <button class="btn sm" id="quickPolaroidBtn" title="📷 加拍立得边框（底部留白 18%）">📷 拍立得</button>
+    <button class="btn sm" id="quickVintageBtn" title="🖼️ 加复古边框（米黄背景 + 内阴影）">🖼️ 复古</button>
+    <button class="btn sm accent" id="miMore" title="更多：风格 / 特效 / 高级 / 导出">🎨 更多工具</button>
   </div>
 
   <!-- 底部功能导航条（顶栏次要工具下移） -->

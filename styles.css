@@ -64,8 +64,8 @@ body {
 .btn.primary:hover { filter: brightness(1.06); }
 .zoom-label { min-width: 64px; font-variant-numeric: tabular-nums; font-weight: 600; }
 
-/* ===== 美图常规条（主界面直接可用控件） ===== */
-.beauty-bar { display: flex; align-items: center; gap: 12px; padding: 7px 16px; background: var(--bg2); border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+/* ===== 美颜常规条：内嵌底部栏（AGENTS.md §1 硬约束 border-top，与底部 nav-bar 共存） ===== */
+.beauty-bar { display: flex; align-items: center; gap: 12px; padding: 7px 16px; background: var(--bg2); border-top: 1px solid var(--rule); flex-wrap: wrap; flex: 0 0 auto; }
 .beauty-title { font-weight: 600; font-size: 13px; color: var(--accent); white-space: nowrap; }
 .mini-field { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .mini-field input[type="range"] { width: 84px; margin: 0; }
