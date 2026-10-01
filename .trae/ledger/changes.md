@@ -41,3 +41,13 @@
   - `sw.js` ← CACHE v39→v40（硬约束 §3：改 index.html 必须 +1）
 - **验证**：regression.cjs 404/0 全绿；app.js 安全扫描确认所有按钮事件靠 getElementById 无位置依赖；sync-dist.cjs 成功
 - **关联**：↔Dc-003（导航条形态决策） ↔Iss-003（已归档） ↔Iss-004
+
+#### Chg-004（2026-10-01 · 美颜工具条移到底部内嵌栏）
+
+- **批次主题**：.beauty-bar（亮度/对比/饱和/色温/一键美颜/一键海报）从顶栏下方移到底部 app-row 之后、bottom-nav 之前
+- **文件列表**：
+  - `index.html` ← beauty-bar 整块节点移动（剪切+粘贴，HTML 内容一行不改，ID 全保留）；body flex 纵向顺序变成：toolbar → app-row → beauty-bar → bottom-nav
+  - `styles.css` ← .beauty-bar border-bottom → border-top（匹配硬约束 §1：内嵌底部栏 border-top）；加 flex:0 0 auto 固定高度不塌
+  - `sw.js` ← CACHE v40→v41（硬约束 §3：改 index.html 必须 +1）
+- **验证**：regression.cjs 404/0 全绿；app.js 事件绑定全靠 getElementById 无位置依赖
+- **关联**：↔Dc-003（内嵌底部栏形态） ↔Chg-003（上一轮顶栏减半 + bottom-nav 新增）
