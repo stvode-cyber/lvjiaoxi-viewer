@@ -23,15 +23,6 @@
 - **预防规则**：写 `# TODO: [PS5-GBK] 预防：参数行纯 ASCII，中文注释单独 # 行` 到构建脚本头部
 - **关联路径**：`scripts/sync-dist.cjs` 调用的 PS 脚本、`build-windows.bat` 间接调用的 PS
 
-#### Iss-003（活跃 · 踩 3 次 ⚠️ 够归档门槛）regression.cjs 共享 jsdom document 残留值
-
-- **问题**：regression.cjs 所有测试共享同一个 jsdom document，前序测试改过的 input.value / canvas 尺寸 / global state 会残留到后序测试
-- **根因**：test 框架没有每个 test 独立 setup，同一个 document 贯穿全程
-- **解决**：断言前显式 `element.value = '目标值'`，不要依赖默认值
-- **预防规则**：写 `// TODO: [jsdom-document] 预防：断言前显式设目标值，别依赖上一个测试的残留` 到 regression.cjs 头部
-- **关联路径**：`test/regression.cjs`
-- **状态**：踩够 3 次 → 下次提炼时自动移归档区
-
 #### Iss-004（活跃 · 踩 2 次）NSIS 安装残留的 lnk 指向已删除目录
 
 - **问题**：Setup.exe 静默/交互式安装后，开始菜单 `.lnk` 可能指向上次安装选的旧路径（比如 C:\LVJX_TEST），但该目录后来被手动删除了 → 点 lnk 打不开
@@ -45,8 +36,18 @@
 
 ## 归档区（已沉淀 / 已解决，只追加不准删）
 
-<!-- 归档条目会从活跃区迁过来，格式同活跃区 -->
+> Iss-000 / Iss-001 / Iss-002 活跃区仍在；Iss-003 踩够 3 次自动归档
 
 #### Iss-000（已沉淀）初始化占位
 
 - **备注**：首个条目，方便后续归档追加时有参照格式
+
+#### Iss-003（已沉淀 · 踩 3 次归档）regression.cjs 共享 jsdom document 残留值
+
+- **问题**：regression.cjs 所有测试共享同一个 jsdom document，前序测试改过的 input.value / canvas 尺寸 / global state 会残留到后序测试
+- **根因**：test 框架没有每个 test 独立 setup，同一个 document 贯穿全程
+- **解决**：断言前显式 `element.value = '目标值'`，不要依赖默认值
+- **预防规则**：写 `// TODO: [jsdom-document] 预防：断言前显式设目标值，别依赖上一个测试的残留` 到 regression.cjs 头部
+- **关联路径**：`test/regression.cjs`
+- **归档原因**：踩够 3 次，预防规则已注入 regression.cjs 头部
+- **活跃区位置**：见上（已从活跃区移出）

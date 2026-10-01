@@ -32,7 +32,7 @@
 ## 活跃坑 top 3（踩过 ≥2 次）
 1. **Iss-001** jsdom Uint8Array 是 window realm，`instanceof` 必须用 `window.Uint8Array`
 2. **Iss-002** PowerShell 5 参数行纯 ASCII，中文注释被 GBK 误读
-3. **Iss-003** regression.cjs 共享 jsdom document，前序测试残留控件值 → 断言前显式设目标值
+3. **Iss-004** NSIS 安装残留的 lnk 指向已删除目录（已归档 Iss-003：jsdom document 残留值）
 
 ## 接手下一步
 看用户最新需求 → 按 AGENTS.md §6.3 改前必扫 issues.md → 动手

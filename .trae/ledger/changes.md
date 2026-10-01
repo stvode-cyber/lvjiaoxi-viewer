@@ -31,3 +31,13 @@
   - 用 WScript.Shell 修正 `绿角犀看图.lnk` 指向真实 EXE（原指向 C:\LVJX_TEST 已不存在）
 - **验证**：应用启动成功（ProcessName=lvjiaoxi-viewer）
 - **关联**：↔Iss-002（PS5 GBK 预防：命令参数行纯 ASCII） ↔Iss-004（新坑本身）
+
+#### Chg-003（2026-10-01 · 顶栏按钮拆分 + 底部导航条）
+
+- **批次主题**：顶部工具栏右侧 12 按钮挤 → 拆分成 6 核心留顶栏 + 6 次要功能移到底部新导航条
+- **文件列表**：
+  - `index.html` ← 顶栏 tb-right 从 12 减到 6；新增 `<nav class='bottom-nav'>` 放 6 个工具按钮（btnCopy/btnSlide/btnBatch/btnRecent/btnSettings/accountBtn）；按钮 ID 不变，app.js 事件绑定零改动
+  - `styles.css` ← 新增 `.bottom-nav` 块（flex column body 下自动贴底；配色对齐 toolbar/thumb-bar；图标+标签垂直 tab bar 风格；accountBtn 绿色 accent）
+  - `sw.js` ← CACHE v39→v40（硬约束 §3：改 index.html 必须 +1）
+- **验证**：regression.cjs 404/0 全绿；app.js 安全扫描确认所有按钮事件靠 getElementById 无位置依赖；sync-dist.cjs 成功
+- **关联**：↔Dc-003（导航条形态决策） ↔Iss-003（已归档） ↔Iss-004
