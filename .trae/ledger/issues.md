@@ -32,6 +32,15 @@
 - **关联路径**：`test/regression.cjs`
 - **状态**：踩够 3 次 → 下次提炼时自动移归档区
 
+#### Iss-004（活跃 · 踩 2 次）NSIS 安装残留的 lnk 指向已删除目录
+
+- **问题**：Setup.exe 静默/交互式安装后，开始菜单 `.lnk` 可能指向上次安装选的旧路径（比如 C:\LVJX_TEST），但该目录后来被手动删除了 → 点 lnk 打不开
+- **根因**：NSIS 用 Registry 记住上次安装路径；静默安装 `/S` 沿用这个路径但不做 `Test-Path` 检查，把 EXE 写到 AppData\Local\ 下别的目录了；lnk 仍指向旧路径 C:\LVJX_TEST
+- **解决**：1) 全局搜 `lvjiaoxi-viewer.exe` 定位真实 EXE 位置；2) 用 WScript.Shell 修正 lnk 的 TargetPath
+- **预防规则**：重装前先 Test-Path lnk 的 TargetPath，不存在先删旧 lnk；静默安装后强制扫 AppData\Local\ 下 lvjx-* 目录找 EXE
+- **关联路径**：`nsis_x/*.exe`、`AppData\Local\lvjx-v010-final\`
+- **重现次数**：2（2026-09-30 重装 + 2026-10-01 打开应用各踩一次）
+
 ---
 
 ## 归档区（已沉淀 / 已解决，只追加不准删）

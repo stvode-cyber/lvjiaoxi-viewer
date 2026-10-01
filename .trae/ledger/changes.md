@@ -17,3 +17,17 @@
   - `.trae/ledger/.session.md` ← 会话临时内存骨架
 - **验证**：regression.cjs 全绿 404/0；AGENTS.md + .trae/ledger/ 目录不影响 app.js / sw.js / Cargo.toml 等运行时代码，无需重构建
 - **关联**：↔Dc-006 ↔Iss-001 ↔Iss-002 ↔Iss-003
+
+#### Chg-002（2026-10-01 · NSIS 重装 + 启动应用 + lnk 修正）
+
+- **批次主题**：重装绿角犀看图 Setup.exe /S → 全局搜 EXE 定位真实路径 → 启动应用 + 修正开始菜单 lnk → 沉淀新坑 Iss-004
+- **文件列表**：
+  - `.trae/ledger/issues.md` ← 新增 Iss-004（NSIS 残留 lnk 指向已删除目录，踩 2 次）
+  - `.trae/ledger/changes.md` ← 追加 Chg-002
+- **操作动作**：
+  - 执行 `绿角犀看图_0.1.0_x64-setup.exe /S`（ExitCode=0）
+  - 全局搜 `lvjiaoxi-viewer.exe` 定位到 `AppData\Local\lvjx-v010-final\lvjiaoxi-viewer.exe` (14.3MB)
+  - Start-Process 启动成功（PID=15264）
+  - 用 WScript.Shell 修正 `绿角犀看图.lnk` 指向真实 EXE（原指向 C:\LVJX_TEST 已不存在）
+- **验证**：应用启动成功（ProcessName=lvjiaoxi-viewer）
+- **关联**：↔Iss-002（PS5 GBK 预防：命令参数行纯 ASCII） ↔Iss-004（新坑本身）

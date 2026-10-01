@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -33,17 +33,12 @@
     </div>
 
     <div class="tb-group tb-right">
-      <button class="btn icon" id="btnCopy" title="复制到剪贴板">⧉</button>
       <button class="btn icon" id="btnUndo" title="撤销编辑" disabled>↶</button>
       <button class="btn icon" id="btnRedo" title="重做编辑" disabled>↷</button>
       <button class="btn icon" id="btnEdit" title="图片工具：滤镜 / 导出">🎨</button>
-      <button class="btn icon" id="btnInfo" title="图片信息">ⓘ</button>
-      <button class="btn icon" id="btnSlide" title="幻灯片播放">▶</button>
-      <button class="btn icon" id="btnBatch" title="批量处理">⚙</button>
-      <button class="btn icon" id="btnRecent" title="最近打开">🕘</button>
       <button class="btn icon" id="btnSnap" title="画面区域截图：框选当前画面导出">📷</button>
-      <button class="btn icon" id="btnSettings" title="设置">⚒</button>
-      <button class="btn text" id="accountBtn" title="登录云端账户">☁ 登录</button>
+      <span class="tb-sep"></span>
+      <button class="btn icon" id="btnInfo" title="图片信息">ⓘ</button>
       <button class="btn icon" id="btnFull" title="全屏">⛶</button>
     </div>
   </header>
@@ -128,6 +123,16 @@
     </aside>
 
   </div>
+
+  <!-- 底部功能导航条（顶栏次要工具下移） -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="btn nav-btn" id="btnCopy" title="复制到剪贴板">⧉<span class="nav-label">复制</span></button>
+    <button class="btn nav-btn" id="btnSlide" title="幻灯片播放">▶<span class="nav-label">幻灯</span></button>
+    <button class="btn nav-btn" id="btnBatch" title="批量处理">⚙<span class="nav-label">批量</span></button>
+    <button class="btn nav-btn" id="btnRecent" title="最近打开">🕘<span class="nav-label">最近</span></button>
+    <button class="btn nav-btn" id="btnSettings" title="设置">⚒<span class="nav-label">设置</span></button>
+    <button class="btn nav-btn nav-cloud" id="accountBtn" title="登录云端账户">☁<span class="nav-label">云账户</span></button>
+  </nav>
 
   <!-- 图床/导出/信息/更多等面板：叠加层，不参与主布局 -->
 
