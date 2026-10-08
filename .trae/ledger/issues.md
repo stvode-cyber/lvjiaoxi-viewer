@@ -61,3 +61,5 @@
 - **代价**：GIF 失去动画帧（image crate gif 解码器只取第一帧 → 转 JPEG），但保证能显示静态图而不是报"无法解码"
 - **预防规则**：新增"WebView2 原生支持格式"时要加真实文件验证，不要只假设 Chromium 全能解
 - **关联路径**：`src-tauri/src/lib.rs` NATIVE_EXTS / load_paths / read_archive_entry / resolve_image_url
+- **重现次数**：2026-10-08 再踩一次！新 EXE Hash=E67F551A04FB8515，运行中 EXE Hash=30E7F6180B（老的），覆盖安装 NSIS /S 没更新旧路径文件 → 手动 Copy-Item 覆盖 + 验证 Hash 才解决
+- **子坑 5a**：NSIS /S 静默安装到自定义路径（lvjx-v010-final）时不覆盖旧 EXE，必须手动 Copy-Item + Stop-Process + 验证 Hash
