@@ -87,3 +87,16 @@
 - **验证**：cargo check 通过；regression.cjs 404/0 全绿；tauri build 成功
 - **产物**：nsis_x 已刷新（11:24:28）
 - **关联**：↔Iss-005（新坑） ↔Iss-002（PS5 GBK）
+
+#### Chg-008（2026-10-08 · setup 冗余清理）
+
+- **批次主题**：清理 lib.rs setup 闭包周边的开发调试残留
+- **改动点**：`src-tauri/src/lib.rs` 删除 711-712 行 touch 时间戳注释（开发时手动 touch 强制重编译的临时备注）
+- **验证**：cargo check ✅ regression.cjs 404/0 ✅
+- **确认保留**：
+  - installer.nsh（三段 hook PreInstall/PostInstall/PostUnInstall 全在干活，右键菜单 + 自动卸载）
+  - .setup() 闭包（托盘 + 命令行缓存 pending 路径，紧凑有效无冗余）
+  - single_instance plugin（配合 get_pending_paths 转发新实例打开的文件）
+  - .verif/ 目录（验收截图，非代码）
+  - app.js 无大块注释代码
+- **关联**：↔Iss-004（NSIS lnk 残留） ↔Iss-005（GIF 解码）
