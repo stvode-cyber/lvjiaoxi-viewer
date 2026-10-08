@@ -76,3 +76,14 @@
   - `.trae/ledger/context.md` ← 3 处过期修复
 - **验证**：regression.cjs 404/0 全绿（本批次不动业务代码，纯台账）
 - **关联**：↔Chg-003（顶栏减半） ↔Chg-004（美颜下移） ↔Chg-005（重构建）
+
+#### Chg-007（2026-10-08 · GIF 无法解码兜底）
+
+- **批次主题**：WebView2 对某些 GIF 变种原生解码失败 → 从 NATIVE_EXTS 移入 Rust image crate 解码路径兜底
+- **根因证据**：`%TEMP%/lvjx-debug.log` 5 条 CATCH broken，urlHead=data:image/gif;base64,（Rust 正确透传但 WebView2 onerror）
+- **改动点**：
+  - `src-tauri/src/lib.rs` NATIVE_EXTS 移除 "gif"；三处解码入口（load_paths 行 419 / read_archive_entry 行 172 / resolve_image_url 行 479）同步加 gif 走 image crate → JPEG
+  - `test/regression.cjs` 行 1203 源码断言字符串更新匹配新 matches! 包含 gif
+- **验证**：cargo check 通过；regression.cjs 404/0 全绿；tauri build 成功
+- **产物**：nsis_x 已刷新（11:24:28）
+- **关联**：↔Iss-005（新坑） ↔Iss-002（PS5 GBK）

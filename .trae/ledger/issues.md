@@ -51,3 +51,13 @@
 - **关联路径**：`test/regression.cjs`
 - **归档原因**：踩够 3 次，预防规则已注入 regression.cjs 头部
 - **活跃区位置**：见上（已从活跃区移出）
+
+#### Iss-005（活跃 · 踩 5 次）WebView2 对某些 GIF 变种原生解码失败
+
+- **问题**：GIF 文件在 Rust 侧正确透传 data URL（data:image/gif;base64,...），但前端 <img src> 触发 onerror → "无法解码：xxx.gif"
+- **根因**：WebView2（Chromium）对某些 GIF 格式变种/损坏文件（IE 缓存中的 .gif、超大 GIF、非标准 color table）原生解码失败。
+  lvjx-debug.log 铁证：5 张 GIF 全 CATCH broken，urlHead 都有 data:image/gif;base64, → Rust 没问题，是 WebView2 解码端挂
+- **解决**：把 gif 从 NATIVE_EXTS 移入 image crate 解码路径（load_paths/read_archive_entry/resolve_image_url 三处同步）
+- **代价**：GIF 失去动画帧（image crate gif 解码器只取第一帧 → 转 JPEG），但保证能显示静态图而不是报"无法解码"
+- **预防规则**：新增"WebView2 原生支持格式"时要加真实文件验证，不要只假设 Chromium 全能解
+- **关联路径**：`src-tauri/src/lib.rs` NATIVE_EXTS / load_paths / read_archive_entry / resolve_image_url
