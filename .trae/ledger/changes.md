@@ -62,3 +62,17 @@
   - `nsis_x/绿角犀看图_0.1.0_x64_zh-CN.msi` ← 209.9MB，刚构建 10:35
 - **版本号**：0.1.0 全落点一致（tauri.conf.json / Cargo.toml / EXE 元数据 / manifest / about 标题 / sw.js CACHE v41）
 - **关联**：↔Chg-003（顶栏减半） ↔Chg-004（美颜下移） ↔Iss-002（PS5 GBK）
+
+#### Chg-006（2026-10-08 · 台账过期修复）
+
+- **批次主题**：台账自身过期字段修复（不碰业务代码）
+- **过期点**：
+  1. START_HERE.md 写 sw.js CACHE v39 → 实际已到 v41（Chg-004 改 beauty-bar 时升的）
+  2. START_HERE.md 完成度日期 2026-09-30 → 2026-10-08
+  3. START_HERE.md 硬约束导航条写"顶栏 + 底部图片条不许增删" → 实际上一轮加了 bottom-nav，更新为反映现状（顶栏 6 + beauty-bar + bottom-nav 6 + 底部图片条）
+  4. context.md 日期 + CACHE v41 + 显示版本从"待确认"改为 v0.1.0（查 app.js 行 4960）
+- **文件列表**：
+  - `.trae/ledger/START_HERE.md` ← 3 处过期修复
+  - `.trae/ledger/context.md` ← 3 处过期修复
+- **验证**：regression.cjs 404/0 全绿（本批次不动业务代码，纯台账）
+- **关联**：↔Chg-003（顶栏减半） ↔Chg-004（美颜下移） ↔Chg-005（重构建）

@@ -2,7 +2,7 @@
 
 > 这个文件记录项目的稳定状态。完成度变了、硬规则变了、关键配置变了 → 改这里。
 
-## 完成度快照（2026-09-30）
+## 完成度快照（2026-10-08）
 
 | 模块 | 百分比 | 状态 | 备注 |
 |------|--------|------|------|
@@ -22,8 +22,8 @@
 | Tauri bundle.version | 0.1.0 | src-tauri/tauri.conf.json |
 | Cargo package.version | 0.1.0 | src-tauri/Cargo.toml |
 | manifest webmanifest version | 0.1.0 | manifest.webmanifest |
-| sw.js CACHE | lvjiaoxi-viewer-v39 | sw.js |
-| 显示版本 (app.js about) | 待确认 | app.js |
+| sw.js CACHE | lvjiaoxi-viewer-v41 | sw.js |
+| 显示版本 (app.js about) | v0.1.0 | app.js 行 4960 |
 
 ## 已定硬规则清单
 
