@@ -708,8 +708,6 @@ pub fn run() {
 //      }
 //   3) load_paths 的 else 分支改为调用 decode_to_rgb 而非返回错误。
 // 解码后统一经 rgb_to_jpeg_data_url 转 data URL 给前端 <img>。
-// touch 12:28:18: 强制重编译以重新内嵌前端资源
-// touch 12:32:40: 重新内嵌
 
 #[cfg(test)]
 mod tests {
