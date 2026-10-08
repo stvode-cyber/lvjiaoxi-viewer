@@ -1200,7 +1200,7 @@ test('压缩包直看 ZIP/CBZ + 懒加载 + handleOpenPaths 统一入口', async
   assert(rustSrc.includes('__MACOSX'), '跳过 __MACOSX 无用条目');
   assert(rustSrc.includes('.DS_Store'), '跳过 .DS_Store');
   assert(rustSrc.includes('NATIVE_EXTS.contains'), 'WebView 原生格式直接 data URL');
-  assert(rustSrc.includes('matches!(ext.as_str(), "tif" | "tiff" | "tga")'), 'TIFF/TGA 走 image crate 解码');
+  assert(rustSrc.includes('matches!(ext.as_str(), "gif" | "tif" | "tiff" | "tga")'), 'GIF/TIFF/TGA 走 image crate 解码（GIF 兜底 WebView2 解码失败）');
   assert(rustSrc.includes('image::ImageReader::new'), 'image crate ImageReader 解码');
   assert(rustSrc.includes('write_with_encoder'), 'JPEG 编码（和 decode_to_rgb 同款）');
 

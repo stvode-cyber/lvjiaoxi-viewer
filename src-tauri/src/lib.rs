@@ -168,8 +168,8 @@ fn read_archive_entry(path: String, index: usize) -> Result<String, String> {
         return Ok(format!("data:{};base64,{}", mime, b64));
     }
 
-    // TIFF / TGA 等 → Rust image crate 解码转 JPEG
-    if matches!(ext.as_str(), "tif" | "tiff" | "tga") {
+    // GIF / TIFF / TGA 等 → Rust image crate 解码转 JPEG（GIF：WebView2 对某些变种解码失败，兜底）
+    if matches!(ext.as_str(), "gif" | "tif" | "tiff" | "tga") {
         let cursor = Cursor::new(&buf);
         let img = image::ImageReader::new(cursor)
             .with_guessed_format()
@@ -202,8 +202,10 @@ pub struct ImageEntry {
 }
 
 // WebView 原生支持的格式：直接以 data URL 透传，无需 Rust 解码
+// 注意：gif 已移出，因为 WebView2 对某些 GIF 变种/损坏文件原生解码失败（见 lvjx-debug.log CATCH broken），
+// 统一走 image crate 解码成 PNG 兜底，代价是失去动画帧但保证能显示。
 const NATIVE_EXTS: &[&str] = &[
-    "jpg", "jpeg", "png", "gif", "webp", "bmp", "ico", "svg", "avif", "apng",
+    "jpg", "jpeg", "png", "webp", "bmp", "ico", "svg", "avif", "apng",
 ];
 
 // 压缩包扩展名（ZIP/CBZ 一期支持；RAR/7Z 后续版再加）
@@ -414,8 +416,8 @@ async fn load_paths(paths: Vec<String>, recursive: Option<bool>) -> Result<Vec<I
                 Ok(bytes) => format!("data:{};base64,{}", mime, B64.encode(&bytes)),
                 Err(_) => continue,
             }
-        } else if ext == "tif" || ext == "tiff" || ext == "tga" {
-            // 需要 Rust 解码的格式：解码失败则跳过该文件，不阻塞整批加载
+        } else if ext == "gif" || ext == "tif" || ext == "tiff" || ext == "tga" {
+            // 需要 Rust 解码的格式（GIF：WebView2 对某些变种解码失败，兜底成 PNG）
             match decode_to_rgb(&f).and_then(rgb_to_jpeg_data_url) {
                 Ok(u) => u,
                 Err(_) => continue,
@@ -474,7 +476,7 @@ fn first_thumb(path: String) -> Result<Option<String>, String> {
     if NATIVE_EXTS.contains(&ext.as_str()) {
         let bytes = std::fs::read(&file).map_err(|e| e.to_string())?;
         Ok(Some(format!("data:{};base64,{}", mime, B64.encode(&bytes))))
-    } else if ext == "tif" || ext == "tiff" || ext == "tga" {
+    } else if ext == "gif" || ext == "tif" || ext == "tiff" || ext == "tga" {
         let rgb = decode_to_rgb(&file)?;
         Ok(Some(rgb_to_jpeg_data_url(rgb)?))
     } else {
