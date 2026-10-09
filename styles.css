@@ -242,18 +242,18 @@ body {
 
 .edit-work { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
 .edit-tools { display: flex; flex-direction: row; flex-wrap: wrap; flex: 0 0 auto; background: var(--bg); border-bottom: 1px solid var(--rule); padding: 0 8px; gap: 0; }
-.edit-tab { border: none; background: none; padding: 7px 14px; cursor: pointer; font-size: 13px; color: var(--muted); text-align: center; border-bottom: 2px solid transparent; }
+.edit-tab { border: none; background: none; padding: 5px 12px; cursor: pointer; font-size: 13px; color: var(--muted); text-align: center; border-bottom: 2px solid transparent; }
 .edit-tab.active { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); background: var(--accent-soft); }
 .edit-tab:hover { color: var(--ink); background: var(--bg2); }
 .edit-body { overflow-y: auto; overflow-x: hidden; flex: 1 1 auto; min-height: 0; max-height: 100%; }
 .edit-pane { display: none; flex-direction: column; }
 .edit-pane.active { display: flex; }
-.edit-sub-tabs { display: flex; gap: 4px; padding: 4px 10px; border-bottom: 1px solid var(--rule); background: var(--bg); flex-wrap: wrap; flex: 0 0 auto; }
+.edit-sub-tabs { display: flex; gap: 4px; padding: 3px 8px; border-bottom: 1px solid var(--rule); background: var(--bg); flex-wrap: wrap; flex: 0 0 auto; }
 .edit-sub-tab { border: none; background: none; padding: 4px 10px; font-size: 12px; color: var(--muted); cursor: pointer; border-radius: 12px; }
 .edit-sub-tab.active { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
 .edit-sub-tab:hover { color: var(--ink); background: var(--bg2); }
 .edit-sub-panes { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-.edit-sub-pane { display: none; padding: 6px 10px; }
+.edit-sub-pane { display: none; padding: 0; } /* padding 交给内部 edit-section，避免双重留白 */
 .edit-sub-pane.active { display: block; }
 .batch-body { padding: 18px; overflow-y: auto; }
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; font-size: 13px; }
@@ -273,7 +273,7 @@ body {
 .hint { font-size: 12px; color: var(--muted); margin: 2px 0 8px; line-height: 1.4; }
 
 /* 图片工具：body flex 内嵌底部栏（border-top 对齐 Dc-003 硬约束）—— 打开时替换 beauty-bar 位置 */
-.edit-panel { display: flex; flex-direction: column; background: var(--bg2); border-top: 1px solid var(--rule); max-height: 32vh; flex: 0 0 auto; overflow: hidden; }
+.edit-panel { display: flex; flex-direction: column; background: var(--bg2); border-top: 1px solid var(--rule); max-height: 26vh; flex: 0 0 auto; overflow: hidden; }
 .edit-panel[hidden] { display: none; }
 .edit-panel-head { display: flex; align-items: center; gap: 8px; padding: 4px 12px; border-bottom: 1px solid var(--rule); font-weight: 600; font-size: 13px; }
 .edit-panel-head .btn { margin-left: auto; width: auto; height: auto; padding: 4px 10px; }
@@ -293,12 +293,12 @@ body {
 .style-cell .del-x { position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; font-size: 13px; border-radius: 50%; background: rgba(0,0,0,.35); color: #fff; line-height: 14px; text-align: center; display: none; cursor: pointer; border: none; padding: 0; }
 .style-cell:hover .del-x { display: block; }
 .edit-name { font-size: 13px; color: var(--muted); font-weight: 400; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.edit-preview-wrap { position: relative; padding: 10px 18px 4px; background: var(--bg); border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 0 0 auto; max-height: 32vh; overflow: hidden; }
-#editPreview { max-width: 100%; max-height: calc(32vh - 24px); background:
+.edit-preview-wrap { position: relative; padding: 10px 18px 4px; background: var(--bg); border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 0 0 auto; max-height: 26vh; overflow: hidden; }
+#editPreview { max-width: 100%; max-height: calc(26vh - 24px); background:
   repeating-conic-gradient(rgba(55,56,52,.45) 0% 25%, rgba(55,56,52,.20) 0% 50%) 50% / 18px 18px;
   border-radius: 6px; cursor: crosshair; touch-action: none; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
 .edit-preview-wrap .hint { margin: 0; text-align: center; }
-.edit-section { padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+.edit-section { padding: 6px 10px; border-bottom: 1px solid var(--rule); }
 .edit-section:last-child { border-bottom: none; }
 .edit-section h4 { margin: 0 0 6px; font-size: 13px; color: var(--ink); }
 .edit-actions { display: flex; gap: 6px; margin-top: 2px; flex-wrap: wrap; align-items: center; }

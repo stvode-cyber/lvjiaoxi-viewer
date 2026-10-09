@@ -240,3 +240,21 @@
   - beauty-bar 默认 hidden，edit-panel 内嵌 body flex column 流 → 不遮挡主图
 - **验证**：regression.cjs 410/0 全绿；npm run tauri build 成功（1m06s）
 - **关联**：↔Chg-017（beauty-bar 默认 hidden） ↔Chg-016（edit-panel 内嵌方案） ↔Dc-003（内嵌底栏硬约束）
+
+#### Chg-019（2026-10-09 · edit-panel 空间压缩第一轮：垂直侧栏→顶部横向tab）
+
+- **批次主题**：edit-tools 从 108px 垂直侧栏改为顶部横向 tab bar；max-height 42→32vh；head/sub-pane/section/field/hint 全部 padding 砍半
+- **根因**：用户截图反馈"占用的空间太大了"——edit-panel 占近半屏，主图被压得很小
+- **文件列表**：`styles.css`（纯 CSS，零 HTML/JS 风险）；`sw.js` CACHE v49→v50
+- **效果**：edit-panel 高度 ~320px→~230px，tab 栏从侧栏变顶栏内容区更宽，主图面积翻倍
+- **验证**：regression 410/0 全绿；58s build 成功；本机启动 OK
+- **关联**：↔Chg-018
+
+#### Chg-020（2026-10-09 · edit-panel 空间压缩第二轮：26vh + 双重padding清零）
+
+- **批次主题**：max-height 32→26vh；edit-sub-pane padding 清零（交给内部 edit-section，消双重留白）；edit-tab/sub-tabs/section 再压；editPreview + preview-wrap 的 32vh 联动值同步 26vh
+- **根因**：用户反馈"如果空间还是太大，请继续优化"
+- **文件列表**：`styles.css`（6 处）；`sw.js` CACHE v50→v51
+- **效果**：面板再省 ~90px（max-height 省 6vh≈63px + 双重 padding 12px + tab 行 6px + section 4px）
+- **验证**：regression 410/0 全绿；build 首次遇 NSIS 下载网络抖动（os error 10054）重试即过；nsis_x 已更新
+- **关联**：↔Chg-019
