@@ -84,3 +84,23 @@
 - **影响文件**：`app.js` showImage（主改动）、sw.js CACHE +1
 - **验证**：regression 410/0 全绿（Iss-003 活跃坑未触发——regression 大部分是源码断言而非运行时控件值断言）
 - **关联**：↔Dc-003（内嵌底栏形态） ↔Iss-003（jsdom document 残留值，本次未踩但改控件值的测试需警惕）
+
+#### Dc-010（2026-10-09 · 编辑面板交互重构）editMask 内部采用「一级 tab + 二级 sub-tab」分层导航，不靠滚动堆 section
+
+- **选型**：每个 edit-pane 内部加 `.edit-sub-tabs > .edit-sub-panes > .edit-sub-pane`，sub-tab 点击只切对应内容区，不滚到底
+- **替换旧行为**：
+  1. 旧版 edit-body overflow-y auto，每个 pane 5-10 个 section 全堆一个滚动体里 → 用户要滚到底才能找到"消除笔"这种工具，体验反直觉
+  2. decor pane 有 HTML bug：`data-pane="decor"` 是空 div（L594 就闭合），边框/贴纸/海报/证件照/Logo/文字/马赛克/消除笔 11 个 section 裸在 `.edit-body` 直接子级 → 切任何一级 tab 它们都**永远显示**（`.edit-pane` 只切自己的 active，裸 section 不受控）
+- **新 sub-tab 分组**（3 个 pane 加导航，2 个内容少保持原样）：
+  | Pane | Sub-tabs |
+  |---|---|
+  | beauty（美颜） | 美型&调色（美颜+滤镜完整参数+色调分离） / 照片调整（自动增强） |
+  | recipe（风格配方） | 不变（2 个 section 本来就少） |
+  | decor（特效） | 边框/贴纸 / 海报排版（海报标题+证件照） / 水印/笔刷（Logo+文字+马赛克+消除笔） |
+  | pro（高级） | 人像精修（瘦脸瘦腹+美型微调+抠图） / 高级处理（OpenCV+AI放大+裁剪） |
+  | export（导出） | 不变（1 个 section） |
+- **CSS**：`.edit-pane { display: flex; }` 改 flex 容器（active 时 flex），新增 7 条 sub-tab 样式规则
+- **JS**：$$('.edit-sub-tab') 点击绑定（每个 pane 内部独立管 active，切一级 tab 时 sub-tab 状态保持）
+- **核心 bug 修复**：decor pane 的 11 个裸 section 收回 `data-pane="decor"` 容器内（这是重构的**关键动机**，不是可选项）
+- **id/class 零改动**：所有 section id（flBrightness/beautyVal/borderMode/emojiBar/mosaicBtn/cvDenoise/slimFace/deform_eye/matFg/cropReset/exRun）和 class 名保持不变，app.js 事件绑定 100% 兼容
+- **关联**：↔Dc-003（内嵌底栏形态） ↔Chg-013 ↔Iss-006（decor pane 空 div bug，首次发现）

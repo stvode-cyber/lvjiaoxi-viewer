@@ -5206,6 +5206,16 @@
     // 图片工具弹窗
     els.editClose.addEventListener('click', () => els.editMask.hidden = true);
     $$('.edit-tab').forEach((t) => t.addEventListener('click', () => switchEditTab(t.dataset.tab)));
+    // sub-tab 点击切换（每个 edit-pane 内部独立管理）
+    $$('.edit-sub-tab').forEach((st) => {
+      st.addEventListener('click', () => {
+        const pane = st.closest('.edit-pane');
+        if (!pane) return;
+        const sub = st.dataset.sub;
+        pane.querySelectorAll('.edit-sub-tab').forEach((x) => x.classList.toggle('active', x === st));
+        pane.querySelectorAll('.edit-sub-pane').forEach((x) => x.classList.toggle('active', x.dataset.sub === sub));
+      });
+    });
     els.flReset.addEventListener('click', resetFilters);
     if (els.cropReset) els.cropReset.addEventListener('click', resetCrop);
     if (els.editPreview) {

@@ -32,6 +32,24 @@
 - **关联路径**：`nsis_x/*.exe`、`AppData\Local\lvjx-v010-final\`
 - **重现次数**：2（2026-09-30 重装 + 2026-10-01 打开应用各踩一次）
 
+#### Iss-005（活跃 · 踩 5 次）WebView2 对某些 GIF 变种原生解码失败
+
+- **问题**：GIF 文件在 Rust 侧正确透传 data URL（data:image/gif;base64,...），但前端 <img src> 触发 onerror → "无法解码：xxx.gif"
+- **根因**：WebView2（Chromium）对某些 GIF 格式变种/损坏文件（IE 缓存中的 .gif、超大 GIF、非标准 color table）原生解码失败
+- **解决**：Dc-008 方案 B 已实施（Chg-011）—— gif 恢复原生透传播动画，坏 GIF 前端 onerror → decode_fallback → JPEG 第一帧；顺修 is_image 漏 gif 导致文件夹扫描整个跳过 GIF 的隐藏回归；压缩包内 GIF 仍静态第一帧
+- **预防规则**：新增"WebView2 原生支持格式"时要加真实文件验证，不要只假设 Chromium 全能解
+- **关联路径**：`src-tauri/src/lib.rs` / load_paths / read_archive_entry / resolve_image_url
+- **重现次数**：5（2026-10-08 NSIS /S 覆盖安装失效踩第 5 次）
+
+#### Iss-006（活跃 · 踩 1 次）decor pane 空 div + section 裸在 edit-body 外
+
+- **问题**：编辑面板「特效」tab（data-pane="decor"）内容丢失 → 边框/贴纸/海报/证件照/Logo/文字/马赛克/消除笔 11 个 section 在**所有 tab 下**都永远显示，严重干扰其他 tab 的使用
+- **根因**：`index.html` L593 `<div class="edit-pane" data-pane="decor">` 后 L594 立即 `</div>` 闭合 → 空容器；L596-L773 的 11 个 section 裸在 `.edit-body` 直接子级。`.edit-pane { display:none }` 只对 pane 生效，裸 section 不受控
+- **解决**：Dc-010 重构时顺便修了 —— 把 11 个裸 section 收回 decor pane，同时加 sub-tab 导航
+- **预防规则**：写 edit-pane HTML 后必须确认所有 section 被对应 data-pane 容器包裹；用 `rg -n 'data-pane'` 检查闭合
+- **关联路径**：`index.html` editMask 部分（L472-L887）
+- **重现次数**：首次发现（2026-10-09 晚）
+
 ---
 
 ## 归档区（已沉淀 / 已解决，只追加不准删）
@@ -51,16 +69,3 @@
 - **关联路径**：`test/regression.cjs`
 - **归档原因**：踩够 3 次，预防规则已注入 regression.cjs 头部
 - **活跃区位置**：见上（已从活跃区移出）
-
-#### Iss-005（活跃 · 踩 5 次）WebView2 对某些 GIF 变种原生解码失败
-
-- **问题**：GIF 文件在 Rust 侧正确透传 data URL（data:image/gif;base64,...），但前端 <img src> 触发 onerror → "无法解码：xxx.gif"
-- **根因**：WebView2（Chromium）对某些 GIF 格式变种/损坏文件（IE 缓存中的 .gif、超大 GIF、非标准 color table）原生解码失败。
-  lvjx-debug.log 铁证：5 张 GIF 全 CATCH broken，urlHead 都有 data:image/gif;base64, → Rust 没问题，是 WebView2 解码端挂
-- **解决**：把 gif 从 NATIVE_EXTS 移入 image crate 解码路径（load_paths/read_archive_entry/resolve_image_url 三处同步）
-- **代价**：GIF 失去动画帧（image crate gif 解码器只取第一帧 → 转 JPEG），但保证能显示静态图而不是报"无法解码"
-- **预防规则**：新增"WebView2 原生支持格式"时要加真实文件验证，不要只假设 Chromium 全能解
-- **关联路径**：`src-tauri/src/lib.rs` NATIVE_EXTS / load_paths / read_archive_entry / resolve_image_url
-- **重现次数**：2026-10-08 再踩一次！新 EXE Hash=E67F551A04FB8515，运行中 EXE Hash=30E7F6180B（老的），覆盖安装 NSIS /S 没更新旧路径文件 → 手动 Copy-Item 覆盖 + 验证 Hash 才解决
-- **子坑 5a**：NSIS /S 静默安装到自定义路径（lvjx-v010-final）时不覆盖旧 EXE，必须手动 Copy-Item + Stop-Process + 验证 Hash
-- **2026-10-09 更新**：Dc-008 方案 B 已实施（Chg-011）—— gif 恢复原生透传播动画，坏 GIF 前端 onerror → decode_fallback → JPEG 第一帧；顺修 is_image 漏 gif 导致文件夹扫描整个跳过 GIF 的隐藏回归；压缩包内 GIF 仍静态第一帧

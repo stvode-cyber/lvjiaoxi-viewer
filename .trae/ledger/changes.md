@@ -155,3 +155,17 @@
 - **验证**：regression.cjs 410/0 全绿；sync-dist.cjs 已跑
 - **注意**：NSIS 安装包未重建，桌面端生效需下次 `npm run tauri build`
 - **关联**：↔Dc-009 ↔Iss-003（活跃坑未触发，改控件值的运行时测试需显式设目标值） ↔Chg-011
+
+#### Chg-013（2026-10-09 晚 · 编辑面板交互重构）
+
+- **批次主题**：editMask 内部从"一级 tab + 一坨滚动 section"改成"一级 tab + 二级 sub-tab 分层导航"，同时修 decor pane 空 div bug
+- **根因**：
+  1. 用户反馈「打开更多工具后页面乱了」
+  2. 实锤 bug：decor pane（`data-pane="decor"`）是空 div，边框/贴纸等 11 个 section 裸在 `.edit-body` 直接子级 → 永远显示（Iss-006）
+- **文件列表**：
+  - `index.html` ← editMask 全部重构：每个 edit-pane 内加 `.edit-sub-tabs > .edit-sub-panes > .edit-sub-pane` 嵌套 + decor pane 收回 11 个裸 section
+  - `styles.css` ← `.edit-pane { display: flex }` 改 flex 容器 + 新增 7 条 sub-tab 样式规则
+  - `app.js` ← L5209-L5218 新增 10 行 sub-tab 点击绑定
+  - `sw.js` ← CACHE v44→v45（改了 HTML + CSS + app.js）
+- **验证**：regression.cjs 410/0 双次全绿；sync-dist.cjs 已跑；所有 section id/class 零改动
+- **关联**：↔Dc-010 ↔Iss-006 ↔Chg-012

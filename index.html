@@ -519,6 +519,12 @@
       </div><!-- /recipe pane -->
 
       <div class="edit-pane active" data-pane="beauty">
+      <nav class="edit-sub-tabs" data-sub-tabs="beauty">
+        <button class="edit-sub-tab active" data-sub="tone">美型&调色</button>
+        <button class="edit-sub-tab" data-sub="photo">照片调整</button>
+      </nav>
+      <div class="edit-sub-panes">
+      <div class="edit-sub-pane active" data-sub="tone">
       <div class="edit-section">
         <h4>美颜</h4>
         <p class="hint">磨皮 / 美白基于 OpenCV；未加载时点按自动联网加载（约 8MB）。</p>
@@ -581,6 +587,8 @@
         <label class="field"><span>染色强度 <b id="flTintAmtVal">0</b>%（0 为不染色）</span>
           <input type="range" id="flTintAmt" min="0" max="100" value="0"></label>
       </div>
+      </div><!-- /tone sub-pane -->
+      <div class="edit-sub-pane" data-sub="photo">
       <div class="edit-section">
         <h4>照片调整</h4>
         <p class="hint">自动增强：分析亮度直方图，自动调整亮度 / 对比度 / 饱和度（非破坏性，可继续手动微调）。</p>
@@ -588,11 +596,18 @@
           <button class="btn" id="btnAutoEnhance">✨ 自动增强</button>
         </div>
       </div>
+      </div><!-- /photo sub-pane -->
+      </div><!-- /edit-sub-panes -->
       </div><!-- /beauty pane -->
 
       <div class="edit-pane" data-pane="decor">
-      </div>
-
+      <nav class="edit-sub-tabs" data-sub-tabs="decor">
+        <button class="edit-sub-tab active" data-sub="border">边框/贴纸</button>
+        <button class="edit-sub-tab" data-sub="poster">海报排版</button>
+        <button class="edit-sub-tab" data-sub="wmbrush">水印/笔刷</button>
+      </nav>
+      <div class="edit-sub-panes">
+      <div class="edit-sub-pane active" data-sub="border">
       <div class="edit-section">
         <h4>边框</h4>
         <div class="edit-actions">
@@ -632,6 +647,8 @@
           <button class="btn" id="emojiClear">清空贴纸</button>
         </div>
       </div>
+      </div><!-- /border sub-pane -->
+      <div class="edit-sub-pane" data-sub="poster">
       <div class="edit-section">
         <h4>海报标题（一键生成）</h4>
         <p class="hint">快速生成标题/副标题/价格海报。生成后自动加入文字层，可继续拖拽编辑。</p>
@@ -651,8 +668,6 @@
           <button class="btn primary" id="posterGenerate">生成海报文字</button>
         </div>
       </div>
-
-      <!-- 证件照自动排版 -->
       <div class="edit-section">
         <h4>📇 证件照自动排版</h4>
         <p class="hint">自动按标准尺寸在 A4/照片纸上排 N 张，300DPI 打印清晰。</p>
@@ -692,8 +707,8 @@
         </div>
         <p class="hint" id="idPhotoInfo" style="margin-top:6px;font-size:11px;color:#868e96"></p>
       </div>
-
-      <!-- Logo 水印（单张编辑器扩展） -->
+      </div><!-- /poster sub-pane -->
+      <div class="edit-sub-pane" data-sub="wmbrush">
       <div class="edit-section">
         <h4>🏷 Logo 水印（单张）</h4>
         <p class="hint">上传 PNG Logo 印到图上（透明 PNG 天然保留透明区域）。和批量 tab 独立，单张实时预览。</p>
@@ -720,7 +735,6 @@
           <button class="btn" id="logoWmClear">✕ 移除 Logo</button>
         </div>
       </div>
-
       <div class="edit-section">
         <h4>文字 / 水印</h4>
         <div class="edit-actions">
@@ -770,27 +784,17 @@
           <button class="btn" id="eraserClear">清空消除笔</button>
         </div>
       </div>
+      </div><!-- /wmbrush sub-pane -->
+      </div><!-- /edit-sub-panes -->
       </div><!-- /decor pane -->
 
       <div class="edit-pane" data-pane="pro">
-      <div class="edit-section">
-        <h4>高级处理（OpenCV）</h4>
-        <p class="hint">首次使用需联网加载 opencv.js（约 8MB）；处理在导出时应用到最终区域。CDN 地址可在「设置 → 高级」修改。</p>
-        <div class="edit-actions">
-          <button class="btn" id="cvDenoise">去噪（中值）</button>
-          <button class="btn" id="cvBilateral">保边去噪（双边）</button>
-          <button class="btn" id="cvSharp">智能锐化</button>
-          <button class="btn" id="opsReset">清空高级处理（0 步）</button>
-        </div>
-      </div>
-      <div class="edit-section">
-        <h4>AI 放大（实验性）</h4>
-        <p class="hint">需联网加载 onnxruntime-web 与超分辨率模型（.onnx 地址在「设置 → 高级」配置，输入 1×3×H×W），导出时推理；实际倍率以模型输出为准。</p>
-        <div class="edit-actions">
-          <select id="aiScale"><option value="2">放大 2×</option><option value="4">放大 4×</option></select>
-          <button class="btn" id="aiRun">AI 超分辨率放大</button>
-        </div>
-      </div>
+      <nav class="edit-sub-tabs" data-sub-tabs="pro">
+        <button class="edit-sub-tab active" data-sub="portrait">人像精修</button>
+        <button class="edit-sub-tab" data-sub="advanced">高级处理</button>
+      </nav>
+      <div class="edit-sub-panes">
+      <div class="edit-sub-pane active" data-sub="portrait">
       <div class="edit-section">
         <h4>瘦身 / 瘦脸（局部液化）</h4>
         <p class="hint">瘦脸：两侧脸颊向面中收缩；瘦身：身体两侧向内收。点「设定锚点」后在预览图上拖拽定位作用中心，作用范围按模式自动取形。</p>
@@ -840,13 +844,6 @@
         </div>
       </div>
       <div class="edit-section">
-        <h4>裁剪</h4>
-        <p class="hint">导出时会包含当前裁剪区域。拖动选框四角可调整大小，框内可移动位置。</p>
-        <div class="edit-actions">
-          <button class="btn" id="cropReset">重置裁剪（全图）</button>
-        </div>
-      </div>
-      <div class="edit-section">
         <h4>一键抠图（离线智能去背）</h4>
         <p class="hint">点「前景笔」在要保留的主体上涂抹，「背景笔」在要去掉的区域涂抹，再点「✨ 一键抠图」生成透明蒙版。无需联网，边缘自动羽化；用「导出透明 PNG」保存带 alpha 的结果。</p>
         <div class="edit-actions">
@@ -862,6 +859,35 @@
         </div>
         <p class="hint" id="matStatus">未涂抹 — 先在前景/背景画笔中选择一种，在预览图上涂抹标记。</p>
       </div>
+      </div><!-- /portrait sub-pane -->
+      <div class="edit-sub-pane" data-sub="advanced">
+      <div class="edit-section">
+        <h4>高级处理（OpenCV）</h4>
+        <p class="hint">首次使用需联网加载 opencv.js（约 8MB）；处理在导出时应用到最终区域。CDN 地址可在「设置 → 高级」修改。</p>
+        <div class="edit-actions">
+          <button class="btn" id="cvDenoise">去噪（中值）</button>
+          <button class="btn" id="cvBilateral">保边去噪（双边）</button>
+          <button class="btn" id="cvSharp">智能锐化</button>
+          <button class="btn" id="opsReset">清空高级处理（0 步）</button>
+        </div>
+      </div>
+      <div class="edit-section">
+        <h4>AI 放大（实验性）</h4>
+        <p class="hint">需联网加载 onnxruntime-web 与超分辨率模型（.onnx 地址在「设置 → 高级」配置，输入 1×3×H×W），导出时推理；实际倍率以模型输出为准。</p>
+        <div class="edit-actions">
+          <select id="aiScale"><option value="2">放大 2×</option><option value="4">放大 4×</option></select>
+          <button class="btn" id="aiRun">AI 超分辨率放大</button>
+        </div>
+      </div>
+      <div class="edit-section">
+        <h4>裁剪</h4>
+        <p class="hint">导出时会包含当前裁剪区域。拖动选框四角可调整大小，框内可移动位置。</p>
+        <div class="edit-actions">
+          <button class="btn" id="cropReset">重置裁剪（全图）</button>
+        </div>
+      </div>
+      </div><!-- /advanced sub-pane -->
+      </div><!-- /edit-sub-panes -->
       </div><!-- /pro pane -->
 
       <div class="edit-pane" data-pane="export">

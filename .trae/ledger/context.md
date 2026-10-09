@@ -23,7 +23,7 @@
 | Tauri bundle.version | 0.1.0 | src-tauri/tauri.conf.json |
 | Cargo package.version | 0.1.0 | src-tauri/Cargo.toml |
 | manifest webmanifest version | 0.1.0 | manifest.webmanifest |
-| sw.js CACHE | lvjiaoxi-viewer-v43 | sw.js |
+| sw.js CACHE | lvjiaoxi-viewer-v45 | sw.js |
 | 显示版本 (app.js about) | v0.1.0 | app.js 行 4960 |
 
 ## 已定硬规则清单
@@ -39,6 +39,7 @@
 9. 回归测试前显式设控件值防 document 残留
 10. **切图编辑态归零**（Dc-009）= filters/slim/deform/crop/ops/matting/texts/mosaic/eraser/editUndo/editRedo/logoWm 切图全部重置；视图级参数（rotation/flip/mode）由 rememberRotation 等设置决定
 11. **发版前本机验证铁律**（AGENTS 交付流程 step 7-10）= 每次打包后必须：本机静默安装 → 验证版本号 → 启动冒烟 → 目视核心场景 → 卸载临时路径；全部 OK 再推整体升级
+12. **edit-pane 闭合检查**（Iss-006 预防）= 写 edit-pane HTML 后必须确认所有 section 被对应 data-pane 容器包裹，不能裸在 edit-body 直接子级；`.edit-pane { display:none }` 不会隐藏裸 section
 
 ## 关键路径（不许乱改的）
 
