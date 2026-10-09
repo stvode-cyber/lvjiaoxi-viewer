@@ -35,7 +35,7 @@
     <div class="tb-group tb-right">
       <button class="btn icon" id="btnUndo" title="撤销编辑" disabled>↶</button>
       <button class="btn icon" id="btnRedo" title="重做编辑" disabled>↷</button>
-      <button class="btn icon" id="btnEdit" title="图片工具：滤镜 / 导出">🎨</button>
+      <button class="btn icon" id="btnEdit" title="美图：美颜 / 滤镜 / 特效 / 高级 / 导出">🎨</button>
       <button class="btn icon" id="btnSnap" title="画面区域截图：框选当前画面导出">📷</button>
       <span class="tb-sep"></span>
       <button class="btn icon" id="btnInfo" title="图片信息">ⓘ</button>
@@ -88,8 +88,8 @@
 
   </div>
 
-  <!-- 美颜工具条：移到底部内嵌栏（主画布下方，符合 AGENTS.md §1 内嵌底部栏硬约束） -->
-  <div class="beauty-bar" id="beautyBar">
+  <!-- 美颜工具条：默认隐藏，所有控件移进 edit-panel beauty pane，点顶栏「🎨 美图」才展开 -->
+  <div class="beauty-bar" id="beautyBar" hidden>
     <span class="beauty-title">美图</span>
     <label class="mini-field"><span class="mini-lbl">亮度</span>
       <input type="range" id="miBrightness" min="0" max="200" value="100"><b id="miBrightnessVal">100</b></label>
@@ -121,353 +121,6 @@
     <button class="btn sm" id="quickVintageBtn" title="🖼️ 加复古边框（米黄背景 + 内阴影）">🖼️ 复古</button>
     <button class="btn sm accent" id="miMore" title="更多：风格 / 特效 / 高级 / 导出">🎨 更多工具</button>
   </div>
-
-  <!-- 底部功能导航条（顶栏次要工具下移） -->
-  <nav class="bottom-nav" id="bottomNav">
-    <button class="btn nav-btn" id="btnCopy" title="复制到剪贴板">⧉<span class="nav-label">复制</span></button>
-    <button class="btn nav-btn" id="btnSlide" title="幻灯片播放">▶<span class="nav-label">幻灯</span></button>
-    <button class="btn nav-btn" id="btnBatch" title="批量处理">⚙<span class="nav-label">批量</span></button>
-    <button class="btn nav-btn" id="btnRecent" title="最近打开">🕘<span class="nav-label">最近</span></button>
-    <button class="btn nav-btn" id="btnSettings" title="设置">⚒<span class="nav-label">设置</span></button>
-    <button class="btn nav-btn nav-cloud" id="accountBtn" title="登录云端账户">☁<span class="nav-label">云账户</span></button>
-  </nav>
-
-  <!-- 图床/导出/信息/更多等面板：叠加层，不参与主布局 -->
-
-  <!-- 右键菜单 -->
-  <div class="ctx-menu" id="ctxMenu" hidden>
-    <button data-act="copy">⧉ 复制到剪贴板</button>
-    <button data-act="info">ⓘ 图片信息</button>
-    <button data-act="wallpaper">🖥 设为壁纸（下载）</button>
-    <button data-act="reveal">📍 复制文件路径</button>
-    <button data-act="slideshow">▶ 幻灯片播放</button>
-  </div>
-
-  <!-- 设置弹窗 -->
-  <div class="modal-mask" id="settingsMask" hidden>
-    <div class="modal settings-modal">
-      <div class="modal-head"><span>设置</span><button class="btn icon sm" id="settingsClose" title="关闭">✕</button></div>
-      <div class="settings-body">
-        <nav class="settings-nav" id="settingsNav"></nav>
-        <div class="settings-form" id="settingsForm"></div>
-      </div>
-      <div class="modal-foot"><button class="btn" id="settingsReset">恢复默认设置</button></div>
-    </div>
-  </div>
-
-  <!-- 批量弹窗 -->
-  <div class="modal-mask" id="batchMask" hidden>
-    <div class="modal batch-modal">
-      <div class="modal-head">
-        <span>批量处理</span>
-        <span class="batch-scope" id="batchScope"></span>
-        <button class="btn icon sm" id="batchClose" title="关闭">✕</button>
-      </div>
-      <div class="batch-tabs" id="batchTabs">
-        <button class="batch-tab active" data-tab="convert">格式转换</button>
-        <button class="batch-tab" data-tab="resize">调整尺寸</button>
-        <button class="batch-tab" data-tab="rename">重命名</button>
-        <button class="batch-tab" data-tab="tone">添加滤镜</button>
-        <button class="batch-tab" data-tab="compress">压缩</button>
-        <button class="batch-tab" data-tab="watermark">加水印</button>
-        <button class="batch-tab" data-tab="gif">🎬 制作 GIF</button>
-      </div>
-      <div class="batch-body" id="batchBody">
-
-        <!-- 转换 -->
-        <section class="batch-pane" data-pane="convert">
-          <div class="bt-preview">
-            <span class="bt-preview-label" id="cvPreviewLabel">转换预览：未选中</span>
-            <canvas id="cvPreview" width="200" height="200"></canvas>
-          </div>
-          <label class="field">
-            <span>目标格式</span>
-            <select id="cvFormat">
-              <option value="image/jpeg">JPG</option>
-              <option value="image/png">PNG</option>
-              <option value="image/webp">WebP</option>
-              <option value="image/bmp">BMP</option>
-            </select>
-          </label>
-          <label class="field" id="cvQualityField">
-            <span>质量 <b id="cvQualityVal">92</b></span>
-            <input type="range" id="cvQuality" min="1" max="100" value="92">
-          </label>
-          <label class="field">
-            <span>输出命名</span>
-            <select id="cvNaming">
-              <option value="replace">原名替换扩展名</option>
-              <option value="suffix">添加后缀 (_converted)</option>
-              <option value="prefix">添加前缀 (converted_)</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>输出位置</span>
-            <select id="cvOutput">
-              <option value="subdir">新建子目录 converted/</option>
-              <option value="same">原目录（覆盖同名）</option>
-            </select>
-          </label>
-          <p class="hint">输出打包为 ZIP 下载（浏览器无法直接写本地磁盘）。</p>
-        </section>
-
-        <!-- 尺寸 -->
-        <section class="batch-pane" data-pane="resize" hidden>
-          <div class="bt-preview">
-            <span class="bt-preview-label" id="rsPreviewLabel">调整尺寸预览：未选中</span>
-            <canvas id="rsPreview" width="200" height="200"></canvas>
-          </div>
-          <label class="field">
-            <span>缩放模式</span>
-            <select id="rsMode">
-              <option value="percent">按百分比</option>
-              <option value="exact">指定宽高</option>
-            </select>
-          </label>
-          <label class="field" id="rsPercentField">
-            <span>百分比 <b id="rsPercentVal">50</b>%</span>
-            <input type="range" id="rsPercent" min="10" max="500" value="50">
-          </label>
-          <div class="field-row" id="rsExactField" hidden>
-            <label class="field"><span>宽度(px)</span><input type="number" id="rsWidth" value="1920" min="1"></label>
-            <label class="field"><span>高度(px)</span><input type="number" id="rsHeight" value="1080" min="1"></label>
-          </div>
-          <label class="field inline">
-            <input type="checkbox" id="rsLockRatio" checked> 锁定宽高比
-          </label>
-          <label class="field">
-            <span>重采样算法</span>
-            <select id="rsResample">
-              <option value="smooth">双线性（平衡）</option>
-              <option value="pixelated">最近邻（最快）</option>
-              <option value="high">Lanczos（高质量）</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>输出格式</span>
-            <select id="rsFormat">
-              <option value="image/jpeg">JPG</option>
-              <option value="image/png">PNG</option>
-              <option value="image/webp">WebP</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>分辨率 DPI</span>
-            <select id="rsDpi">
-              <option value="0">不设置</option>
-              <option value="72">72</option>
-              <option value="96" selected>96</option>
-              <option value="150">150</option>
-              <option value="300">300</option>
-              <option value="600">600</option>
-            </select>
-          </label>
-          <p class="hint">DPI 写入 PNG（pHYs）/ JPEG（JFIF 密度）/ WebP（EXIF 元数据）。</p>
-        </section>
-
-        <!-- 重命名 -->
-        <section class="batch-pane" data-pane="rename" hidden>
-          <label class="field">
-            <span>命名模板</span>
-            <input type="text" id="rnTemplate" value="{n:3}_{name}">
-          </label>
-          <p class="hint">变量：<code>{n}</code> 序号 · <code>{n:3}</code> 零填充3位 · <code>{name}</code> 原名 · <code>{date}</code> 今天 · <code>{date:YYYYMMDD}</code></p>
-          <div class="rename-preview" id="rnPreview"></div>
-          <p class="hint">重命名后原图与新名一并打包为 ZIP 下载，可解压还原。</p>
-        </section>
-
-        <!-- 添加滤镜 -->
-        <section class="batch-pane" data-pane="tone" hidden>
-          <div class="bt-preview">
-            <span class="bt-preview-label" id="btPreviewLabel">滤镜预览：未选中</span>
-            <canvas id="btPreview" width="200" height="200"></canvas>
-          </div>
-          <label class="field">
-            <span>滤镜预设</span>
-            <select id="btPreset"></select>
-          </label>
-          <label class="field">
-            <span>输出格式</span>
-            <select id="btFormat">
-              <option value="image/png">PNG</option>
-              <option value="image/jpeg">JPG</option>
-              <option value="image/webp">WebP</option>
-            </select>
-          </label>
-          <label class="field inline">
-            <input type="checkbox" id="btKeepName" checked> 保留原文件名（替换扩展名）
-          </label>
-          <p class="hint">将所选预设应用到全部图片，导出并打包 ZIP。滤镜走与编辑器相同的色调引擎。</p>
-        </section>
-
-        <!-- 压缩 -->
-        <section class="batch-pane" data-pane="compress" hidden>
-          <div class="bt-preview">
-            <span class="bt-preview-label" id="cpPreviewLabel">压缩预览：未选中</span>
-            <canvas id="cpPreview" width="200" height="200"></canvas>
-          </div>
-          <label class="field">
-            <span>目标格式</span>
-            <select id="cpFormat">
-              <option value="same">保持原格式</option>
-              <option value="image/jpeg">JPG</option>
-              <option value="image/webp">WebP</option>
-              <option value="image/png">PNG</option>
-            </select>
-            <p class="hint">「保持原格式」仅重编码压缩，不改扩展名；JPG/PNG 源亦可选 WebP 进一步减小体积。</p>
-          </label>
-          <label class="field" id="cpQualityField">
-            <span>质量 <b id="cpQualityVal">75</b></span>
-            <input type="range" id="cpQuality" min="1" max="100" value="75">
-            <p class="hint">仅对 JPG / WebP 生效，PNG 无损不受影响。</p>
-          </label>
-          <label class="field">
-            <span>最长边限制 (px)</span>
-            <input type="number" id="cpMaxEdge" value="1920" min="0">
-            <p class="hint">0 = 不缩放；其余按比例缩至最长边为该像素。</p>
-          </label>
-          <p class="hint">一键整批压缩照片：控制质量并将超长边缩小，导出打包 ZIP。</p>
-        </section>
-
-        <!-- 加水印 -->
-        <section class="batch-pane" data-pane="watermark" hidden>
-          <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-            <button class="btn sm preset-btn" id="wmPresetCopyright" title="一键设为版权水印">©️ 版权水印（白色 60% 右下）</button>
-            <button class="btn sm preset-btn" id="wmPresetPhotographer" title="一键设为摄影师署名">📷 摄影师署名（灰色 40% 左下）</button>
-          </div>
-          <div class="bt-preview">
-            <span class="bt-preview-label" id="wmPreviewLabel">水印预览：未选中</span>
-            <canvas id="wmPreview" width="200" height="200"></canvas>
-          </div>
-          <label class="field">
-            <span>水印文字</span>
-            <input type="text" id="wmText" value="绿角犀" placeholder="要印的字（留空则不处理）">
-          </label>
-          <label class="field">
-            <span>字号 <b id="wmSizeVal">5</b>%（相对于图片短边）</span>
-            <input type="range" id="wmSize" min="1" max="20" step="0.5" value="5">
-          </label>
-          <label class="field">
-            <span>透明度 <b id="wmOpacityVal">60</b>%</span>
-            <input type="range" id="wmOpacity" min="5" max="100" value="60">
-          </label>
-          <label class="field">
-            <span>颜色</span>
-            <input type="color" id="wmColor" value="#ffffff">
-          </label>
-          <label class="field">
-            <span>位置</span>
-            <select id="wmPos">
-              <option value="tl">↖ 左上</option>
-              <option value="tc">↑ 顶部居中</option>
-              <option value="tr">↗ 右上</option>
-              <option value="ml">← 左中</option>
-              <option value="mc">· 居中</option>
-              <option value="mr">→ 右中</option>
-              <option value="bl">↙ 左下</option>
-              <option value="bc">↓ 底部居中</option>
-              <option value="br" selected>↘ 右下</option>
-              <option value="tile">⊞ 平铺</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>边距 <b id="wmMarginVal">3</b>%</span>
-            <input type="range" id="wmMargin" min="0" max="15" value="3">
-          </label>
-          <label class="field">
-            <span>输出格式</span>
-            <select id="wmFormat">
-              <option value="image/jpeg">JPG（推荐，体积小）</option>
-              <option value="image/png">PNG（无损）</option>
-              <option value="image/webp">WebP</option>
-            </select>
-          </label>
-        </section>
-
-        <!-- GIF 制作 -->
-        <section class="batch-pane" data-pane="gif" hidden>
-          <div class="batch-gif-presets" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-            <button class="btn sm preset-btn" id="gifPresetWeChat" title="一键设为微信表情">🎯 微信表情 480px</button>
-            <button class="btn sm preset-btn" id="gifPresetVideo" title="一键设为短视频 GIF">🎬 短视频 720p</button>
-            <button class="btn sm preset-btn" id="gifPresetMeme" title="一键设为表情包">😂 表情包 320px</button>
-          </div>
-          <div class="bt-preview">
-            <span class="bt-preview-label" id="gifStatus">待生成 — 选中的图片按顺序组成帧</span>
-            <canvas id="gifPreview" width="200" height="200"></canvas>
-          </div>
-          <div class="field-row">
-            <label class="field"><span>FPS (帧率)</span>
-              <input type="number" id="gifFps" min="1" max="30" value="10"></label>
-            <label class="field"><span>循环次数</span>
-              <select id="gifLoop">
-                <option value="0" selected>无限循环</option>
-                <option value="1">1 次</option>
-                <option value="2">2 次</option>
-                <option value="3">3 次</option>
-                <option value="5">5 次</option>
-              </select>
-            </label>
-          </div>
-          <div class="field-row">
-            <label class="field"><span>输出宽度</span>
-              <select id="gifWidth">
-                <option value="0">原始尺寸（可能很大）</option>
-                <option value="1280">1280px（大屏）</option>
-                <option value="720" selected>720px（推荐）</option>
-                <option value="480">480px（微信表情）</option>
-                <option value="320">320px（小表情）</option>
-              </select>
-            </label>
-            <label class="field"><span>画质</span>
-              <select id="gifQuality">
-                <option value="10">最佳（慢）</option>
-                <option value="15" selected>高（推荐）</option>
-                <option value="20">中（快）</option>
-                <option value="30">低（极快）</option>
-              </select>
-            </label>
-          </div>
-          <label class="field inline">
-            <input type="checkbox" id="gifQuantize" checked> 色彩量化（256 色，文件更小）
-          </label>
-          <div class="batch-gif-btns" style="margin-top:6px;display:flex;gap:8px">
-            <button class="btn primary" id="gifEncode">🎬 开始编码</button>
-            <button class="btn" id="gifCancel" hidden>⏹ 取消编码</button>
-          </div>
-          <p class="hint" style="margin-top:6px">
-            提示：GIF 单帧最多 256 色。建议选 480px 宽度，10 帧以上通常 1-3MB（微信可发）。<br>
-            选中的图片按缩略图顺序排列 → 每张图 = 一帧。
-          </p>
-        </section>
-
-      </div>
-      <div class="modal-foot">
-        <div class="batch-progress" id="batchProgress" hidden>
-          <div class="batch-bar"><div class="batch-bar-fill" id="batchBarFill"></div></div>
-          <span id="batchProgressText">0 / 0</span>
-        </div>
-        <p class="batch-report" id="batchReport" hidden></p>
-        <button class="btn" id="batchCancel" hidden>取消</button>
-        <button class="btn primary" id="batchRun">开始处理</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 最近打开 -->
-  <div class="modal-mask" id="recentMask" hidden>
-    <div class="modal recent-modal">
-      <div class="modal-head">
-        <span>最近打开</span>
-        <button class="btn icon sm" id="recentClose" title="关闭">✕</button>
-      </div>
-      <ul class="recent-list" id="recentList"></ul>
-      <div class="recent-foot">
-        <span class="recent-hint" id="recentHint"></span>
-        <button class="btn sm" id="recentClear">清空记录</button>
-      </div>
-    </div>
-  </div>
-
   <!-- 图片工具：滤镜 / 导出（内嵌主界面面板，在图片下方展开，不浮窗） -->
   <div class="edit-panel" id="editMask" hidden>
     <div class="edit-panel-head">
@@ -485,7 +138,7 @@
         <!-- 由 renderEditTimeline() 填充 -->
       </div>
     </div>
-      <div class="edit-preview-wrap">
+      <div class="edit-preview-wrap" id="editPreviewWrap" hidden>
         <canvas id="editPreview"></canvas>
         <p class="hint" id="editPreviewHint">在图上拖拽选择保留区域，拖动四角可调整。</p>
       </div>
@@ -911,6 +564,353 @@
       </div><!-- /edit-body -->
       </div><!-- /edit-work -->
   </div>
+
+  <!-- 底部功能导航条（顶栏次要工具下移） -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="btn nav-btn" id="btnCopy" title="复制到剪贴板">⧉<span class="nav-label">复制</span></button>
+    <button class="btn nav-btn" id="btnSlide" title="幻灯片播放">▶<span class="nav-label">幻灯</span></button>
+    <button class="btn nav-btn" id="btnBatch" title="批量处理">⚙<span class="nav-label">批量</span></button>
+    <button class="btn nav-btn" id="btnRecent" title="最近打开">🕘<span class="nav-label">最近</span></button>
+    <button class="btn nav-btn" id="btnSettings" title="设置">⚒<span class="nav-label">设置</span></button>
+    <button class="btn nav-btn" id="btnBeauty" title="美图：美颜/滤镜/特效/高级/导出">🎨<span class="nav-label">美图</span></button>
+  </nav>
+
+  <!-- 图床/导出/信息/更多等面板：叠加层，不参与主布局 -->
+
+  <!-- 右键菜单 -->
+  <div class="ctx-menu" id="ctxMenu" hidden>
+    <button data-act="copy">⧉ 复制到剪贴板</button>
+    <button data-act="info">ⓘ 图片信息</button>
+    <button data-act="wallpaper">🖥 设为壁纸（下载）</button>
+    <button data-act="reveal">📍 复制文件路径</button>
+    <button data-act="slideshow">▶ 幻灯片播放</button>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div class="modal-mask" id="settingsMask" hidden>
+    <div class="modal settings-modal">
+      <div class="modal-head"><span>设置</span><button class="btn icon sm" id="settingsClose" title="关闭">✕</button></div>
+      <div class="settings-body">
+        <nav class="settings-nav" id="settingsNav"></nav>
+        <div class="settings-form" id="settingsForm"></div>
+      </div>
+      <div class="modal-foot"><button class="btn" id="settingsReset">恢复默认设置</button></div>
+    </div>
+  </div>
+
+  <!-- 批量弹窗 -->
+  <div class="modal-mask" id="batchMask" hidden>
+    <div class="modal batch-modal">
+      <div class="modal-head">
+        <span>批量处理</span>
+        <span class="batch-scope" id="batchScope"></span>
+        <button class="btn icon sm" id="batchClose" title="关闭">✕</button>
+      </div>
+      <div class="batch-tabs" id="batchTabs">
+        <button class="batch-tab active" data-tab="convert">格式转换</button>
+        <button class="batch-tab" data-tab="resize">调整尺寸</button>
+        <button class="batch-tab" data-tab="rename">重命名</button>
+        <button class="batch-tab" data-tab="tone">添加滤镜</button>
+        <button class="batch-tab" data-tab="compress">压缩</button>
+        <button class="batch-tab" data-tab="watermark">加水印</button>
+        <button class="batch-tab" data-tab="gif">🎬 制作 GIF</button>
+      </div>
+      <div class="batch-body" id="batchBody">
+
+        <!-- 转换 -->
+        <section class="batch-pane" data-pane="convert">
+          <div class="bt-preview">
+            <span class="bt-preview-label" id="cvPreviewLabel">转换预览：未选中</span>
+            <canvas id="cvPreview" width="200" height="200"></canvas>
+          </div>
+          <label class="field">
+            <span>目标格式</span>
+            <select id="cvFormat">
+              <option value="image/jpeg">JPG</option>
+              <option value="image/png">PNG</option>
+              <option value="image/webp">WebP</option>
+              <option value="image/bmp">BMP</option>
+            </select>
+          </label>
+          <label class="field" id="cvQualityField">
+            <span>质量 <b id="cvQualityVal">92</b></span>
+            <input type="range" id="cvQuality" min="1" max="100" value="92">
+          </label>
+          <label class="field">
+            <span>输出命名</span>
+            <select id="cvNaming">
+              <option value="replace">原名替换扩展名</option>
+              <option value="suffix">添加后缀 (_converted)</option>
+              <option value="prefix">添加前缀 (converted_)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>输出位置</span>
+            <select id="cvOutput">
+              <option value="subdir">新建子目录 converted/</option>
+              <option value="same">原目录（覆盖同名）</option>
+            </select>
+          </label>
+          <p class="hint">输出打包为 ZIP 下载（浏览器无法直接写本地磁盘）。</p>
+        </section>
+
+        <!-- 尺寸 -->
+        <section class="batch-pane" data-pane="resize" hidden>
+          <div class="bt-preview">
+            <span class="bt-preview-label" id="rsPreviewLabel">调整尺寸预览：未选中</span>
+            <canvas id="rsPreview" width="200" height="200"></canvas>
+          </div>
+          <label class="field">
+            <span>缩放模式</span>
+            <select id="rsMode">
+              <option value="percent">按百分比</option>
+              <option value="exact">指定宽高</option>
+            </select>
+          </label>
+          <label class="field" id="rsPercentField">
+            <span>百分比 <b id="rsPercentVal">50</b>%</span>
+            <input type="range" id="rsPercent" min="10" max="500" value="50">
+          </label>
+          <div class="field-row" id="rsExactField" hidden>
+            <label class="field"><span>宽度(px)</span><input type="number" id="rsWidth" value="1920" min="1"></label>
+            <label class="field"><span>高度(px)</span><input type="number" id="rsHeight" value="1080" min="1"></label>
+          </div>
+          <label class="field inline">
+            <input type="checkbox" id="rsLockRatio" checked> 锁定宽高比
+          </label>
+          <label class="field">
+            <span>重采样算法</span>
+            <select id="rsResample">
+              <option value="smooth">双线性（平衡）</option>
+              <option value="pixelated">最近邻（最快）</option>
+              <option value="high">Lanczos（高质量）</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>输出格式</span>
+            <select id="rsFormat">
+              <option value="image/jpeg">JPG</option>
+              <option value="image/png">PNG</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>分辨率 DPI</span>
+            <select id="rsDpi">
+              <option value="0">不设置</option>
+              <option value="72">72</option>
+              <option value="96" selected>96</option>
+              <option value="150">150</option>
+              <option value="300">300</option>
+              <option value="600">600</option>
+            </select>
+          </label>
+          <p class="hint">DPI 写入 PNG（pHYs）/ JPEG（JFIF 密度）/ WebP（EXIF 元数据）。</p>
+        </section>
+
+        <!-- 重命名 -->
+        <section class="batch-pane" data-pane="rename" hidden>
+          <label class="field">
+            <span>命名模板</span>
+            <input type="text" id="rnTemplate" value="{n:3}_{name}">
+          </label>
+          <p class="hint">变量：<code>{n}</code> 序号 · <code>{n:3}</code> 零填充3位 · <code>{name}</code> 原名 · <code>{date}</code> 今天 · <code>{date:YYYYMMDD}</code></p>
+          <div class="rename-preview" id="rnPreview"></div>
+          <p class="hint">重命名后原图与新名一并打包为 ZIP 下载，可解压还原。</p>
+        </section>
+
+        <!-- 添加滤镜 -->
+        <section class="batch-pane" data-pane="tone" hidden>
+          <div class="bt-preview">
+            <span class="bt-preview-label" id="btPreviewLabel">滤镜预览：未选中</span>
+            <canvas id="btPreview" width="200" height="200"></canvas>
+          </div>
+          <label class="field">
+            <span>滤镜预设</span>
+            <select id="btPreset"></select>
+          </label>
+          <label class="field">
+            <span>输出格式</span>
+            <select id="btFormat">
+              <option value="image/png">PNG</option>
+              <option value="image/jpeg">JPG</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </label>
+          <label class="field inline">
+            <input type="checkbox" id="btKeepName" checked> 保留原文件名（替换扩展名）
+          </label>
+          <p class="hint">将所选预设应用到全部图片，导出并打包 ZIP。滤镜走与编辑器相同的色调引擎。</p>
+        </section>
+
+        <!-- 压缩 -->
+        <section class="batch-pane" data-pane="compress" hidden>
+          <div class="bt-preview">
+            <span class="bt-preview-label" id="cpPreviewLabel">压缩预览：未选中</span>
+            <canvas id="cpPreview" width="200" height="200"></canvas>
+          </div>
+          <label class="field">
+            <span>目标格式</span>
+            <select id="cpFormat">
+              <option value="same">保持原格式</option>
+              <option value="image/jpeg">JPG</option>
+              <option value="image/webp">WebP</option>
+              <option value="image/png">PNG</option>
+            </select>
+            <p class="hint">「保持原格式」仅重编码压缩，不改扩展名；JPG/PNG 源亦可选 WebP 进一步减小体积。</p>
+          </label>
+          <label class="field" id="cpQualityField">
+            <span>质量 <b id="cpQualityVal">75</b></span>
+            <input type="range" id="cpQuality" min="1" max="100" value="75">
+            <p class="hint">仅对 JPG / WebP 生效，PNG 无损不受影响。</p>
+          </label>
+          <label class="field">
+            <span>最长边限制 (px)</span>
+            <input type="number" id="cpMaxEdge" value="1920" min="0">
+            <p class="hint">0 = 不缩放；其余按比例缩至最长边为该像素。</p>
+          </label>
+          <p class="hint">一键整批压缩照片：控制质量并将超长边缩小，导出打包 ZIP。</p>
+        </section>
+
+        <!-- 加水印 -->
+        <section class="batch-pane" data-pane="watermark" hidden>
+          <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+            <button class="btn sm preset-btn" id="wmPresetCopyright" title="一键设为版权水印">©️ 版权水印（白色 60% 右下）</button>
+            <button class="btn sm preset-btn" id="wmPresetPhotographer" title="一键设为摄影师署名">📷 摄影师署名（灰色 40% 左下）</button>
+          </div>
+          <div class="bt-preview">
+            <span class="bt-preview-label" id="wmPreviewLabel">水印预览：未选中</span>
+            <canvas id="wmPreview" width="200" height="200"></canvas>
+          </div>
+          <label class="field">
+            <span>水印文字</span>
+            <input type="text" id="wmText" value="绿角犀" placeholder="要印的字（留空则不处理）">
+          </label>
+          <label class="field">
+            <span>字号 <b id="wmSizeVal">5</b>%（相对于图片短边）</span>
+            <input type="range" id="wmSize" min="1" max="20" step="0.5" value="5">
+          </label>
+          <label class="field">
+            <span>透明度 <b id="wmOpacityVal">60</b>%</span>
+            <input type="range" id="wmOpacity" min="5" max="100" value="60">
+          </label>
+          <label class="field">
+            <span>颜色</span>
+            <input type="color" id="wmColor" value="#ffffff">
+          </label>
+          <label class="field">
+            <span>位置</span>
+            <select id="wmPos">
+              <option value="tl">↖ 左上</option>
+              <option value="tc">↑ 顶部居中</option>
+              <option value="tr">↗ 右上</option>
+              <option value="ml">← 左中</option>
+              <option value="mc">· 居中</option>
+              <option value="mr">→ 右中</option>
+              <option value="bl">↙ 左下</option>
+              <option value="bc">↓ 底部居中</option>
+              <option value="br" selected>↘ 右下</option>
+              <option value="tile">⊞ 平铺</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>边距 <b id="wmMarginVal">3</b>%</span>
+            <input type="range" id="wmMargin" min="0" max="15" value="3">
+          </label>
+          <label class="field">
+            <span>输出格式</span>
+            <select id="wmFormat">
+              <option value="image/jpeg">JPG（推荐，体积小）</option>
+              <option value="image/png">PNG（无损）</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </label>
+        </section>
+
+        <!-- GIF 制作 -->
+        <section class="batch-pane" data-pane="gif" hidden>
+          <div class="batch-gif-presets" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+            <button class="btn sm preset-btn" id="gifPresetWeChat" title="一键设为微信表情">🎯 微信表情 480px</button>
+            <button class="btn sm preset-btn" id="gifPresetVideo" title="一键设为短视频 GIF">🎬 短视频 720p</button>
+            <button class="btn sm preset-btn" id="gifPresetMeme" title="一键设为表情包">😂 表情包 320px</button>
+          </div>
+          <div class="bt-preview">
+            <span class="bt-preview-label" id="gifStatus">待生成 — 选中的图片按顺序组成帧</span>
+            <canvas id="gifPreview" width="200" height="200"></canvas>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>FPS (帧率)</span>
+              <input type="number" id="gifFps" min="1" max="30" value="10"></label>
+            <label class="field"><span>循环次数</span>
+              <select id="gifLoop">
+                <option value="0" selected>无限循环</option>
+                <option value="1">1 次</option>
+                <option value="2">2 次</option>
+                <option value="3">3 次</option>
+                <option value="5">5 次</option>
+              </select>
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>输出宽度</span>
+              <select id="gifWidth">
+                <option value="0">原始尺寸（可能很大）</option>
+                <option value="1280">1280px（大屏）</option>
+                <option value="720" selected>720px（推荐）</option>
+                <option value="480">480px（微信表情）</option>
+                <option value="320">320px（小表情）</option>
+              </select>
+            </label>
+            <label class="field"><span>画质</span>
+              <select id="gifQuality">
+                <option value="10">最佳（慢）</option>
+                <option value="15" selected>高（推荐）</option>
+                <option value="20">中（快）</option>
+                <option value="30">低（极快）</option>
+              </select>
+            </label>
+          </div>
+          <label class="field inline">
+            <input type="checkbox" id="gifQuantize" checked> 色彩量化（256 色，文件更小）
+          </label>
+          <div class="batch-gif-btns" style="margin-top:6px;display:flex;gap:8px">
+            <button class="btn primary" id="gifEncode">🎬 开始编码</button>
+            <button class="btn" id="gifCancel" hidden>⏹ 取消编码</button>
+          </div>
+          <p class="hint" style="margin-top:6px">
+            提示：GIF 单帧最多 256 色。建议选 480px 宽度，10 帧以上通常 1-3MB（微信可发）。<br>
+            选中的图片按缩略图顺序排列 → 每张图 = 一帧。
+          </p>
+        </section>
+
+      </div>
+      <div class="modal-foot">
+        <div class="batch-progress" id="batchProgress" hidden>
+          <div class="batch-bar"><div class="batch-bar-fill" id="batchBarFill"></div></div>
+          <span id="batchProgressText">0 / 0</span>
+        </div>
+        <p class="batch-report" id="batchReport" hidden></p>
+        <button class="btn" id="batchCancel" hidden>取消</button>
+        <button class="btn primary" id="batchRun">开始处理</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 最近打开 -->
+  <div class="modal-mask" id="recentMask" hidden>
+    <div class="modal recent-modal">
+      <div class="modal-head">
+        <span>最近打开</span>
+        <button class="btn icon sm" id="recentClose" title="关闭">✕</button>
+      </div>
+      <ul class="recent-list" id="recentList"></ul>
+      <div class="recent-foot">
+        <span class="recent-hint" id="recentHint"></span>
+        <button class="btn sm" id="recentClear">清空记录</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- 帮助 / 关于 / 系统集成说明 -->
   <div class="modal-mask" id="aboutMask" hidden>

@@ -11,7 +11,7 @@
 | 美图编辑器 | 100% | ✅ | 内嵌底部栏形态；slim/deform 合并位移场；美型微调(大眼/小脸/美牙/丰唇/瘦鼻) |
 | AI 超分 | 100% | ✅ | sub_pixel_cnn.onnx + ort.wasm；失败自动降级 Lanczos |
 | 抠图 | 100% | ✅ | 高斯似然比 + 双边滤波羽化；≤512px 工作分辨率 |
-| 打包交付 | 100% | ✅ | NSIS 全中文(SimpChinese) + MSI；内嵌 WebView2 离线包；installer.nsh 三段 hook |
+| 打包交付 | 100% | ✅ | NSIS 全中文(SimpChinese) + MSI；内嵌 WebView2 离线包；installer.nsh 三段 hook；v0.1.0 CACHE v45 本机验证通过 |
 | 回归测试 | 100% | ✅ | test/regression.cjs 404 项断言全绿；beauty.cjs / edit-crop.cjs / photo.cjs 等专项 |
 | 鸿蒙主线 | 60% | 🔄 | harmony/ (ArkTS 原生)，entry/ 基本框架有，功能未对齐 |
 | 后端服务 | 0% | ⬜ | server/mock-server.js 占位，无正式部署 |

@@ -169,3 +169,74 @@
   - `sw.js` ← CACHE v44→v45（改了 HTML + CSS + app.js）
 - **验证**：regression.cjs 410/0 双次全绿；sync-dist.cjs 已跑；所有 section id/class 零改动
 - **关联**：↔Dc-010 ↔Iss-006 ↔Chg-012
+
+#### Chg-014（2026-10-09 · 重新构建 NSIS 安装包 + 本机验证）
+
+- **批次主题**：Chg-012（切图归零）+ Chg-013（编辑面板重构）代码已提交但未打包，本轮重新构建并走完本机验证流程
+- **构建命令**：node scripts/sync-dist.cjs → npm run tauri build
+- **构建结果**：Success，1m27s，Rust 4 warnings（均为既有 unused imports，不影响运行）
+- **产物**：
+  - `nsis_x/绿角犀看图_0.1.0_x64-setup.exe` ← 223MB（含 WebView2 离线运行时）
+  - `nsis_x/绿角犀看图_0.1.0_x64_zh-CN.msi` ← 221.8MB
+- **版本号**：0.1.0 全落点一致（tauri.conf.json / Cargo.toml / EXE FileVersion / EXE ProductVersion / manifest / about 标题 / sw.js CACHE v45）
+- **本机验证**（AGENTS.md 交付流程 step 7-10）：
+  1. 静默安装 `Setup.exe /S /D=D:\LVJX_LOCAL` → 成功
+  2. 版本号检查：FileVersion=0.1.0 / ProductVersion=0.1.0 ✅
+  3. 启动冒烟：PID=14988 Responding=True ✅
+  4. 卸载清理：`uninstall.exe /S` → D:\LVJX_LOCAL 已清空 ✅
+- **关联**：↔Chg-012（切图归零） ↔Chg-013（编辑面板重构） ↔Dc-009 ↔Dc-010 ↔Iss-004
+
+#### Chg-015（2026-10-09 · edit-panel 布局修正：脱离 flex 流 → position:fixed）
+
+- **批次主题**：用户反馈"打开更多工具图片被改了"——edit-panel 展开时挤压主图 viewer 区域，改为 position:fixed 底部浮层覆盖，开/关不再影响主图尺寸
+- **根因**：body flex column 布局下 edit-panel 是 flex 直接子元素，hidden→可见时参与垂直空间分配压缩 app-row（flex:1 1 auto）
+- **文件列表**：
+  - `styles.css` ← .edit-panel 去掉 flex:0 0 auto / min-height:200px，加 position:fixed left:0 right:0 bottom:0 z-index:25；[hidden] 改为 display:none !important
+  - `sw.js` ← CACHE v45→v46（硬约束 §3：改 styles.css 必须 +1）
+- **验证**：regression.cjs 410/0 全绿；npm run tauri build 成功（1m04s，Rust 4 warnings 既有）
+- **app.js 零改动**：[hidden] 属性天然兼容 position:fixed，display:none !important 保证优先级不被 flex 覆盖
+- **关联**：↔Dc-011（修正 Dc-003） ↔Dc-003 ↔Chg-013（编辑面板重构，同根因的第二次修复）
+
+#### Chg-016（2026-10-09 · edit-panel 回到 flex 内嵌 + beauty-bar 互斥 · 第二次迭代）
+
+- **批次主题**：Chg-015 的 position:fixed 浮层覆盖方案被用户否决（遮挡底部 beauty-bar + bottom-nav），改回 body flex 内嵌底栏 + 与 beauty-bar 互斥替换
+- **根因**：用户明确需求"图片页面不动，只增加工具导航"——浮层方案遮挡底部栏，主图视觉仍被挡
+- **文件列表**：
+  - `styles.css` ← .edit-panel 去掉 position:fixed，恢复 `flex:0 0 auto` + border-top，max-height 58vh→42vh；`[hidden]` 改回 display:none
+  - `index.html` ← .edit-preview-wrap 加 id="editPreviewWrap" + hidden 属性（砍掉 32vh 大预览，不占空间）
+  - `app.js` ← openEdit() 加 `els.beautyBar.hidden = true`（互斥替换）；editClose 恢复 hidden=false；els 列表新增 'beautyBar', 'bottomNav'（之前从未注册）
+  - `sw.js` ← CACHE v46→v47（改 styles.css + index.html + app.js）
+- **测试中踩坑**：els.beautyBar 未注册 → TypeError（踩了 1 次，已修复）
+- **验证**：regression.cjs 410/0 全绿；npm run tauri build 成功（1m11s）
+- **关联**：↔Dc-011（第二次迭代） ↔Dc-003（内嵌底栏硬约束，最终对齐） ↔Chg-015（第一次迭代 position:fixed 被否决）
+
+#### Chg-017（2026-10-09 · 导航条优化：beauty-bar 默认隐藏 + 顶栏🎨成为唯一美图入口）
+
+- **批次主题**：底部常驻的 beauty-bar（美图简化滑块+一键美颜+海报按钮）默认 hidden，只有点顶栏🎨才展开 edit-panel（完整美图面板）
+- **根因**：用户要求"在没点美工功能前不需要显示"——界面干净，美图功能按"需要才出现"
+- **文件列表**：
+  - `index.html` ← beauty-bar 加 `hidden` 属性；btnEdit title 从「图片工具：滤镜/导出」改为「美图：美颜/滤镜/特效/高级/导出」
+  - `app.js` ← openEdit() 去掉 `els.beautyBar.hidden = true`（本来就 hidden）；editClose 去掉恢复逻辑
+  - `sw.js` ← CACHE v47→v48
+- **为什么不删 beauty-bar HTML**：里面控件 id（miBrightness/miBeautyLight/quickPosterBtn 等）app.js 有独立事件绑定，删 HTML → getElementById 返回 null → 事件绑定报错。hidden 保留 DOM 但用户不可见，两全
+- **edit-panel 已完整**：beauty pane 有完整滤镜滑块 + 美颜；recipe pane 有风格配方；decor pane 有边框/海报；pro pane 有抠图/AI 超分；export pane 有导出 —— 覆盖 beauty-bar 所有功能 + 更多
+- **验证**：regression.cjs 410/0 全绿；npm run tauri build 成功（1m06s）
+- **AGENTS §1 硬约束检查**：导航条按钮数量不变（顶栏 6 + bottom-nav 6），只是隐藏了 beauty-bar 常驻 → 合规
+- **关联**：↔Chg-016（edit-panel 互斥 beauty-bar） ↔Dc-003（内嵌底栏硬约束）
+
+#### Chg-018（2026-10-09 · edit-panel 移到 bottom-nav 前面 + 底部导航加美图按钮）
+
+- **批次主题**：edit-panel DOM 位置从 bottom-nav 之后移到 beauty-bar 和 bottom-nav 之间 → 展开时紧贴 bottom-nav 上方；bottom-nav 把"云账户"按钮替换成"美图"按钮
+- **根因**：用户明确要求"美图工具放在下面导航条，点击后显现的内容放在导航条上面，而不是直接出现在最下面"
+- **文件列表**：
+  - `index.html` ← PowerShell 行搬运：edit-panel（原 L471-L913）剪切粘贴到 L124（beauty-bar 结束后、bottom-nav 前）；bottom-nav 最后按钮 accountBtn（云账户）替换为 btnBeauty（美图）
+  - `app.js` ← els cacheDom 列表新增 'btnBeauty'；L5198 加 `if (els.btnBeauty) els.btnBeauty.addEventListener('click', openEdit)` 绑定
+  - `sw.js` ← CACHE v48→v49
+- **AGENTS §1 硬约束**：bottom-nav 保持 6 个按钮（复制/幻灯/批量/最近/设置/**美图**），云账户被替换而非增删 → 合规
+- **accountBtn 相关**：HTML 节点删除，app.js 里 els.accountBtn 自动返回 null；所有 openCloud/refreshAccountUI 调用都有 `if (els.accountBtn)` null 守卫 → 零错误。云端功能暂不可用
+- **效果**：
+  - 顶栏 🎨 btnEdit 和底部 🎨 btnBeauty 双入口（都绑定 openEdit）
+  - 点任一入口 → edit-panel 在 bottom-nav **紧上方**展开（不是贴浏览器底部）
+  - beauty-bar 默认 hidden，edit-panel 内嵌 body flex column 流 → 不遮挡主图
+- **验证**：regression.cjs 410/0 全绿；npm run tauri build 成功（1m06s）
+- **关联**：↔Chg-017（beauty-bar 默认 hidden） ↔Chg-016（edit-panel 内嵌方案） ↔Dc-003（内嵌底栏硬约束）

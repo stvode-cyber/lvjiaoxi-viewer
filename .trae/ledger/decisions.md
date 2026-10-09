@@ -104,3 +104,18 @@
 - **核心 bug 修复**：decor pane 的 11 个裸 section 收回 `data-pane="decor"` 容器内（这是重构的**关键动机**，不是可选项）
 - **id/class 零改动**：所有 section id（flBrightness/beautyVal/borderMode/emojiBar/mosaicBtn/cvDenoise/slimFace/deform_eye/matFg/cropReset/exRun）和 class 名保持不变，app.js 事件绑定 100% 兼容
 - **关联**：↔Dc-003（内嵌底栏形态） ↔Chg-013 ↔Iss-006（decor pane 空 div bug，首次发现）
+
+#### Dc-011（2026-10-09 · edit-panel 布局修正 · 第二次迭代）edit-panel 回到 body flex 内嵌底栏，与 beauty-bar 互斥替换
+
+- **背景**：Chg-015 把 edit-panel 改为 position:fixed 浮层覆盖，用户实测仍不可接受——浮层遮挡了底部 beauty-bar + bottom-nav 区域，主图视觉上仍被遮挡。用户明确需求："点更多工具，只改出风格配方/特效/高级...导航，但图片页面不动"
+- **第二次修正**（本批次）：edit-panel 回到 body flex 内嵌底栏
+  - `position: fixed` 去掉，恢复 body flex column 子元素身份
+  - edit-panel 在 DOM 中位于 beauty-bar 和 bottom-nav 之后（L472），追加在底部
+  - openEdit() 时 beautyBar.hidden = true（**互斥替换**，不叠加挤压）
+  - editClose 时 beautyBar.hidden = false（恢复常驻）
+  - edit-preview-wrap 默认 hidden（砍掉 32vh 大预览 canvas，edit-work 直接占满面板剩余空间）
+  - edit-panel max-height 从 58vh 降到 42vh
+- **els 新增注册**：'beautyBar', 'bottomNav' 加入 app.js els 对象之前从未注册（之前 beauty-bar 和 bottom-nav 纯 CSS 定位，JS 不操作它们的显隐）
+- **Dc-003 最终对齐**：edit-panel 内嵌底部栏（border-top，body flex column 内），与 beauty-bar 互斥，符合硬约束 §1
+- **测试**：regression.cjs 410/0 全绿；els.beautyBar 之前未注册导致 TypeError（踩了 1 次）
+- **关联**：↔Dc-003（内嵌底栏硬约束，本决策最终对齐） ↔Chg-016（本次迭代） ↔Chg-015（上一次迭代 position:fixed 方案）

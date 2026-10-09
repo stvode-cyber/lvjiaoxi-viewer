@@ -483,11 +483,12 @@
     [
       'btnOpenFiles', 'btnOpenDir', 'fileInput', 'dirInput',
       'btnZoomOut', 'btnZoomFit', 'btnZoomIn', 'btnRotL', 'btnRotR', 'btnFlipH', 'btnFlipV',
-      'btnCopy', 'btnEdit', 'btnInfo', 'btnSlide', 'btnBatch', 'btnSettings', 'btnFull',
+      'btnCopy', 'btnEdit', 'btnBeauty', 'btnInfo', 'btnSlide', 'btnBatch', 'btnSettings', 'btnFull',
       'btnSnap', 'btnUndo', 'btnRedo',
       'viewer', 'stage', 'image', 'imgWrap', 'emptyHint', 'loading',
       'navPrev', 'navNext', 'edgeLeft', 'edgeRight', 'counter', 'jumpInput',
       'thumbBar', 'thumbs', 'thumbSearch', 'thumbCount',
+      'beautyBar', 'bottomNav',
       'infoPanel', 'infoClose', 'infoBody',
       'ctxMenu',
       'settingsMask', 'settingsClose', 'settingsNav', 'settingsForm', 'settingsReset',
@@ -5194,6 +5195,7 @@
     els.btnFlipV.addEventListener('click', () => flip(false));
     els.btnCopy.addEventListener('click', copyCurrentImage);
     els.btnEdit.addEventListener('click', openEdit);
+    if (els.btnBeauty) els.btnBeauty.addEventListener('click', openEdit);
     els.btnInfo.addEventListener('click', toggleInfo);
     els.btnSlide.addEventListener('click', startSlideshow);
     els.btnBatch.addEventListener('click', openBatch);
