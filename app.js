@@ -764,10 +764,24 @@
     if (!getSetting('view', 'rememberRotation')) {
       state.rotation = 0; state.flipH = false; state.flipV = false;
     }
-    // 美工状态随图切换重置（滤镜按既有行为在切图时保留由 resetFilters 显式清）
-    state.texts = []; state.textSel = null;
-    state.mosaic = []; state.mosaicMode = false; state.eraser = []; state.eraserMode = false; state.mosaicPainting = false; state.eraserPainting = false; state.textDrag = null; state.cropDrag = null;
+    // 美工状态随图切换重置：每张图独立编辑，切图回到初始态
+    state.filters = { brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0, hslH: 0, hslS: 100, hslL: 0 };
+    state.slim = { enabled: false, mode: state.slim.mode || 'face', strength: 0, cx: 0.5, cy: 0.5, rx: 0.22, ry: 0.22 };
+    state.slimMode = false;
+    state.deform = []; state.deformMode = null;
+    state.crop = null; state.cropDrag = null;
+    state.ops = []; state.logoWm = null;
+    state.matting = { mode: 'none', strokes: { fg: [], bg: [] }, mask: null, mW: 0, mH: 0 };
+    state.texts = []; state.textSel = null; state.textDrag = null;
+    state.mosaic = []; state.mosaicMode = false; state.mosaicPainting = false;
+    state.eraser = []; state.eraserMode = false; state.eraserPainting = false;
+    editUndo = []; editRedo = [];
     if (els.mosaicBtn) els.mosaicBtn.textContent = '🖌 进入马赛克模式';
+    // UI 同步回默认态（filter 滑块、slimStrength、deform 数量等）
+    syncFilterUI(); syncBeautyBar();
+    if (typeof updateSlimUI === 'function') updateSlimUI();
+    if (typeof updateDeformUI === 'function') updateDeformUI();
+    if (typeof updateOpsUI === 'function') updateOpsUI();
     state.mode = getSetting('view', 'defaultZoom') === 'actual' ? 'actual' : 'fit';
 
     els.loading.hidden = false;
@@ -797,6 +811,8 @@
       recordHistory(item);
       // 长图检测：height/width > 1.7（对应约 16:9 的反面），自动启用滚轮翻页模式
       detectLongImage(item);
+      // 切图后若编辑面板打开，预览 canvas 用新图重绘（filter/slim/deform 已 reset，预览即干净原图）
+      if (typeof renderEditPreview === 'function') renderEditPreview();
     };
 
     const cached = state.cache.get(index);
