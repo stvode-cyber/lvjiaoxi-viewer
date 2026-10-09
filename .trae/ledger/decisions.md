@@ -47,3 +47,16 @@
 - **原因**：台账必须是"活"的 —— 改前扫、改后记、踩坑归类加级；静态 CHANGELOG 做不到动态风险预警
 - **影响文件**：`AGENTS.md`（新增 §6）、`.trae/ledger/` 全部文件
 - **关联**：↔所有 Dc/Iss/Chg 条目
+
+#### Dc-007（2026-10-08 · GIF 解码策略）GIF 走 image crate 解码兜底 → JPEG 第一帧
+
+- **选型**：gif 从 NATIVE_EXTS 移除，load_paths / read_archive_entry / resolve_image_url 三处统一走 image::ImageReader 解码 → JPEG data URL
+- **备选**：
+  - A) 保留 WebView2 原生透传（gif 在 NATIVE_EXTS 里），但某些变种/损坏 GIF 会触发 img.onerror → "无法解码"
+  - B) JS 侧用 gif.js 解码成 canvas 帧播放动画（代价：前端膨胀 + 性能）
+  - C) 当前方案：image crate → JPEG 第一帧（失去动画但保证显示）
+- **原因**：lvjx-debug.log 5 张 GIF 全 CATCH broken，urlHead=data:image/gif;base64, → Rust 透传正确但 WebView2 解码端挂；image crate 是项目已有依赖（lib.rs 里 TIFF/TGA 已经在用），加 gif feature 零额外成本；静态第一帧比"无法解码"强
+- **影响文件**：`src-tauri/src/lib.rs` NATIVE_EXTS 行 206、三处 matches! 扩展行 172/419/479；`test/regression.cjs` 行 1203 源码断言
+- **代价**：GIF 失去动画帧（image crate gif 解码只取第一帧）
+- **升级路径**：未来如需保留动画 → Dc-008 gif.js 方案（见 weekly/2026-10-09.md 下周待办）
+- **关联**：↔Iss-005（GIF 踩 6 次）

@@ -100,3 +100,22 @@
   - .verif/ 目录（验收截图，非代码）
   - app.js 无大块注释代码
 - **关联**：↔Iss-004（NSIS lnk 残留） ↔Iss-005（GIF 解码）
+
+#### Chg-009（2026-10-09 · 跨 AI 交接批次）
+
+- **批次主题**：换电脑 / 换 AI 前，全量台账刷新固化交接快照
+- **更新文件**：
+  - `.trae/ledger/START_HERE.md` — 日期 2026-10-09；活跃坑 top 3→top 4（Iss-005 置顶）；硬规则加 GIF 兜底 + NSIS 覆盖失效；完成度表加 GIF 兜底行；接手下一步加环境验证
+  - `.trae/ledger/context.md` — 日期 2026-10-09；硬规则清单加 GIF 兜底 + NSIS 覆盖失效；关键路径加 installer.nsh + scripts/sync-dist.cjs；新增 Tauri 命令层表（9 个命令）
+  - `.trae/ledger/decisions.md` — 追加 Dc-007（GIF 走 image crate 兜底，关联 Iss-005）
+  - `.trae/ledger/weekly/2026-10-09.md` — 新生成，本周大事记 + 活跃坑 + 已决策 + 下周待办
+  - `.trae/ledger/.session.md` — 已清空骨架（提炼已完成）
+- **验证**：无需 regression / cargo check（纯台账维护）
+- **环境切换提醒（新电脑需做）**：
+  1. Git clone 仓库（SSH）
+  2. npm install
+  3. rustup / cargo 安装 + Tauri CLI（cargo install tauri-cli）
+  4. node scripts/sync-dist.cjs
+  5. npm run tauri build（首次编译慢，Rust 增量编译后第二次快）
+  6. node test/regression.cjs → 必须 404/0 全绿
+- **关联**：↔Chg-007（GIF 修复） ↔Chg-008（setup 清理） ↔Dc-007 ↔Iss-005
