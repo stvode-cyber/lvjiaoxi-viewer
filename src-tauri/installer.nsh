@@ -25,9 +25,16 @@
     nsExec::ExecToLog 'cmd /c ""$R0" /qn /norestart"'
   skip_hklm_uninstall:
 
-  ; 清理目标目录所有残留文件，确保全新安装
+  ; 只清理应用自身残留文件，不用 RMDir /r 清空整个目录（避免误删用户放在安装目录里的个人文件）
+  ; 卸载器已删掉旧版本体文件；这里补删三类已知应用文件：
+  ;   1) uninstall.exe —— _?= 方式卸载后不自删，需手动清
+  ;   2) 旧主程序 —— Iss-005 子坑：NSIS /S 静默安装可能不覆盖旧 EXE，先删保证新 EXE 落盘
+  ;   3) WebView2Loader.dll —— 旧版可能残留的加载器，装新包时由安装器重新决定
   Sleep 500
-  RMDir /r /REBOOTOK "$INSTDIR"
+  Delete "$INSTDIR\lvjiaoxi-viewer.exe"
+  Delete "$INSTDIR\uninstall.exe"
+  Delete "$INSTDIR\WebView2Loader.dll"
+  RMDir "$INSTDIR" ; 目录为空才删除；用户文件留在里面时目录保留
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
