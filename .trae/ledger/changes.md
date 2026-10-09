@@ -131,3 +131,16 @@
 - **验证**：regression.cjs 404/0 全绿；cargo check exit 0（3 warnings 与上会话持平，均为既有 unused 类）
 - **注意**：installer.nsh 属 NSIS 打包 hook，改动在下次 `npm run tauri build` 出包时才生效
 - **关联**：↔Dc-008 ↔Iss-005 ↔Chg-009
+
+#### Chg-011（2026-10-09 晚 · GIF 原生优先 + decode_fallback 兜底，Dc-008 方案 B 实施）
+
+- **批次主题**：正常 GIF 恢复动画（WebView2 原生解码）；坏 GIF 走 img.onerror → decode_fallback → image crate → JPEG 第一帧
+- **文件列表**：
+  - `src-tauri/src/lib.rs` ← gif 加回 NATIVE_EXTS；is_image 补收 gif（顺修 Dc-007 隐藏回归：文件夹扫描跳过 GIF）；load_paths/first_thumb 的 gif 分支回归原生透传（tif/tga 保持 Rust 解码）；新增 decode_fallback 命令（decode_to_rgb → rgb_to_jpeg_data_url）；generate_handler 注册
+  - `app.js` ← showImage catch 接兜底：desktop.invoke('decode_fallback') → 换 item.url → 重 loadImage；item.fallbackTried 防死循环
+  - `test/regression.cjs` ← 新增 6 断言（原生透传 / is_image 收集 gif / decode_fallback 存在+注册 / 前端接线 / 防死循环）
+  - `sw.js` ← CACHE v41→v42（硬约束 §3）
+- **压缩包注意**：read_archive_entry 的 GIF 仍走 image crate 静态第一帧（entry 无真实路径，无法前端兜底）
+- **验证**：regression.cjs 410/0 全绿；cargo check exit 0（3 warnings 既有）；sync-dist.cjs 已跑
+- **注意**：桌面端生效需重新 `npm run tauri build` 出新包（上一轮 Chg-010 的 installer.nsh 修复一并生效）
+- **关联**：↔Dc-008（替换 Dc-007） ↔Iss-005 ↔Chg-010

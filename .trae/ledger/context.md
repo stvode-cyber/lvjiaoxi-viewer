@@ -1,4 +1,4 @@
-﻿# context.md · 当前状态快照
+# context.md · 当前状态快照
 
 > 这个文件记录项目的稳定状态。完成度变了、硬规则变了、关键配置变了 → 改这里。
 
@@ -31,7 +31,7 @@
 1. 美图面板 = 内嵌底部栏，批量面板 = 遮罩弹窗
 2. 变形算法 = 合并位移场一次性双线性采样
 3. AI 超分 = ONNX 失败自动降级 Lanczos
-4. **GIF 兜底** = WebView2 原生解码失败 → image crate → JPEG 第一帧（失去动画）
+4. **GIF 原生优先**（Dc-008）= 正常 GIF WebView2 原生解码播动画；解码失败 img.onerror → decode_fallback → image crate → JPEG 第一帧；压缩包内 GIF 仍静态第一帧
 5. 版本号 6 落点 + sw.js CACHE 必须同步
 6. 打包前必须跑 node scripts/sync-dist.cjs
 7. PowerShell 5 参数行纯 ASCII
@@ -61,3 +61,4 @@
 | flog | 368 | 前端 debug log → %TEMP%/lvjx-debug.log |
 | list_archive_entries | 112 | ZIP/CBZ 压缩包内图片条目列表（懒加载） |
 | read_archive_entry | 141 | 按需读取压缩包内单张图片 → data URL |
+| decode_fallback | 490 | 前端解码兜底（GIF 等原生透传失败 → image crate → JPEG 第一帧，Dc-008 方案 B） |

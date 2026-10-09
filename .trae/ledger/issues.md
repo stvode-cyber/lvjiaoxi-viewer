@@ -63,3 +63,4 @@
 - **关联路径**：`src-tauri/src/lib.rs` NATIVE_EXTS / load_paths / read_archive_entry / resolve_image_url
 - **重现次数**：2026-10-08 再踩一次！新 EXE Hash=E67F551A04FB8515，运行中 EXE Hash=30E7F6180B（老的），覆盖安装 NSIS /S 没更新旧路径文件 → 手动 Copy-Item 覆盖 + 验证 Hash 才解决
 - **子坑 5a**：NSIS /S 静默安装到自定义路径（lvjx-v010-final）时不覆盖旧 EXE，必须手动 Copy-Item + Stop-Process + 验证 Hash
+- **2026-10-09 更新**：Dc-008 方案 B 已实施（Chg-011）—— gif 恢复原生透传播动画，坏 GIF 前端 onerror → decode_fallback → JPEG 第一帧；顺修 is_image 漏 gif 导致文件夹扫描整个跳过 GIF 的隐藏回归；压缩包内 GIF 仍静态第一帧

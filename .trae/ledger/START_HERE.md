@@ -1,10 +1,10 @@
-﻿# 🟢 接手入口 · 30 秒懂绿角犀看图
+# 🟢 接手入口 · 30 秒懂绿角犀看图
 
 ## 一句话定位
 桌面图片浏览器 + 内嵌底部栏美图编辑器。零框架原生 JS 单文件 app.js（252KB）+ Rust Tauri v2 + WebView2 离线运行时。核心卖点：合并位移场变形（导出 = 预览同公式）、AI 超分 ONNX 推理失败自动降级 Lanczos、抠图高斯似然比 + 双边羽化。
 
 ## 当前版本
-`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE v41）
+`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE v42）
 
 ## 完成度（2026-10-09）
 
@@ -26,7 +26,7 @@
 - 导航条：顶栏（6 核心按钮）+ beauty-bar（美颜内嵌底部栏）+ bottom-nav（6 功能导航）+ 底部图片条
 - 变形算法：合并位移场一次性双线性采样，导出 = 预览同公式
 - AI 超分：ONNX 失败必须自动降级，禁止挂起
-- **GIF 兜底**：WebView2 对某些 GIF 变种解码失败，统一走 image crate → JPEG 第一帧（失去动画但保证显示）
+- **GIF 原生优先**（Dc-008）：正常 GIF WebView2 原生解码播动画；坏 GIF 自动兜底 decode_fallback → JPEG 第一帧；压缩包内 GIF 静态第一帧
 - 版本号 6 落点必须全同，改版本 = 7 处同步 + 重构建
 - sw.js CACHE 改 app.js / sw.js 必须 +1
 - 测试前必须跑 sync-dist.cjs
