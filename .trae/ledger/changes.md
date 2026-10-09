@@ -119,3 +119,15 @@
   5. npm run tauri build（首次编译慢，Rust 增量编译后第二次快）
   6. node test/regression.cjs → 必须 404/0 全绿
 - **关联**：↔Chg-007（GIF 修复） ↔Chg-008（setup 清理） ↔Dc-007 ↔Iss-005
+
+#### Chg-010（2026-10-09 晚 · weekly 待办执行：NSIS 误删修复 + GIF 动画分析）
+
+- **批次主题**：执行 weekly 下周待办 #1 环境验证 / #3 installer.nsh 修复 / #2 GIF 动画代价分析
+- **文件列表**：
+  - `src-tauri/installer.nsh` ← PreInstall 的 `RMDir /r "$INSTDIR"` 改为定点 Delete 三类应用文件（lvjiaoxi-viewer.exe / uninstall.exe / WebView2Loader.dll）+ 非递归 RMDir —— 用户放在安装目录的个人文件不再被误删；Iss-005 子坑「先删旧 EXE 保证覆盖」的修复效果保留
+  - `.trae/ledger/decisions.md` ← 新增 Dc-008（GIF 动画方案分析，建议方案 B 待拍板）
+  - `.trae/ledger/changes.md` ← 追加 Chg-010
+  - `.trae/ledger/weekly/2026-10-09.md` ← 勾选待办 + 追加执行记录
+- **验证**：regression.cjs 404/0 全绿；cargo check exit 0（3 warnings 与上会话持平，均为既有 unused 类）
+- **注意**：installer.nsh 属 NSIS 打包 hook，改动在下次 `npm run tauri build` 出包时才生效
+- **关联**：↔Dc-008 ↔Iss-005 ↔Chg-009

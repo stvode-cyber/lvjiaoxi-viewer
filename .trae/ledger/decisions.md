@@ -60,3 +60,15 @@
 - **代价**：GIF 失去动画帧（image crate gif 解码只取第一帧）
 - **升级路径**：未来如需保留动画 → Dc-008 gif.js 方案（见 weekly/2026-10-09.md 下周待办）
 - **关联**：↔Iss-005（GIF 踩 6 次）
+
+#### Dc-008（2026-10-09 · GIF 动画方案分析）建议：原生优先 + 解码失败兜底（⏸ 待拍板，未实施前 Dc-007 仍生效）
+
+- **背景**：weekly 待办分析 GIF 动画找回方案；Dc-007 现状 = 全部 GIF 走 image crate → JPEG 第一帧（失去动画）
+- **摸底事实**：
+  1. assets/gif.js 是**编码器**（批量 tab「制作 GIF」在用），不能解码播放；JS 解码需 gifuct-js / omggif（约 10-20KB），weekly 原文「用 gif.js 解码」不成立
+  2. WebView2 是 Chromium 内核，正常 GIF 原生能解码且能播动画；当时踩坑的 5 张全是 IE 缓存 0 字节/截断坏文件（10-08 诊断已确认）
+  3. 前端条目带原始路径（app.js L87 `e.path`），具备「失败后找 Rust 兜底」条件
+- **方案对比**：A 现状全 JPEG（零改动但动画全丢）/ **B 原生优先 + onerror 兜底**（lib.rs 恢复 gif 透传 + 新增 decode_fallback 命令 ~30 行，app.js img.onerror 换 JPEG ~15 行；正常 GIF 满血动画，坏 GIF 降级静态=现状效果）/ C JS 解码器逐帧 canvas（大改动 + 大 GIF 内存风险，仅在将来要做 GIF 逐帧编辑时考虑）
+- **建议**：方案 B，设计哲学与「AI 超分失败自动降级 Lanczos」一致
+- **状态**：⏸ 待用户拍板；实施时走全套交付流程（lib.rs + app.js + sw.js CACHE +1 + regression + sync-dist），实施后本条替换 Dc-007 的「全走 JPEG」策略
+- **关联**：↔Dc-007 ↔Iss-005
