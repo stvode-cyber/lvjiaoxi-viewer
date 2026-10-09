@@ -258,3 +258,15 @@
 - **效果**：面板再省 ~90px（max-height 省 6vh≈63px + 双重 padding 12px + tab 行 6px + section 4px）
 - **验证**：regression 410/0 全绿；build 首次遇 NSIS 下载网络抖动（os error 10054）重试即过；nsis_x 已更新
 - **关联**：↔Chg-019
+
+#### Chg-021（2026-10-09 · 头部行与一级tab合并成一行）
+
+- **批次主题**：edit-panel-head（图片工具/文件名/⏱/✕）整行删除，三元素移进 edit-tools tab 行尾——tab 左、文件名推右（margin-left:auto）、⏱/✕ 紧随
+- **根因**：用户指定方案"把头部行和一级 tab 合并成一行"
+- **文件列表**：
+  - `index.html` ← 删 edit-panel-head div；editName/editHistoryBtn/editClose 移进 edit-tools nav 尾部（id 不变，JS 零改动）
+  - `styles.css` ← 删 .edit-panel-head 3 条规则；edit-tools 加 align-items:center；新增 .edit-tools .edit-name{margin-left:auto} + .edit-head-btn{26×26}
+  - `sw.js` ← CACHE v51→v52
+- **效果**：面板顶部再省一行 ~28px；一行 = 5 tab + 文件名 + ⏱ + ✕
+- **验证**：regression 410/0 全绿；build 成功；本机启动 OK；nsis_x 已更新
+- **关联**：↔Chg-020（第二轮压缩） ↔Chg-019（第一轮压缩）

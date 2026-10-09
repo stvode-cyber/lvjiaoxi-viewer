@@ -241,7 +241,7 @@ body {
 .batch-tab.active { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); }
 
 .edit-work { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
-.edit-tools { display: flex; flex-direction: row; flex-wrap: wrap; flex: 0 0 auto; background: var(--bg); border-bottom: 1px solid var(--rule); padding: 0 8px; gap: 0; }
+.edit-tools { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; flex: 0 0 auto; background: var(--bg); border-bottom: 1px solid var(--rule); padding: 0 8px; gap: 0; }
 .edit-tab { border: none; background: none; padding: 5px 12px; cursor: pointer; font-size: 13px; color: var(--muted); text-align: center; border-bottom: 2px solid transparent; }
 .edit-tab.active { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); background: var(--accent-soft); }
 .edit-tab:hover { color: var(--ink); background: var(--bg2); }
@@ -275,9 +275,9 @@ body {
 /* 图片工具：body flex 内嵌底部栏（border-top 对齐 Dc-003 硬约束）—— 打开时替换 beauty-bar 位置 */
 .edit-panel { display: flex; flex-direction: column; background: var(--bg2); border-top: 1px solid var(--rule); max-height: 26vh; flex: 0 0 auto; overflow: hidden; }
 .edit-panel[hidden] { display: none; }
-.edit-panel-head { display: flex; align-items: center; gap: 8px; padding: 4px 12px; border-bottom: 1px solid var(--rule); font-weight: 600; font-size: 13px; }
-.edit-panel-head .btn { margin-left: auto; width: auto; height: auto; padding: 4px 10px; }
-.edit-panel-head .btn:first-of-type { margin-left: auto; } /* ✕ 右对齐，⏱ 在它左边 */
+/* 头部行已合并进 edit-tools tab 行：文件名推右 + ⏱/✕ 紧随 */
+.edit-tools .edit-name { margin-left: auto; }
+.edit-head-btn { width: 26px; height: 26px; padding: 0; margin-left: 4px; flex: 0 0 auto; }
 .edit-history-panel { border-bottom: 1px solid var(--rule); background: var(--bg); max-height: 180px; overflow: hidden; }
 .edit-history-panel[hidden] { display: none; }
 .eh-head { display: flex; align-items: center; gap: 8px; padding: 6px 18px; font-size: 13px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--rule); }

@@ -123,12 +123,6 @@
   </div>
   <!-- 图片工具：滤镜 / 导出（内嵌主界面面板，在图片下方展开，不浮窗） -->
   <div class="edit-panel" id="editMask" hidden>
-    <div class="edit-panel-head">
-      <span>图片工具</span>
-      <span class="edit-name" id="editName"></span>
-      <button class="btn icon sm" id="editHistoryBtn" title="编辑历史时间线">⏱</button>
-      <button class="btn icon sm" id="editClose" title="关闭">✕</button>
-    </div>
     <div class="edit-history-panel" id="editHistoryPanel" hidden>
       <div class="eh-head">
         <span>编辑历史</span>
@@ -149,6 +143,10 @@
         <button class="edit-tab" data-tab="decor">特效</button>
         <button class="edit-tab" data-tab="pro">高级</button>
         <button class="edit-tab" data-tab="export">导出</button>
+        <!-- 原编辑面板头部行合并进 tab 行：文件名 + 历史 + 关闭（省一行 ~26px） -->
+        <span class="edit-name" id="editName"></span>
+        <button class="btn icon sm edit-head-btn" id="editHistoryBtn" title="编辑历史时间线">⏱</button>
+        <button class="btn icon sm edit-head-btn" id="editClose" title="关闭">✕</button>
       </nav>
       <div class="edit-body">
       <div class="edit-pane" data-pane="recipe">
