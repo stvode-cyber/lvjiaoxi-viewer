@@ -23,7 +23,7 @@
 | Tauri bundle.version | 0.1.0 | src-tauri/tauri.conf.json |
 | Cargo package.version | 0.1.0 | src-tauri/Cargo.toml |
 | manifest webmanifest version | 0.1.0 | manifest.webmanifest |
-| sw.js CACHE | lvjiaoxi-viewer-v41 | sw.js |
+| sw.js CACHE | lvjiaoxi-viewer-v43 | sw.js |
 | 显示版本 (app.js about) | v0.1.0 | app.js 行 4960 |
 
 ## 已定硬规则清单
@@ -37,7 +37,7 @@
 7. PowerShell 5 参数行纯 ASCII
 8. jsdom Uint8Array 用 window realm 检测
 9. 回归测试前显式设控件值防 document 残留
-10. **NSIS 覆盖安装失效** = /S 静默安装不覆盖旧 EXE，需手动 Copy-Item + 验证 Hash
+10. **切图编辑态归零**（Dc-009）= filters/slim/deform/crop/ops/matting/texts/mosaic/eraser/editUndo/editRedo/logoWm 切图全部重置；视图级参数（rotation/flip/mode）由 rememberRotation 等设置决定
 
 ## 关键路径（不许乱改的）
 

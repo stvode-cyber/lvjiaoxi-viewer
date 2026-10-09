@@ -72,3 +72,15 @@
 - **建议**：方案 B，设计哲学与「AI 超分失败自动降级 Lanczos」一致
 - **状态**：✅ 用户已拍板「按方案 B 执行」，2026-10-09 晚实施完成（Chg-011）；本条替换 Dc-007 的「全走 JPEG」策略
 - **关联**：↔Dc-007 ↔Iss-005
+
+#### Dc-009（2026-10-09 · 切图行为决策）每张图独立编辑态，切图全部编辑参数归零（替换旧行为：滤镜跨图继承）
+
+- **选型**：showImage 入口统一重置所有编辑态：filters / slim / deform / crop / ops / matting / texts / mosaic / eraser / slimMode / deformMode / editUndo / editRedo / logoWm
+- **替换旧行为**：旧版 L767 注释明确写「滤镜按既有行为在切图时保留」，导致用户给 A 图调的亮度 130 → 切到 B 图、C 图都带 brightness:130，体验反直觉
+- **保留不动**：视图级参数（rotation/flipH/flipV/mode/scale）按既有行为：rotation 由 rememberRotation 设置控制，mode 默认 defaultZoom
+- **UI 同步**：重置后立即 syncFilterUI() / syncBeautyBar() / updateSlimUI() / updateDeformUI() / updateOpsUI()，finish 里调 renderEditPreview 用新图重绘编辑预览 canvas
+- **原因**：参考 HoneyView / FastStone / 美图秀秀 —— 每张图片打开都是干净初始态，编辑只对当前图生效；历史记录（editUndo）跟图绑定不跨图
+- **隐藏修复**：切到带 EXIF 旋转的新图时，rotation 可能残留上一张的值导致方向错
+- **影响文件**：`app.js` showImage（主改动）、sw.js CACHE +1
+- **验证**：regression 410/0 全绿（Iss-003 活跃坑未触发——regression 大部分是源码断言而非运行时控件值断言）
+- **关联**：↔Dc-003（内嵌底栏形态） ↔Iss-003（jsdom document 残留值，本次未踩但改控件值的测试需警惕）

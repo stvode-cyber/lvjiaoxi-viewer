@@ -144,3 +144,14 @@
 - **验证**：regression.cjs 410/0 全绿；cargo check exit 0（3 warnings 既有）；sync-dist.cjs 已跑
 - **注意**：桌面端生效需重新 `npm run tauri build` 出新包（上一轮 Chg-010 的 installer.nsh 修复一并生效）
 - **关联**：↔Dc-008（替换 Dc-007） ↔Iss-005 ↔Chg-010
+
+#### Chg-012（2026-10-09 晚 · 切图编辑态归零）
+
+- **批次主题**：每张图打开回到干净初始态，切图跨图滤镜/变形/裁剪不再继承
+- **根因**：旧版 app.js L767 注释明确「滤镜按既有行为在切图时保留」，是故意设计但反用户直觉
+- **文件列表**：
+  - `app.js` ← showImage 入口新增全量编辑态重置（filters/slim/slimMode/deform/deformMode/crop/cropDrag/ops/logoWm/matting/texts/textSel/textDrag/mosaic/mosaicMode/mosaicPainting/eraser/eraserMode/eraserPainting/editUndo/editRedo）+ UI 同步（syncFilterUI/syncBeautyBar/updateSlimUI/updateDeformUI/updateOpsUI）+ finish 里调 renderEditPreview 重绘编辑预览 canvas
+  - `sw.js` ← CACHE v42→v43（硬约束 §3）
+- **验证**：regression.cjs 410/0 全绿；sync-dist.cjs 已跑
+- **注意**：NSIS 安装包未重建，桌面端生效需下次 `npm run tauri build`
+- **关联**：↔Dc-009 ↔Iss-003（活跃坑未触发，改控件值的运行时测试需显式设目标值） ↔Chg-011

@@ -4,7 +4,7 @@
 桌面图片浏览器 + 内嵌底部栏美图编辑器。零框架原生 JS 单文件 app.js（252KB）+ Rust Tauri v2 + WebView2 离线运行时。核心卖点：合并位移场变形（导出 = 预览同公式）、AI 超分 ONNX 推理失败自动降级 Lanczos、抠图高斯似然比 + 双边羽化。
 
 ## 当前版本
-`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE v42）
+`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE v43）
 
 ## 完成度（2026-10-09）
 
@@ -30,7 +30,7 @@
 - 版本号 6 落点必须全同，改版本 = 7 处同步 + 重构建
 - sw.js CACHE 改 app.js / sw.js 必须 +1
 - 测试前必须跑 sync-dist.cjs
-- **NSIS 覆盖安装失效**：/S 静默安装到自定义路径时不覆盖旧 EXE，必须手动 Copy-Item + Stop-Process + 验证 Hash
+- **切图行为**（Dc-009）：每张图独立编辑态，切图后 filters/slim/deform/crop/matting 等全部归零；视图级 rotation/flip/mode 由 rememberRotation 等设置决定
 
 ## 活跃坑 top 4（踩过 ≥2 次，Iss-005 当前最高频）
 1. **Iss-005** GIF 解码失败（踩 6 次）—— WebView2 对某些变种 GIF 原生解码失败；兜底到 image crate 后 IE 缓存 0 字节空 GIF 会 skip；NSIS /S 不覆盖旧 EXE 导致新修复不生效
