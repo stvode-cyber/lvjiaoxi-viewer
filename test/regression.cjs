@@ -1200,9 +1200,17 @@ test('压缩包直看 ZIP/CBZ + 懒加载 + handleOpenPaths 统一入口', async
   assert(rustSrc.includes('__MACOSX'), '跳过 __MACOSX 无用条目');
   assert(rustSrc.includes('.DS_Store'), '跳过 .DS_Store');
   assert(rustSrc.includes('NATIVE_EXTS.contains'), 'WebView 原生格式直接 data URL');
-  assert(rustSrc.includes('matches!(ext.as_str(), "gif" | "tif" | "tiff" | "tga")'), 'GIF/TIFF/TGA 走 image crate 解码（GIF 兜底 WebView2 解码失败）');
+  assert(rustSrc.includes('matches!(ext.as_str(), "gif" | "tif" | "tiff" | "tga")'), '压缩包内 GIF/TIFF/TGA 走 image crate 解码（无真实路径，无法前端兜底）');
   assert(rustSrc.includes('image::ImageReader::new'), 'image crate ImageReader 解码');
   assert(rustSrc.includes('write_with_encoder'), 'JPEG 编码（和 decode_to_rgb 同款）');
+
+  // GIF 原生优先 + decode_fallback 兜底（Dc-008 方案 B）
+  assert(rustSrc.includes('"jpg", "jpeg", "png", "gif", "webp"'), 'gif 恢复原生透传（正常 GIF 播动画）');
+  assert(rustSrc.includes('"gif" | "tif" | "tiff" | "tga" | "heic"'), 'is_image 收集 gif（修复 Dc-007 隐藏回归：文件夹扫描跳过 GIF）');
+  assert(rustSrc.includes('fn decode_fallback'), 'decode_fallback 兜底命令存在');
+  assert(rustSrc.includes('decode_fallback,'), 'decode_fallback 注册到 generate_handler');
+  assert(appSrc.includes("desktop.invoke('decode_fallback'"), '前端 onerror 走 decode_fallback 兜底');
+  assert(appSrc.includes('item.fallbackTried'), 'fallback 只尝试一次防死循环');
 
   // 7. invoke_handler 注册
   assert(rustSrc.includes('list_archive_entries,'), 'list_archive_entries 注册到 generate_handler');

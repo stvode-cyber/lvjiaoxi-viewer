@@ -1,4 +1,4 @@
-﻿/* 绿角犀看图 · Web 原型 — 核心逻辑
+/* 绿角犀看图 · Web 原型 — 核心逻辑
  * 覆盖 PRD 5.2~5.6；5.1 系统集成层以 Web 能力替代并在「关于」中标注。
  * 纯前端、零依赖、离线可用（双击 index.html 即可运行）。
  */
@@ -803,7 +803,20 @@
     if (cached && cached.complete && cached.naturalWidth) { finish(cached); }
     else {
       loadImage(item).then((img) => { state.cache.set(index, img); if (state.index === index) finish(img); })
-        .catch(() => { els.image.hidden = true; desktop.flog('showImage CATCH broken path=' + String(item.path) + ' urlHead=' + String(item.url).slice(0, 22)); item.broken = true; showLoadingError(item.name); toast('无法解码：' + item.name); });
+        .catch(() => {
+          // 桌面端解码兜底（Dc-008 方案 B）：原生透传的 GIF 等在 WebView2 解码失败时，
+          // 请 Rust 用 image crate 解码转 JPEG 第一帧；仍失败才判「无法解码」
+          const fail = () => { els.image.hidden = true; desktop.flog('showImage CATCH broken path=' + String(item.path) + ' urlHead=' + String(item.url).slice(0, 22)); item.broken = true; showLoadingError(item.name); toast('无法解码：' + item.name); };
+          if (!desktop.available() || !item.path || item.fallbackTried) { fail(); return; }
+          item.fallbackTried = true;
+          desktop.invoke('decode_fallback', { path: item.path }).then((url) => {
+            if (!url) { fail(); return; }
+            item.url = url;
+            state.cache.delete(index);
+            renderThumbs();
+            return loadImage(item).then((img) => { state.cache.set(index, img); if (state.index === index) finish(img); });
+          }).catch(fail);
+        });
     }
   }
 

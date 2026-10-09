@@ -202,10 +202,10 @@ pub struct ImageEntry {
 }
 
 // WebView 原生支持的格式：直接以 data URL 透传，无需 Rust 解码
-// 注意：gif 已移出，因为 WebView2 对某些 GIF 变种/损坏文件原生解码失败（见 lvjx-debug.log CATCH broken），
-// 统一走 image crate 解码成 PNG 兜底，代价是失去动画帧但保证能显示。
+// gif 原生透传（Dc-008 方案 B）：正常 GIF 由 WebView2(Chromium) 解码并播放动画；
+// 坏/变种 GIF 在前端 img.onerror 后调 decode_fallback 命令（image crate → JPEG 第一帧）兜底
 const NATIVE_EXTS: &[&str] = &[
-    "jpg", "jpeg", "png", "webp", "bmp", "ico", "svg", "avif", "apng",
+    "jpg", "jpeg", "png", "gif", "webp", "bmp", "ico", "svg", "avif", "apng",
 ];
 
 // 压缩包扩展名（ZIP/CBZ 一期支持；RAR/7Z 后续版再加）
@@ -240,7 +240,7 @@ fn is_image(path: &Path) -> bool {
         .map(|e| {
             let l = e.to_lowercase();
             NATIVE_EXTS.contains(&l.as_str())
-                || matches!(l.as_str(), "tif" | "tiff" | "tga" | "heic" | "heif" | "cr2" | "nef" | "arw" | "dng" | "raw" | "psd")
+                || matches!(l.as_str(), "gif" | "tif" | "tiff" | "tga" | "heic" | "heif" | "cr2" | "nef" | "arw" | "dng" | "raw" | "psd")
         })
         .unwrap_or(false)
 }
@@ -416,8 +416,8 @@ async fn load_paths(paths: Vec<String>, recursive: Option<bool>) -> Result<Vec<I
                 Ok(bytes) => format!("data:{};base64,{}", mime, B64.encode(&bytes)),
                 Err(_) => continue,
             }
-        } else if ext == "gif" || ext == "tif" || ext == "tiff" || ext == "tga" {
-            // 需要 Rust 解码的格式（GIF：WebView2 对某些变种解码失败，兜底成 PNG）
+        } else if ext == "tif" || ext == "tiff" || ext == "tga" {
+            // 需要 Rust 解码的格式（gif 已恢复原生透传，解码失败由前端调 decode_fallback 兜底）
             match decode_to_rgb(&f).and_then(rgb_to_jpeg_data_url) {
                 Ok(u) => u,
                 Err(_) => continue,
@@ -476,13 +476,25 @@ fn first_thumb(path: String) -> Result<Option<String>, String> {
     if NATIVE_EXTS.contains(&ext.as_str()) {
         let bytes = std::fs::read(&file).map_err(|e| e.to_string())?;
         Ok(Some(format!("data:{};base64,{}", mime, B64.encode(&bytes))))
-    } else if ext == "gif" || ext == "tif" || ext == "tiff" || ext == "tga" {
+    } else if ext == "tif" || ext == "tiff" || ext == "tga" {
         let rgb = decode_to_rgb(&file)?;
         Ok(Some(rgb_to_jpeg_data_url(rgb)?))
     } else {
         // HEIC / RAW / PSD：暂不支持，前端显示占位
         Ok(None)
     }
+}
+
+// 前端解码兜底（Dc-008 方案 B）：原生透传的 GIF 等在 WebView2 解码失败（损坏/变种）时，
+// 用 image crate 解码 → JPEG 第一帧。任何失败返回 Err，由前端展示「无法解码」。
+#[tauri::command]
+fn decode_fallback(path: String) -> Result<String, String> {
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Err("文件不存在".to_string());
+    }
+    let rgb = decode_to_rgb(p)?;
+    rgb_to_jpeg_data_url(rgb)
 }
 
 #[tauri::command]
@@ -688,6 +700,7 @@ pub fn run() {
             flog,
             list_archive_entries,
             read_archive_entry,
+            decode_fallback,
         ]);
 
     builder
