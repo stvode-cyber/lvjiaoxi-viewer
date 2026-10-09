@@ -176,4 +176,11 @@ SSH 推送（已配置）:
 4. git add -A && git commit -m "xxx" && git push
 5. npm run tauri build（需要桌面安装包时）
 6. 复制产物到 nsis_x/
+
+—— 先本机更新，确认 OK 再整体升级 ——
+7. 本机静默安装: Setup.exe /S /D=<本地临时路径>
+8. 验证 EXE FileVersion / ProductVersion 正确 → 启动应用 Responding=True
+9. 手动目视验证核心场景（如切图归零、GIF 动画、更多工具面板布局）
+10. 本机卸载: uninstall.exe /S（临时路径，不影响正式环境）
+—— 以上 7-10 步全部 OK，再推整体升级 ——
 ```

@@ -38,6 +38,7 @@
 8. jsdom Uint8Array 用 window realm 检测
 9. 回归测试前显式设控件值防 document 残留
 10. **切图编辑态归零**（Dc-009）= filters/slim/deform/crop/ops/matting/texts/mosaic/eraser/editUndo/editRedo/logoWm 切图全部重置；视图级参数（rotation/flip/mode）由 rememberRotation 等设置决定
+11. **发版前本机验证铁律**（AGENTS 交付流程 step 7-10）= 每次打包后必须：本机静默安装 → 验证版本号 → 启动冒烟 → 目视核心场景 → 卸载临时路径；全部 OK 再推整体升级
 
 ## 关键路径（不许乱改的）
 
