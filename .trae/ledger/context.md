@@ -1,14 +1,14 @@
 # context.md · 当前状态快照
 
 > 这个文件记录项目的稳定状态。完成度变了、硬规则变了、关键配置变了 → 改这里。
-> 最近更新：2026-10-09 晚（交接用）
+> 最近更新：2026-10-10 午（Iss-005 彻底修复）
 
-## 完成度快照（2026-10-09）
+## 完成度快照（2026-10-10）
 
 | 模块 | 百分比 | 状态 | 备注 |
 |------|--------|------|------|
 | 图片浏览核心 | 100% | ✅ | 打开/缩放/翻页/最近访问/格式支持(JPG/PNG/GIF/HEIC/WebP) |
-| GIF 解码策略 | 100% | ✅ | 正常 GIF 原生动画 + 坏 GIF/压缩包内 → JPEG 第一帧 |
+| GIF 解码策略 | 100% | ✅ | 正常 GIF 原生动画 + 坏 GIF decode_fallback 兜底；**压缩包内 GIF Rust 端直接 JPEG 第一帧**（Chg-022 彻底修复） |
 | 美图编辑器 | 100% | ✅ | 内嵌底部栏（非弹窗）；edit-panel 紧贴 bottom-nav 上方；slim/deform 合并位移场 |
 | AI 超分 | 100% | ✅ | sub_pixel_cnn.onnx + ort.wasm；失败自动降级 Lanczos |
 | 抠图 | 100% | ✅ | 高斯似然比 + 双边羽化 ≤512px；消除笔 Patch-Match |
@@ -16,7 +16,7 @@
 | 批量加水印 | 100% | ✅ | drawWatermarkOnCanvas 纯函数 + 9 宫格 + tile -30° |
 | 海报边框+emoji | 100% | ✅ | BORDER_PRESETS + emojiBar + 一键生成 |
 | 打包交付 | 100% | ✅ | NSIS SimpChinese；内嵌 WebView2；installer.nsh 三段 hook |
-| 回归测试 | 100% | ✅ | regression.cjs **410** 项全绿 |
+| 回归测试 | 100% | ✅ | regression.cjs **414** 项全绿 |
 | 鸿蒙主线 | 60% | 🔄 | harmony/ (ArkTS 原生)，entry/ 基本框架有，功能未对齐 |
 | 后端服务 | 0% | ⬜ | server/mock-server.js 占位 |
 
@@ -29,7 +29,7 @@
 | manifest webmanifest version | 0.1.0 | manifest.webmanifest |
 | **sw.js CACHE** | **lvjiaoxi-viewer-v52** | sw.js ← **改 app.js/styles.css 必须再 +1** |
 | 显示版本 (app.js about) | v0.1.0 | app.js |
-| 最近 commit | ec8f7ad | feat: 头部行与一级tab合并 |
+| 最近 commit | 9eb9b3e | Iss-005 压缩包内 GIF 死代码 + 前端兜底路径 bug 彻底修复 |
 
 ## UI 布局快照（2026-10-09 Dc-011 定稿）
 

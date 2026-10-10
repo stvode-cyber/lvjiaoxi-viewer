@@ -5,14 +5,14 @@
 
 ## 当前版本
 `0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v52**）
-- **2026-10-09 最新提交**：`ec8f7ad` 头部行与一级 tab 合并（面板更紧凑）
+- **2026-10-10 最新提交**：`9eb9b3e` Iss-005 压缩包内 GIF 死代码 + 前端兜底路径 bug 彻底修复
 
-## 完成度（2026-10-09 晚）
+## 完成度（2026-10-10 午）
 
 | 模块 | 状态 | 备注 |
 |------|------|------|
 | 图片浏览核心 | ✅ 100% | 打开/缩放/翻页/最近访问/穿透文件夹 |
-| GIF 解码兜底 | ✅ 100% | 正常 GIF WebView2 原生播动画；坏 GIF/压缩包内 GIF → JPEG 第一帧 |
+| GIF 解码兜底 | ✅ 100% | 正常 GIF 原生播动画（decode_fallback 兜底）；压缩包内 GIF Rust 端直接 image crate → JPEG 第一帧（Iss-005 Chg-022 彻底修复） |
 | 美图编辑器 | ✅ 100% | 内嵌底部栏，edit-panel 紧贴 bottom-nav 上方展开；slim/deform 合并位移场 |
 | AI 超分 | ✅ 100% | ONNX + ort.wasm，失败降级 Lanczos |
 | 抠图 | ✅ 100% | 高斯似然比 + 双边羽化 ≤512px；消除笔 Patch-Match |
@@ -20,7 +20,7 @@
 | 批量加水印 | ✅ 100% | drawWatermarkOnCanvas 纯函数 + 9 宫格 + tile -30° |
 | 海报边框+emoji | ✅ 100% | BORDER_PRESETS + emojiBar + 一键生成 |
 | 打包交付 | ✅ 100% | NSIS 全中文 SimpChinese；内嵌 WebView2 离线包；installer.nsh 三段 hook |
-| 回归测试 | ✅ 100% | regression.cjs **410** 项断言全绿 |
+| 回归测试 | ✅ 100% | regression.cjs **414** 项断言全绿（Chg-022 +4 覆盖 Iss-005 修复链路） |
 | 鸿蒙主线 | 🔄 60% | harmony/ ArkTS 原生，并行开发中 |
 | 后端服务 | ⬜ 待接入 | server/mock-server.js 占位，无正式部署 |
 
