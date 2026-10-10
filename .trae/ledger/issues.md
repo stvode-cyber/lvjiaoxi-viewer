@@ -32,14 +32,16 @@
 - **关联路径**：`nsis_x/*.exe`、`AppData\Local\lvjx-v010-final\`
 - **重现次数**：2（2026-09-30 重装 + 2026-10-01 打开应用各踩一次）
 
-#### Iss-005（活跃 · 踩 5 次）WebView2 对某些 GIF 变种原生解码失败
+#### Iss-005（活跃 · 踩 6 次）WebView2 对某些 GIF 变种原生解码失败
 
 - **问题**：GIF 文件在 Rust 侧正确透传 data URL（data:image/gif;base64,...），但前端 <img src> 触发 onerror → "无法解码：xxx.gif"
 - **根因**：WebView2（Chromium）对某些 GIF 格式变种/损坏文件（IE 缓存中的 .gif、超大 GIF、非标准 color table）原生解码失败
-- **解决**：Dc-008 方案 B 已实施（Chg-011）—— gif 恢复原生透传播动画，坏 GIF 前端 onerror → decode_fallback → JPEG 第一帧；顺修 is_image 漏 gif 导致文件夹扫描整个跳过 GIF 的隐藏回归；压缩包内 GIF 仍静态第一帧
-- **预防规则**：新增"WebView2 原生支持格式"时要加真实文件验证，不要只假设 Chromium 全能解
-- **关联路径**：`src-tauri/src/lib.rs` / load_paths / read_archive_entry / resolve_image_url
-- **重现次数**：5（2026-10-08 NSIS /S 覆盖安装失效踩第 5 次）
+- **解决**：Dc-008 方案 B（Chg-011）—— 本地文件 gif 原生透传播动画，坏 GIF 前端 onerror → decode_fallback → JPEG 第一帧；顺修 is_image 漏 gif 导致文件夹扫描整个跳过 GIF
+- **踩坑 v2 根因（Chg-022）**：read_archive_entry 里 GIF 也被当作 NATIVE_EXTS 原生透传（L166 直接 return raw base64），但前端 onerror 兜底拿不到 zip 内子文件路径（item.path 是 zip 文件路径）→ 压缩包内坏 GIF 永远显示"无法解码"；且旧 L171-187 有个"GIF 走 image crate"的 matches 分支是**死代码**（永远走不到）
+- **最终修复（Chg-022）**：read_archive_entry 里 GIF 单独 `if ext == "gif"` 提前处理 → image crate → JPEG 第一帧（压缩包内静态，符合设计意图）；同时加固 decode_to_rgb 用 with_guessed_format 基于文件头探测
+- **预防规则**：新增"WebView2 原生支持格式"时要加真实文件验证；read_archive_entry 里 GIF 不能进 NATIVE_EXTS，必须 image crate 转 JPEG 第一帧
+- **关联路径**：`src-tauri/src/lib.rs` / load_paths / read_archive_entry / decode_to_rgb
+- **重现次数**：6（2026-10-10 发现压缩包内 GIF 死代码 + 前端兜底路径 bug）
 
 #### Iss-006（活跃 · 踩 1 次）decor pane 空 div + section 裸在 edit-body 外
 

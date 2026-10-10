@@ -1200,12 +1200,20 @@ test('压缩包直看 ZIP/CBZ + 懒加载 + handleOpenPaths 统一入口', async
   assert(rustSrc.includes('__MACOSX'), '跳过 __MACOSX 无用条目');
   assert(rustSrc.includes('.DS_Store'), '跳过 .DS_Store');
   assert(rustSrc.includes('NATIVE_EXTS.contains'), 'WebView 原生格式直接 data URL');
-  assert(rustSrc.includes('matches!(ext.as_str(), "gif" | "tif" | "tiff" | "tga")'), '压缩包内 GIF/TIFF/TGA 走 image crate 解码（无真实路径，无法前端兜底）');
+  // Iss-005 修复：压缩包内 GIF 必须在 NATIVE_EXTS 之前单独处理（image crate → JPEG），
+  // 不能让 GIF 进 NATIVE_EXTS 原生透传，因为前端 onerror 兜底拿不到 zip 内子文件路径
+  assert(rustSrc.includes('if ext == "gif"'), '压缩包内 GIF 提前单独处理（Iss-005：防死代码 + 前端无法兜底）');
+  assert(rustSrc.includes('matches!(ext.as_str(), "tif" | "tiff" | "tga")'), '压缩包内 TIFF/TGA 走 image crate 解码');
   assert(rustSrc.includes('image::ImageReader::new'), 'image crate ImageReader 解码');
-  assert(rustSrc.includes('write_with_encoder'), 'JPEG 编码（和 decode_to_rgb 同款）');
+  assert(rustSrc.includes('write_with_encoder'), 'JPEG 编码');
+
+  // Iss-005 加固：decode_to_rgb 用 with_guessed_format 基于文件头探测（不怕扩展名被改）
+  assert(rustSrc.includes('fn decode_to_rgb(path: &Path)'), 'decode_to_rgb 兜底函数');
+  assert(rustSrc.includes('.with_guessed_format()'), 'decode_to_rgb 用 with_guessed_format（文件头探测，防扩展名被改）');
+  assert(rustSrc.includes('std::fs::File::open(path)'), 'decode_to_rgb 先 File::open 再 BufReader');
 
   // GIF 原生优先 + decode_fallback 兜底（Dc-008 方案 B）
-  assert(rustSrc.includes('"jpg", "jpeg", "png", "gif", "webp"'), 'gif 恢复原生透传（正常 GIF 播动画）');
+  assert(rustSrc.includes('"jpg", "jpeg", "png", "gif", "webp"'), 'gif 在 NATIVE_EXTS 里，本地文件原生透传播动画');
   assert(rustSrc.includes('"gif" | "tif" | "tiff" | "tga" | "heic"'), 'is_image 收集 gif（修复 Dc-007 隐藏回归：文件夹扫描跳过 GIF）');
   assert(rustSrc.includes('fn decode_fallback'), 'decode_fallback 兜底命令存在');
   assert(rustSrc.includes('decode_fallback,'), 'decode_fallback 注册到 generate_handler');

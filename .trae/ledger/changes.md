@@ -270,3 +270,16 @@
 - **效果**：面板顶部再省一行 ~28px；一行 = 5 tab + 文件名 + ⏱ + ✕
 - **验证**：regression 410/0 全绿；build 成功；本机启动 OK；nsis_x 已更新
 - **关联**：↔Chg-020（第二轮压缩） ↔Chg-019（第一轮压缩）
+
+#### Chg-022（2026-10-10 · Iss-005 彻底修复：压缩包内 GIF 死代码 + 前端兜底路径 bug）
+
+- **批次主题**：read_archive_entry 内 GIF 从 NATIVE_EXTS 分支提前摘出单独处理 → image crate → JPEG 第一帧；删除永远走不到的死代码 matches 分支；加固 decode_to_rgb 用 with_guessed_format 基于文件头探测
+- **根因**：
+  1. NATIVE_EXTS 包含 gif → read_archive_entry L166 GIF 直接 return raw base64 → L171 `matches!(ext, "gif" | ...)` 是**死代码**（永远走不到）
+  2. 压缩包内 GIF WebView2 解码失败 → 前端 onerror 调 decode_fallback(item.path)，但 item.path 是 zip 文件路径 → image::open("xxx.zip") 必失败 → 压缩包内坏 GIF 永远显示"无法解码"
+- **文件列表**：
+  - `src-tauri/src/lib.rs` ← read_archive_entry：gif 单独 `if ext == "gif"` 提前 image crate → JPEG（删死代码里的 gif 分支）；decode_to_rgb：image::open(path) → File::open + BufReader + ImageReader + with_guessed_format（基于文件头探测，不怕扩展名被改）
+  - `test/regression.cjs` ← 更新断言：matches! 里 gif 分支移走的新路径 + 新增 decode_to_rgb with_guessed_format 断言
+- **效果**：压缩包内 GIF 永远 Rust 端转 JPEG 第一帧（静态），前端无需兜底；本地文件 GIF 链路不变（原生透传 + decode_fallback）；decode_to_rgb 对扩展名被改/损坏的文件更宽容
+- **验证**：regression 414/0 全绿（+4 条新断言覆盖修复）；cargo check 通过；sync-dist OK
+- **关联**：↔Iss-005 ↔Dc-008 ↔Chg-011 ↔Chg-021

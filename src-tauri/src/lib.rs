@@ -162,21 +162,38 @@ fn read_archive_entry(path: String, index: usize) -> Result<String, String> {
 
     let mime = mime_of(&ext);
 
-    // WebView 原生支持 → 直接 data URL
-    if NATIVE_EXTS.contains(&ext.as_str()) {
-        let b64 = B64.encode(&buf);
-        return Ok(format!("data:{};base64,{}", mime, b64));
-    }
-
-    // GIF / TIFF / TGA 等 → Rust image crate 解码转 JPEG（GIF：WebView2 对某些变种解码失败，兜底）
-    if matches!(ext.as_str(), "gif" | "tif" | "tiff" | "tga") {
+    // GIF：压缩包内永远转 JPEG 第一帧（静态，符合 Dc-008 设计意图；
+    // WebView2 对某些 GIF 变种原生解码失败，前端 onerror 兜底拿不到 zip 内子文件路径）
+    if ext == "gif" {
         let cursor = Cursor::new(&buf);
         let img = image::ImageReader::new(cursor)
             .with_guessed_format()
             .map_err(|e| format!("格式探测失败: {}", e))?
             .decode()
             .map_err(|e| format!("解码失败: {}", e))?;
-        // 转 JPEG data URL（和 decode_to_rgb 同款逻辑）
+        let mut jpeg_buf = Vec::new();
+        let mut jcursor = std::io::Cursor::new(&mut jpeg_buf);
+        let enc = JpegEncoder::new_with_quality(&mut jcursor, 90);
+        img.write_with_encoder(enc)
+            .map_err(|e| format!("JPEG 编码失败: {}", e))?;
+        let b64 = B64.encode(&jpeg_buf);
+        return Ok(format!("data:image/jpeg;base64,{}", b64));
+    }
+
+    // WebView 原生支持 → 直接 data URL
+    if NATIVE_EXTS.contains(&ext.as_str()) {
+        let b64 = B64.encode(&buf);
+        return Ok(format!("data:{};base64,{}", mime, b64));
+    }
+
+    // TIFF / TGA → Rust image crate 解码转 JPEG
+    if matches!(ext.as_str(), "tif" | "tiff" | "tga") {
+        let cursor = Cursor::new(&buf);
+        let img = image::ImageReader::new(cursor)
+            .with_guessed_format()
+            .map_err(|e| format!("格式探测失败: {}", e))?
+            .decode()
+            .map_err(|e| format!("解码失败: {}", e))?;
         let mut jpeg_buf = Vec::new();
         let mut jcursor = std::io::Cursor::new(&mut jpeg_buf);
         let enc = JpegEncoder::new_with_quality(&mut jcursor, 90);
@@ -325,9 +342,15 @@ fn mime_of(ext: &str) -> &'static str {
     }
 }
 
-// TIFF / TGA 用 image crate 解码为 RGB8（其余 WebView 原生格式不走这里）
+// TIFF / TGA / GIF 兜底：基于文件头探测格式（不怕扩展名被改），比 image::open(path) 只看扩展名更稳
 fn decode_to_rgb(path: &Path) -> Result<image::RgbImage, String> {
-    let img = image::open(path).map_err(|e| format!("解码失败: {}", e))?;
+    let file = std::fs::File::open(path).map_err(|e| format!("打开文件失败: {}", e))?;
+    let reader = std::io::BufReader::new(file);
+    let img = image::ImageReader::new(reader)
+        .with_guessed_format()
+        .map_err(|e| format!("格式探测失败: {}", e))?
+        .decode()
+        .map_err(|e| format!("解码失败: {}", e))?;
     Ok(img.to_rgb8())
 }
 
