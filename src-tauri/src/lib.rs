@@ -21,6 +21,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[cfg(not(target_os = "android"))]
 use std::borrow::Cow;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
@@ -567,6 +568,11 @@ fn set_wallpaper_impl(path: &str) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(target_os = "android")]
+fn set_wallpaper_impl(_path: &str) -> Result<(), String> {
+    Err("Android 需通过 Intent API 设置壁纸，Rust 侧暂不支持".to_string())
+}
+
 #[cfg(target_os = "windows")]
 fn reveal_impl(path: &str) -> Result<(), String> {
     use std::process::Command;
@@ -598,6 +604,12 @@ fn reveal_impl(path: &str) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(target_os = "android")]
+fn reveal_impl(_path: &str) -> Result<(), String> {
+    Err("Android 无资源管理器定位能力，暂不支持".to_string())
+}
+
+#[cfg(not(target_os = "android"))]
 fn copy_image_impl(bytes: Vec<u8>) -> Result<(), String> {
     let img = image::load_from_memory(&bytes).map_err(|e| e.to_string())?;
     let rgba = img.to_rgba8();
@@ -611,6 +623,11 @@ fn copy_image_impl(bytes: Vec<u8>) -> Result<(), String> {
         })
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[cfg(target_os = "android")]
+fn copy_image_impl(_bytes: Vec<u8>) -> Result<(), String> {
+    Err("Android 剪贴板位图需用 Intent API，Rust arboard 不支持".to_string())
 }
 
 // ============ 启动 ============
@@ -650,8 +667,11 @@ fn build_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub fn run() {
-    let builder = tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+    let mut builder = tauri::Builder::default();
+
+    #[cfg(not(target_os = "android"))]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             // 第二个实例：WebView 已加载完成，直接事件转发
             dbg_log(&format!("[single-instance] raw args={:?}", args));
             if args.len() > 1 {
@@ -685,7 +705,10 @@ pub fn run() {
                     }
                 }
             }
-        }))
+        }));
+    }
+
+    let builder = builder
         .setup(|app| {
             #[cfg(desktop)]
             build_tray(app)?;

@@ -16,8 +16,6 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 # Tauri 核心；tray-icon 启用系统托盘，image-png 用于默认窗口图标
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
-# 单实例：第二次启动把命令行参数转发给已运行实例（文件关联 / 右键菜单调用入口）
-tauri-plugin-single-instance = "2"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -26,14 +24,17 @@ serde_json = "1"
 image = { version = "0.25", features = ["jpeg", "png", "gif", "bmp", "ico", "tiff", "tga", "rayon"] }
 # EXIF 方向纠正（旋转/翻转烘焙）
 kamadak-exif = "0.6"
-# 系统剪贴板位图写入（替代 Web 的 ClipboardItem，支持 arboard）
-arboard = "3"
 # data URL 编码
 base64 = "0.22"
 # SVG 文本内联
 percent-encoding = "2"
 # 压缩包直看（ZIP/CBZ 不解压直接浏览）
 zip = "2"
+
+# Android 不支持 arboard（剪贴板位图）和单实例 plugin，移到桌面专用
+[target.'cfg(not(target_os = "android"))'.dependencies]
+arboard = "3"
+tauri-plugin-single-instance = "2"
 
 # ===== 扩展点（PRD 5.2 需后端解码的格式，按需解除注释并实现 decode_to_rgb 对应分支）=====
 # libheif-rs = "1"     # HEIC / HEIF
