@@ -1186,9 +1186,7 @@ test('压缩包直看 ZIP/CBZ + 懒加载 + handleOpenPaths 统一入口', async
   // 5. Rust 侧依赖 + command
   assert(cargoSrc.includes('zip = "2"'), 'Cargo.toml 加 zip crate');
   assert(rustSrc.includes('use zip::ZipArchive'), 'lib.rs 导入 ZipArchive');
-  assert(rustSrc.includes('const ARCHIVE_EXTS'), 'lib.rs ARCHIVE_EXTS 常量');
   assert(rustSrc.includes('const ARCHIVE_IMAGE_EXTS'), 'lib.rs ARCHIVE_IMAGE_EXTS 常量');
-  assert(rustSrc.includes('fn is_archive(path: &Path)'), 'lib.rs is_archive 辅助函数');
   assert(rustSrc.includes('fn is_image_entry(name: &str)'), 'lib.rs is_image_entry 辅助函数');
   assert(rustSrc.includes('pub struct ArchiveEntry'), 'ArchiveEntry struct（index/name/size）');
   assert(rustSrc.includes('fn list_archive_entries(path: String)'), 'list_archive_entries command');

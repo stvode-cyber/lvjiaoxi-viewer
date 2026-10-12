@@ -31,7 +31,6 @@ use serde::Serialize;
 use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 use image::codecs::jpeg::JpegEncoder;
-use image::ImageEncoder;
 use zip::ZipArchive;
 
 // 启动参数缓存：setup 阶段 emit 的 open-file 事件会因 WebView 未加载完成而丢失，
@@ -225,22 +224,10 @@ const NATIVE_EXTS: &[&str] = &[
     "jpg", "jpeg", "png", "gif", "webp", "bmp", "ico", "svg", "avif", "apng",
 ];
 
-// 压缩包扩展名（ZIP/CBZ 一期支持；RAR/7Z 后续版再加）
-const ARCHIVE_EXTS: &[&str] = &[
-    "zip", "cbz",
-];
-
 // 压缩包内可识别的图片扩展名
 const ARCHIVE_IMAGE_EXTS: &[&str] = &[
     "jpg", "jpeg", "png", "gif", "webp", "bmp", "ico", "tif", "tiff", "tga",
 ];
-
-fn is_archive(path: &Path) -> bool {
-    path.extension()
-        .and_then(|e| e.to_str())
-        .map(|e| ARCHIVE_EXTS.contains(&e.to_lowercase().as_str()))
-        .unwrap_or(false)
-}
 
 fn is_image_entry(name: &str) -> bool {
     Path::new(name)
