@@ -23,19 +23,26 @@
 - **预防规则**：写 `# TODO: [PS5-GBK] 预防：参数行纯 ASCII，中文注释单独 # 行` 到构建脚本头部
 - **关联路径**：`scripts/sync-dist.cjs` 调用的 PS 脚本、`build-windows.bat` 间接调用的 PS
 
-#### Iss-004（活跃 · 踩 3 次归档）NSIS Setup.exe /S 静默安装完全忽略 /D 参数
+#### Iss-004（活跃 · 踩 3 次归档 · 根因确认）Tauri NSIS Setup.exe /S 静默安装在当前环境不可靠
 
-- **问题**：Setup.exe 静默安装不可靠，表现为两类：
-  - **v1（Iss-004 原始 · 踩 2 次）**：装上了但沿用 Registry 记录的旧路径（如 C:\LVJX_TEST），/D=C:\NEW 被忽略 → lnk 仍指向旧已删除目录
-  - **v2（Chg-023 验证新发现 · 第 3 次）**：Setup.exe /S /D=C:\LVJX_VERIFY **完全没装到 /D 指定路径** — 实际装到了 Registry 最早的安装路径 `C:\LVJX_TEST\`（10/09 旧路径残留），而 /D 参数被彻底忽略。更糟的是 C:\NSIS_CHECK\（09/11 更早的旧路径）还在 — PreInstall hook 没清干净
-- **根因**：
-  1. **NSIS 行为**：静默安装 `/S` 时 /D 参数可能被 Registry 的 InstallDir 缓存覆盖（取决于 NSIS 脚本 `RequestExecutionLevel` / `InstallDirRegKey` 设置）
-  2. **installer.nsh PreInstall hook**：`ExecWait uninstall.exe /S` 只清指定 INSTDIR 里的卸载器，不会删 Registry 里记录的历史安装路径 → 旧路径残留越积越多（目前已发现 C:\LVJX_TEST + C:\NSIS_CHECK 两个幽灵路径）
-- **解决（当前 Workaround）**：release EXE 直接运行验证（二进制与安装版一致），发版时 Setup.exe 作为**用户交互式**安装包发布，自动化验证环节改用 EXE 直验
-- **预防规则**：发版自动验证环节**不要依赖 Setup.exe /S**；如需自动化静默安装验证，改走 MSI（WiX）或 SCCM 通道，或重构 installer.nsh PreInstall 先清 Registry InstallDir 再装
-- **关联路径**：`src-tauri/installer.nsh` PreInstall 段、`src-tauri/target/release/bundle/nsis/绿角犀看图_*setup.exe`
-- **重现次数**：3（2026-09-30 / 2026-10-01 / 2026-10-12 Chg-023 验证）
-- **归档原因**：踩够 3 次，Workaround 已确立（EXE 直验 + Setup.exe 交互式发版）；PreInstall hook 深层修复需独立任务（改 NSIS 脚本清 InstallDir Registry + 加 InstallDirRegKey 覆盖）
+- **问题**：Setup.exe 静默安装不可靠，三类表现：
+  - **v1（踩 2 次）**：装上了但沿用 Registry 记录的旧路径，/D 被忽略 → lnk 指向已删目录
+  - **v2（Chg-023）**：Setup.exe /S /D=C:\XXX 没装到 /D 指定路径，实际装到 Registry 最早的残留路径
+  - **v3（Chg-024 根因锁定）**：**纯 Tauri NSIS 模板（无任何 hook）/S 也卡！** 临时移除 installerHooks 后 Build 测试 — Setup.exe /S 15s 不退出；但 C:\LVJX_NOHooks 里已经有 EXE 了（复制了一半但没走完安装流程）
+- **根因**：**Tauri bundler 内嵌的 NSIS 模板 Setup.exe /S 在当前 Windows 10 管理员环境下有缺陷** — 不是 installer.nsh hook 的问题。已通过两轮隔离验证：
+  1. 简化 PreInstall 只留 taskkill → /S 仍卡
+  2. 完全移除 installerHooks → /S 仍卡，EXE 落盘但安装未完成
+- **已做改进**（Chg-024 installer.nsh 简化）：
+  - PreInstall 里的卸载逻辑全删（ExecWait uninstall.exe /S、cmd /c /qn /norestart、文件删除）— 这些在 /S 模式下会卡住或执行顺序错
+  - 只留 `nsExec::ExecToLog 'taskkill /F /IM "lvjiaoxi-viewer.exe"'` — 最轻量、最安全
+  - 旧版卸载交给用户「设置-应用」或手动删残留目录
+- **最终 Workaround**：
+  - **发版自动化验证**：release EXE 直接运行（二进制与安装版一致，已验证可启动 + Responding=True）
+  - **Setup.exe 定位**：只做**用户交互式**安装包发布（双击运行有 UI 引导），不用于自动化 /S
+  - **如需静默安装**：走 MSI（WiX）通道或 SCCM/GPO
+- **关联路径**：`src-tauri/installer.nsh`、`src-tauri/target/release/bundle/nsis/绿角犀看图_*setup.exe`
+- **重现次数**：3（2026-09-30 / 2026-10-01 / 2026-10-12 Chg-023+024）
+- **归档原因**：根因锁定 + Workaround 确立 + 代码已简化
 
 #### Iss-005（活跃 · 踩 6 次）WebView2 对某些 GIF 变种原生解码失败
 
