@@ -2,39 +2,23 @@
 ; 1) 安装前自动静默卸载旧版本（避免旧资源残留导致白屏/功能异常，实现一步到位）
 ; 2) 安装完成后写入右键菜单（PRD 5.1「右键菜单集成」）
 ; 由 tauri.conf.json -> bundle.windows.nsis.installerHooks 引用
+;
+; ISS-004 修复说明：
+;   PreInstall 里的卸载逻辑（ExecWait uninstall.exe /S、cmd /c /qn）在 /S 模式下
+;   会卡主安装流程 — 因为 NSIS 在写 Registry InstallDir 后就进入 hook，
+;   但此时 INSTDIR 还未被文件复制填充，uninstall.exe 不存在。
+;   同时之前发现 Setup.exe /S 会忽略 /D 参数，用 Registry 缓存路径覆盖。
+;   根因：NSIS InstallDirRegKey 无显式设置，但旧版本安装后 Registry 残留值
+;   会被读取覆盖 /D。当前 Workaround：保留 hook 但简化流程；最终方案需要
+;   在 PREINSTALL 里显式清 InstallDirRegKey 缓存（若 Tauri 模板支持）。
 
 !macro NSIS_HOOK_PREINSTALL
-  ; 结束可能仍在运行的旧实例，避免文件占用导致覆盖失败
+  ; 只杀可能在运行的旧进程（最轻量、最安全的操作）
   nsExec::ExecToLog 'taskkill /F /IM "lvjiaoxi-viewer.exe"'
 
-  ; 若目标目录存在旧版卸载器，静默卸载（_?=$INSTDIR 让卸载器同步执行且不复制自身）
-  IfFileExists "$INSTDIR\uninstall.exe" 0 skip_uninstall
-    DetailPrint "检测到旧版本，正在自动卸载..."
-    ExecWait '"$INSTDIR\uninstall.exe" /S _?=$INSTDIR'
-  skip_uninstall:
-
-  ; 兼容 MSI 安装的旧版（注册表卸载项，HKCU + HKLM 均检测）
-  ReadRegStr $R0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\绿角犀看图" "UninstallString"
-  StrCmp $R0 "" skip_reg_uninstall
-    DetailPrint "检测到旧版注册卸载项，正在自动卸载..."
-    nsExec::ExecToLog 'cmd /c ""$R0" /qn /norestart"'
-  skip_reg_uninstall:
-  ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\绿角犀看图" "UninstallString"
-  StrCmp $R0 "" skip_hklm_uninstall
-    DetailPrint "检测到旧版注册卸载项（HKLM），正在自动卸载..."
-    nsExec::ExecToLog 'cmd /c ""$R0" /qn /norestart"'
-  skip_hklm_uninstall:
-
-  ; 只清理应用自身残留文件，不用 RMDir /r 清空整个目录（避免误删用户放在安装目录里的个人文件）
-  ; 卸载器已删掉旧版本体文件；这里补删三类已知应用文件：
-  ;   1) uninstall.exe —— _?= 方式卸载后不自删，需手动清
-  ;   2) 旧主程序 —— Iss-005 子坑：NSIS /S 静默安装可能不覆盖旧 EXE，先删保证新 EXE 落盘
-  ;   3) WebView2Loader.dll —— 旧版可能残留的加载器，装新包时由安装器重新决定
-  Sleep 500
-  Delete "$INSTDIR\lvjiaoxi-viewer.exe"
-  Delete "$INSTDIR\uninstall.exe"
-  Delete "$INSTDIR\WebView2Loader.dll"
-  RMDir "$INSTDIR" ; 目录为空才删除；用户文件留在里面时目录保留
+  ; 旧版卸载逻辑临时移除 — ExecWait uninstall.exe /S 和 cmd /c /qn
+  ; 在 /S 模式下会卡住安装（ISS-004 深层根因）
+  ; 如需干净重装，建议用户先在「设置-应用」卸载旧版，或手动删残留目录
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
