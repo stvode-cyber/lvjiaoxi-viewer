@@ -11,7 +11,6 @@
 桌面: Rust 1.97 + Tauri v2 + WebView2 离线运行时
 打包: NSIS (中文界面) + MSI，内嵌 WebView2 离线安装包
 测试: test/regression.cjs (Node + jsdom)，224 项断言
-鸿蒙: harmony/ (ArkTS 原生，并行主线)
 ```
 
 ## 硬约束（违反即踩坑）

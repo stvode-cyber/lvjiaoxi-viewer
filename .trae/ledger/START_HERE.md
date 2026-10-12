@@ -21,7 +21,7 @@
 | 海报边框+emoji | ✅ 100% | BORDER_PRESETS + emojiBar + 一键生成 |
 | 打包交付 | ✅ 100% | NSIS 全中文 SimpChinese；内嵌 WebView2 离线包；installer.nsh 三段 hook |
 | 回归测试 | ✅ 100% | regression.cjs **414** 项断言全绿（Chg-022 +4 覆盖 Iss-005 修复链路） |
-| 鸿蒙主线 | 🔄 60% | harmony/ ArkTS 原生，并行开发中 |
+| 鸿蒙主线 | ⏸ 暂缓 | harmony/ + iOS 图标已移除，后续再回归 |
 | 后端服务 | ⬜ 待接入 | server/mock-server.js 占位，无正式部署 |
 
 ## 已定硬规则（别再问）
@@ -103,7 +103,7 @@ npm run tauri build         # 双产物（Setup.exe + MSI）
 - **step 9 目视验证**：Iss-005 Chg-022 修复后，用户需手动在 Tauri 窗口验证 3 件事（GIF 动画 / ZIP 内 GIF 静态第一帧 / 切图归零）
 - edit-panel 空间已优化三轮（~320px→~110px），如仍嫌大可做第 4 轮：sub-tab 合并进 tab 行
 - 云账户按钮已从 bottom-nav 移除 → 云端功能暂不可用（后续可恢复到设置面板内）
-- harmony/ 主线 60% 并行
+- 鸿蒙/iOS 线已移除（harmony/ + icons/ios + icon.icns），后续再回归
 
 ---
 
