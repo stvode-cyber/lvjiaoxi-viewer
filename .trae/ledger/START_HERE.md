@@ -50,7 +50,7 @@
 - 发版前本机静默安装验证（AGENTS 交付流程 step 7-10）
 
 ## 活跃坑 top 5（踩过 ≥2 次）
-1. **Iss-005**（踩 5 次）WebView2 对某些 GIF 变种原生解码失败
+1. **Iss-005**（踩 6 次 · Chg-022 已修复待目视验证）WebView2 对某些 GIF 变种原生解码失败
 2. **Iss-001**（踩 2 次）jsdom Uint8Array 是 window realm，`instanceof` 要用 `window.Uint8Array`
 3. **Iss-002**（踩 2 次）PowerShell 5 参数行纯 ASCII
 4. **Iss-004**（踩 2 次）NSIS 安装残留的 lnk 指向已删除目录
@@ -91,17 +91,18 @@ cargo check src-tauri/
 
 ### 环境验证
 ```
-node test/regression.cjs   # 必须 410/0 全绿
+node test/regression.cjs   # 必须 414/0 全绿
 npm run tauri build         # 双产物（Setup.exe + MSI）
 ```
 
 ### 30 秒扫台账
 1. START_HERE.md（已读完）→ context.md 版本号落点 → issues.md 活跃坑 → changes.md 最近 10 条
-2. **新电脑先执行**：`node test/regression.cjs` 确认 410/0 全绿
+2. **新电脑先执行**：`node test/regression.cjs` 确认 414/0 全绿
 
 ### 当前未完成
-- 用户反馈：edit-panel 空间已优化三轮（~320px→~110px），如仍嫌大可做第 4 轮：sub-tab 也合并进 tab 行；或提供悬浮拖拽调高度
-- 云账户按钮从 bottom-nav 移除 → 云端功能暂不可用（后续可恢复到设置面板内）
+- **step 9 目视验证**：Iss-005 Chg-022 修复后，用户需手动在 Tauri 窗口验证 3 件事（GIF 动画 / ZIP 内 GIF 静态第一帧 / 切图归零）
+- edit-panel 空间已优化三轮（~320px→~110px），如仍嫌大可做第 4 轮：sub-tab 合并进 tab 行
+- 云账户按钮已从 bottom-nav 移除 → 云端功能暂不可用（后续可恢复到设置面板内）
 - harmony/ 主线 60% 并行
 
 ---
