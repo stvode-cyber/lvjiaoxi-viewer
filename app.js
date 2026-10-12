@@ -1101,7 +1101,7 @@
       const e = item.exif;
       if (e.camera) { html += '<div class="info-group-title">相机信息 (EXIF)</div>'; html += row('设备', escapeHtml(e.camera)); }
       if (e.datetime) html += row('拍摄时间', escapeHtml(e.datetime));
-      if (e.params) { html += row('光圈', e.params.fnumber || '—'); html += row('快门', e.params.exposure || '—'); html += row('ISO', e.params.iso || '—'); html += row('焦距', e.params.focal || '—'); }
+      if (e.params) { html += row('光圈', escapeHtml(e.params.fnumber || '—')); html += row('快门', escapeHtml(e.params.exposure || '—')); html += row('ISO', escapeHtml(e.params.iso || '—')); html += row('焦距', escapeHtml(e.params.focal || '—')); }
       if (e.gps) html += row('GPS', escapeHtml(e.gps));
     } else if (item.type === 'image/jpeg') {
       html += '<div class="info-group-title">相机信息 (EXIF)</div>';
@@ -3913,7 +3913,7 @@
     const fmt = els.exFormat.value;
     const base = stripExt(item.name) + mimeExt(fmt);
     if (fmt === 'image/bmp') {
-      const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+      let data; try { data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height); } catch (e) { toast('导出失败：无法读取像素'); return; }
       download(new Blob([encodeBMP(data)], { type: 'image/bmp' }), base);
       toast('已导出 BMP：' + base);
       return;
@@ -4730,7 +4730,7 @@
       ctx.drawImage(item.img, 0, 0);
       const quality = (+els.cvQuality.value) / 100;
       if (fmt === 'image/bmp') {
-        const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+        let data; try { data = ctx.getImageData(0, 0, canvas.width, canvas.height); } catch (e) { resolve(null); return; }
         resolve(new Blob([encodeBMP(data)], { type: 'image/bmp' }));
       } else {
         canvas.toBlob((b) => resolve(b), fmt, quality);

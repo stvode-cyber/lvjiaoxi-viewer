@@ -1,7 +1,7 @@
 # context.md · 当前状态快照
 
 > 这个文件记录项目的稳定状态。完成度变了、硬规则变了、关键配置变了 → 改这里。
-> 最近更新：2026-10-10 午（Iss-005 彻底修复）
+> 最近更新：2026-10-12（Chg-023 代码审核安全修复 + CSP 基础策略）
 
 ## 完成度快照（2026-10-10）
 
@@ -27,9 +27,9 @@
 | Tauri bundle.version | 0.1.0 | src-tauri/tauri.conf.json |
 | Cargo package.version | 0.1.0 | src-tauri/Cargo.toml |
 | manifest webmanifest version | 0.1.0 | manifest.webmanifest |
-| **sw.js CACHE** | **lvjiaoxi-viewer-v52** | sw.js ← **改 app.js/styles.css 必须再 +1** |
+| **sw.js CACHE** | **lvjiaoxi-viewer-v53** | sw.js ← **改 app.js/styles.css 必须再 +1** |
 | 显示版本 (app.js about) | v0.1.0 | app.js |
-| 最近 commit | 9eb9b3e | Iss-005 压缩包内 GIF 死代码 + 前端兜底路径 bug 彻底修复 |
+| 最近 build | 2026-10-12 | Chg-023 代码审核安全修复（EXIF escape + BMP try/catch + CSP） |
 
 ## UI 布局快照（2026-10-09 Dc-011 定稿）
 

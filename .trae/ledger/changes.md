@@ -283,3 +283,21 @@
 - **效果**：压缩包内 GIF 永远 Rust 端转 JPEG 第一帧（静态），前端无需兜底；本地文件 GIF 链路不变（原生透传 + decode_fallback）；decode_to_rgb 对扩展名被改/损坏的文件更宽容
 - **验证**：regression 414/0 全绿（+4 条新断言覆盖修复）；cargo check 通过；sync-dist OK
 - **关联**：↔Iss-005 ↔Dc-008 ↔Chg-011 ↔Chg-021
+
+#### Chg-023（2026-10-12 · 代码审核安全修复：EXIF escape + BMP try/catch + CSP + CACHE）
+
+- **批次主题**：全项目代码审核发现 4 类问题 → 零风险定点修复 + build 真机验证
+- **问题清单**（源自 code-review-checklist 全量审核 + AdvisorTool 深挖）：
+  1. **🔴 EXIF 4 字段未 escapeHtml**（app.js L1104）：光圈/快门/ISO/焦距 直接拼 row()，恶意 EXIF 可注入 HTML。同文件 L1102-1103 的 camera/datetime 已 escape，遗漏这 4 个
+  2. **🟠 escapeHtml 参数顺序 bug**（AdvisorTool 深挖）：`escapeHtml(undefined)` → String('undefined') truthy → `|| '—'` fallback 永远不触发。必须先 fallback 再 escape
+  3. **🟡 两处 BMP 导出 getImageData 无 try/catch**（L3916 exportCurrent + L4733 batchConvert）：upscaleSRY/upscaleNCHW 外层已有 try/catch 兜住，无需改
+  4. **🔴 CSP 完全关闭**（tauri.conf.json）：从 null → 基础策略 → 真机启动后发现 `script-src 'self'` block OpenCV.js CDN + 用户自定义云端 API，两次调优最终定稿
+- **CSP 最终策略**（经真机验证通过）：`default-src 'self'; img-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline'; worker-src 'self'; connect-src 'self' https:; font-src 'self' data:`
+- **文件列表**：
+  - `app.js` ← L1104 4 字段加 escapeHtml 修正参数顺序；L3916 + L4733 BMP try/catch
+  - `src-tauri/tauri.conf.json` ← CSP null → 基础策略（两次调优：加 https: 允许 OpenCV CDN + 自定义云端 API + font-src data:）
+  - `sw.js` ← CACHE v52 → v53（改了 app.js 必须升）
+- **build 产物**：NSIS `绿角犀看图_0.1.0_x64-setup.exe` + MSI 双产物 ✅
+- **真机验证**：release EXE 启动 5s+ 进程存活；debug.log 显示 get_pending_paths 正常轮询；无崩溃；CSP 未 block 核心资源
+- **验证**：regression 414/0 持续全绿；cargo 编译 4 个旧 warning（unused import/dead_code，不是本次引入）
+- **关联**：↔Iss-005（code-review-checklist 触发）
