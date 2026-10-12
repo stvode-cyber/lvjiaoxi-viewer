@@ -17,7 +17,8 @@
 | 海报边框+emoji | 100% | ✅ | BORDER_PRESETS + emojiBar + 一键生成 |
 | 打包交付 | 100% | ✅ | NSIS SimpChinese；内嵌 WebView2；installer.nsh 三段 hook |
 | 回归测试 | 100% | ✅ | regression.cjs **412** 项全绿 |
-| 鸿蒙主线 | — | ⏸ 暂缓 | 已移除 harmony/ 目录（ArkTS 原生 + iOS 图标），后续再回归 |
+| 鸿蒙主线 | — | ⏸ 暂缓 | 已移除 harmony/ + iOS 图标，后续再回归 |
+| **Android 主线** | **20%** | 🔄 | **APK arm64 release 已构建成功**（4.1MB，2026-10-12）；Rust aarch64 交叉编译 OK；arboard/single_instance 已桌面专用 + 3 个 stub；Gradle 8.13 手动下载 + 中文路径 overridePathCheck；待真机验证 + 签名 + 全架构（arm64-v7a/x86_64）|
 | 后端服务 | 0% | ⬜ | server/mock-server.js 占位 |
 
 ## 版本号落点（2026-10-09 交接）
