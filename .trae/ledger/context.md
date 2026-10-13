@@ -18,7 +18,7 @@
 | 打包交付 | 100% | ✅ | NSIS SimpChinese；内嵌 WebView2；installer.nsh 三段 hook |
 | 回归测试 | 100% | ✅ | regression.cjs **412** 项全绿 |
 | 鸿蒙主线 | — | ⏸ 暂缓 | 已移除 harmony/ + iOS 图标，后续再回归 |
-| **Android 主线** | **20%** | 🔄 | **APK arm64 release 已构建成功**（4.1MB，2026-10-12）；Rust aarch64 交叉编译 OK；arboard/single_instance 已桌面专用 + 3 个 stub；Gradle 8.13 手动下载 + 中文路径 overridePathCheck；待真机验证 + 签名 + 全架构（arm64-v7a/x86_64）|
+| **Android 主线** | **35%** | 🔄 | **真机验证通过**（2026-10-13 universal APK arm64 PID 19104 存活，零崩溃）；Rust JNI 20 符号齐全 + WebView chromium sandbox 起 + 空状态 UI 完整渲染；踩 Iss-007（手动 cargo build 缺 mobile_entry_point JNI 符号）；待 SAF 图片选择 + 签名 + 多架构 |
 | 后端服务 | 0% | ⬜ | server/mock-server.js 占位 |
 
 ## 版本号落点（2026-10-09 交接）

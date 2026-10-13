@@ -301,3 +301,29 @@
 - **真机验证**：release EXE 启动 5s+ 进程存活；debug.log 显示 get_pending_paths 正常轮询；无崩溃；CSP 未 block 核心资源
 - **验证**：regression 414/0 持续全绿；cargo 编译 4 个旧 warning（unused import/dead_code，不是本次引入）
 - **关联**：↔Iss-005（code-review-checklist 触发）
+
+#### Chg-024（2026-10-12 · installer.nsh PreInstall 简化）
+
+- **批次主题**：PreInstall 里的卸载等待 / 定点删文件 / taskkill / RMDir 全清理 → 只留一行 taskkill
+- **根因**：Tauri NSIS 模板 Setup.exe /S 在当前 Windows 10 管理员环境下**有缺陷**——不是 installer.nsh hook 的问题（Chg-023 两轮隔离验证：简化 hook / 完全移除 hook 都卡 /S）
+- **workaround 确立**：Setup.exe 只做用户交互式发布（双击有 UI），本机验证用 release EXE 直跑
+- **文件列表**：`src-tauri/installer.nsh`（PreInstall 从 30+ 行砍到 5 行）
+- **验证**：changelog 归档，不再重复尝试 /S
+
+#### Chg-025（2026-10-13 · Android 真机验证通过 + Rust warning 清理）
+
+- **批次主题**：universal APK arm64-v8a 在真机 ZY22KJLPHK 上完整启动——Rust .so 16MB 加载 + JNI 20 个符号齐全 + WebView chromium sandbox 进程起 + 空状态 UI 完整渲染；清理 4 个 Rust 编译 warning 到零
+- **根因（踩坑 Iss-007）**：
+  1. 昨天 arm64 APK（12:47，4.1MB）是手动拷贝 .so 构建的 → **缺 mobile_entry_point JNI 导出符号**（Java_com_lvjiaoxi_viewer_Rust_create 等 20 个）→ `UnsatisfiedLinkError` 崩溃
+  2. 正确做法：`tauri android build --apk` 让 Tauri 自动生成完整 APK（19MB universal）
+  3. 真机 PackageManager 残留幽灵 MAIN/LAUNCHER 条目（`cd52b1`）→ ResolverActivity 弹 6 个同名入口（workaround：点第一个选项 x=610 y=2251）
+- **文件列表**：
+  - `src-tauri/src/lib.rs` ← Emitter/Manager 加 `#[cfg(not(target_os = "android"))]`（android target 不用）；`let mut builder` desktop target 下 plugin 块需要 mut，mobile target 下 cfg 排除 mut 不报错
+- **真机验证（PID 19104 存活不崩）**：
+  - `nativeloader: Load liblvjiaoxi_viewer_lib.so ... ok` ✅
+  - `ActivityTaskManager: Displayed com.lvjiaoxi.viewer/.MainActivity +165ms` ✅
+  - 空状态 UI 完整渲染：顶栏精简版「图片」+「设置」+ 主画布 + 底部 6 导航按钮 ✅
+  - 零 FATAL EXCEPTION / 零 UnsatisfiedLinkError / 零 Rust panic ✅
+- **Android 13+ file:// 路径问题**：VIEW intent file:///sdcard/Pictures/test.jpg 未触发图片显示——Android 13+ 要求 SAF（Storage Access Framework）授权，是平台机制限制，非应用代码 bug
+- **验证**：regression 412/0 全绿；cargo check 零 warning；sync-dist OK
+- **关联**：↔Iss-007（新坑：Android mobile_entry_point JNI 符号缺失） ↔Chg-024

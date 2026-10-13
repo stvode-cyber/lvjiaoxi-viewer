@@ -30,6 +30,7 @@ use std::time::UNIX_EPOCH;
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use serde::Serialize;
 use std::sync::Mutex;
+#[cfg(not(target_os = "android"))]
 use tauri::{Emitter, Manager};
 use image::codecs::jpeg::JpegEncoder;
 use zip::ZipArchive;
@@ -666,6 +667,7 @@ fn build_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default();
 

@@ -64,6 +64,15 @@
 - **关联路径**：`index.html` editMask 部分（L472-L887）
 - **重现次数**：首次发现（2026-10-09 晚）
 
+#### Iss-007（活跃 · 踩 1 次 · 2026-10-13 Android 真机验证发现）手动拷贝 .so 构建 APK 缺 mobile_entry_point JNI 符号
+
+- **问题**：手动编译 Rust `cargo build --target aarch64-linux-android --release` + 手动拷 `.so` 到 `gen/android/app/src/main/jniLibs/` 再 `gradle assembleRelease` → APK 安装后启动立即崩溃 `java.lang.UnsatisfiedLinkError: No implementation found for void com.lvjiaoxi.viewer.Rust_create()`
+- **根因**：`#[cfg_attr(mobile, tauri::mobile_entry_point)]` 宏在**手动 cargo build** 时不会触发 JNI 桥生成流程——只有 `tauri android build` 会执行 Rust 编译 + JNI 符号生成 + Kotlin 文件生成 + APK 组装的完整管线
+- **解决**：唯一正确入口 = `tauri android build --apk`；手动 cargo build 只能产出裸 .so（符号齐全但无 JNI 桥），无法被 APK 正常加载
+- **预防规则**：Android APK 构建**禁止**手动 cargo build + 手动拷 .so；永远走 `tauri android build` 作为唯一入口
+- **关联路径**：`src-tauri/src/lib.rs` run() 函数 / `src-tauri/gen/android/` 整个目录
+- **重现次数**：1（2026-10-13 真机验证首次发现）
+
 ---
 
 ## 归档区（已沉淀 / 已解决，只追加不准删）
