@@ -48,7 +48,15 @@ nsis_clean/
 nsis_x/
 
 # === Rust 构建 ===
-src-tauri/gen/
+# gen/ 里的 Android 工程源码（manifest + build.gradle + Kotlin）要提交
+# 但 Rust 构建产物 .so + gradle build outputs 不要提交
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/app/.gradle/
+src-tauri/gen/android/app/src/main/jniLibs/*.so
+src-tauri/gen/android/app/build/outputs/
+src-tauri/gen/android/app/build/intermediates/
+src-tauri/gen/android/app/build/tmp/
+src-tauri/gen/android/gradle/wrapper/gradle-wrapper.jar
 src-tauri/Cargo.lock
 
 # === Node 工具链 ===

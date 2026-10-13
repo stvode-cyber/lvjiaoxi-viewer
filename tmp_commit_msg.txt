@@ -1,0 +1,13 @@
+docs: 跨电脑交接台账同步 + Android manifest priority 修复
+
+台账：
+- .session.md 完整会话记忆（Resolver 幽灵条目进度 + 4 个新踩坑 + 新 AI checklist）
+- START_HERE.md Android 35% + 活跃坑 top5 + 10-13 大事 + Android 构建前置清单
+- context.md Android 主线 35% 快照
+- issues.md Iss-007 新坑（手动 cargo build 缺 mobile_entry_point JNI 桥）
+- changes.md Chg-024/025 installer.nsh 简化 + Android 真机验证
+
+源码（未完成，待手机 USB 接好验证）：
+- AndroidManifest.xml intent-filter 加 android:priority="100"（ResolverActivity 幽灵条目绕过）
+- build.gradle.kts 临时注释 rust 插件（gradle 找不到 npm.bat）
+- 还原步骤：验证通过后恢复 rust 插件

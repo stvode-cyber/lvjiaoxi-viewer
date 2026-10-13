@@ -7,22 +7,23 @@
 `0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v53**）
 - **2026-10-12 最新 build**：Chg-023 代码审核安全修复 — EXIF escapeHtml + BMP try/catch + CSP 基础策略 + build 真机验证通过
 
-## 完成度（2026-10-10 午）
+## 完成度（2026-10-13 晚）
 
 | 模块 | 状态 | 备注 |
 |------|------|------|
 | 图片浏览核心 | ✅ 100% | 打开/缩放/翻页/最近访问/穿透文件夹 |
-| GIF 解码兜底 | ✅ 100% | 正常 GIF 原生播动画（decode_fallback 兜底）；压缩包内 GIF Rust 端直接 image crate → JPEG 第一帧（Iss-005 Chg-022 彻底修复） |
+| GIF 解码兜底 | ✅ 100% | 正常 GIF 原生播动画；压缩包内 GIF Rust 端 image crate → JPEG 第一帧（Iss-005 Chg-022 彻底修复） |
 | 美图编辑器 | ✅ 100% | 内嵌底部栏，edit-panel 紧贴 bottom-nav 上方展开；slim/deform 合并位移场 |
 | AI 超分 | ✅ 100% | ONNX + ort.wasm，失败降级 Lanczos |
 | 抠图 | ✅ 100% | 高斯似然比 + 双边羽化 ≤512px；消除笔 Patch-Match |
-| 压缩包直看 | ✅ 100% | ZIP/CBZ/RAR/7Z 懒加载，skip __MACOSX/.DS_Store |
+| 压缩包直看 | ✅ 100% | ZIP/CBZ/RAR/7Z 懒加载 |
 | 批量加水印 | ✅ 100% | drawWatermarkOnCanvas 纯函数 + 9 宫格 + tile -30° |
 | 海报边框+emoji | ✅ 100% | BORDER_PRESETS + emojiBar + 一键生成 |
-| 打包交付 | ✅ 100% | NSIS 全中文 SimpChinese；内嵌 WebView2 离线包；installer.nsh 三段 hook |
-| 回归测试 | ✅ 100% | regression.cjs **414** 项断言全绿（Chg-022 +4 覆盖 Iss-005 修复链路） |
-| 鸿蒙主线 | ⏸ 暂缓 | harmony/ + iOS 图标已移除，后续再回归 |
-| 后端服务 | ⬜ 待接入 | server/mock-server.js 占位，无正式部署 |
+| 打包交付 | ✅ 100% | NSIS 全中文 SimpChinese；installer.nsh PreInstall 仅留 taskkill |
+| 回归测试 | ✅ 100% | regression.cjs **412** 项全绿 |
+| **Android 主线** | **🔄 35%** | **真机验证通过**（PID 19104 存活零崩溃）；Rust JNI 20 符号齐全 + WebView chromium sandbox 起；踩 Iss-007（手动 cargo build 缺 JNI 桥）；Resolver 幽灵条目修复（manifest priority=100）待装新版验证；APK 已构建（18.44MB 带 priority） |
+| 鸿蒙/iOS 线 | ⏸ 暂缓 | 已移除，后续再回归 |
+| 后端服务 | ⬜ 待接入 | |
 
 ## 已定硬规则（别再问）
 
@@ -49,61 +50,73 @@
 - 切图后编辑态（滤镜/变形/裁剪/抠图...）**全部归零**
 - 发版前本机静默安装验证（AGENTS 交付流程 step 7-10）
 
-## 活跃坑 top 5（踩过 ≥2 次）
-1. **Iss-005**（踩 6 次 · Chg-022 已修复待目视验证）WebView2 对某些 GIF 变种原生解码失败
-2. **Iss-001**（踩 2 次）jsdom Uint8Array 是 window realm，`instanceof` 要用 `window.Uint8Array`
-3. **Iss-002**（踩 2 次）PowerShell 5 参数行纯 ASCII
-4. **Iss-004**（踩 2 次）NSIS 安装残留的 lnk 指向已删除目录
+## 活跃坑 top 5（踩过 ≥1 次，新 AI 必扫）
+1. **Iss-005**（踩 6 次 · 已修复）WebView2 GIF 变种原生解码失败 → Rust 端 image crate 兜底
+2. **Iss-007**（踩 1 次 · 2026-10-13 新坑）手动 cargo build Android 缺 mobile_entry_point JNI 桥 → **铁律：tauri android build 是唯一入口**
+3. **Iss-001**（踩 2 次）jsdom Uint8Array 是 window realm，`instanceof` 要用 `window.Uint8Array`
+4. **Iss-002**（踩 2 次）PowerShell 5 参数行纯 ASCII
 5. **Iss-006**（踩 1 次）edit-pane HTML 闭合检查——section 必须被 data-pane 容器包裹
 
-## 最近 3 周大事（2026-09-20 ~ 2026-10-09）
+## 最近 3 周大事（2026-09-20 ~ 2026-10-13）
+
+### 2026-10-13（Android 主线突破 + Resolver 修复）
+- **Chg-025** Android 真机验证通过：universal APK arm64 PID 19104 存活，Rust JNI 20 符号齐全，WebView chromium sandbox 起，空状态 UI 完整渲染
+- Rust warning 清零（lib.rs Emitter/Manager 加 `#[cfg(not(target_os="android"))]`）
+- **Iss-007 新坑**：手动 cargo build + 手动拷 .so → APK 启动崩溃 `UnsatisfiedLinkError`。根因：mobile_entry_point 宏只在 tauri android build 管线里触发 JNI 桥生成
+- **Resolver 幽灵条目**：ghost `cd52b1` 带多余 DEFAULT category，Android 14 PackageManager 持久化 bug，非 root 清不掉
+  - 解法：manifest intent-filter 加 `android:priority="100"` → Resolver 跳过 ghost
+  - APK 已构建：`gen/android/app/build/outputs/apk/release/app-release.apk`（18.44MB，19:05:23 带 priority 修复）
+- **npm.bat 问题**：gradle rust 插件硬调 npm.bat，但机器只有 npm.cmd → 手动复制 npm.cmd → npm.bat
+- **gradle 绕过法**：临时注释 build.gradle.kts 里 rust 插件 → 手动 gradle assembleRelease（前提：.so 已在 jniLibs）
+- **manifest 写法坑**：`<priority android:value="100" />` 子元素写法 AAPT 报错；正确写法是 `<intent-filter android:priority="100">` 属性
+
+### 2026-10-12（安全审核 + NSIS 简化 + 移除鸿蒙/iOS + Android APK 首次构建）
+- **Chg-023 代码审核安全修复**：EXIF escapeHtml + BMP try/catch + CSP 基础策略 + sw.js CACHE v53
+- **Chg-024 installer.nsh PreInstall 简化**：只留一行 taskkill
+- 移除 harmony/ 目录 + iOS 图标文件
+- Android arm64 APK 首次构建成功（4.1MB，手动 .so 拷贝，后确认缺 JNI 符号）
+
+### 2026-10-10（GIF 解码彻底修复）
+- **Chg-022 / Iss-005** 压缩包内 GIF 死代码 bug + 前端兜底路径失效 → lib.rs read_archive_entry 单独分支 image crate；decode_to_rgb 改为文件头格式探测
+- regression 410 → 414（+4 覆盖修复链路）
 
 ### 2026-10-09（密集迭代日）
-- **Chg-012** 切图归零：showImage 入口统一重置所有编辑态（filters/slim/deform/crop/matting/texts/mosaic/eraser/editUndo/editRedo/logoWm）
-- **Chg-011 修订** GIF 恢复原生动画 + is_image 漏 gif 修复
-- **Chg-013** edit-panel 重构：一级 tab（美颜/风格配方/特效/高级/导出）+ 二级 sub-tab 分层导航；修 Iss-006 decor pane 空 div
-- **Chg-017** beauty-bar 默认 hidden，🎨 成为唯一美图入口
-- **Chg-018** edit-panel 移到 bottom-nav 前面（展开时紧贴导航条上方）；云账户按钮替换为美图按钮（6→6 合规）
-- **Chg-019/020** edit-panel 空间两轮压缩：侧栏→横向 tab + max-height 42→32→26vh + padding 砍半 + 双重 padding 清零
-- **Chg-021** 头部行与一级 tab 合并成一行（面板顶部再省 ~28px）
-- **CACHE v45→v52**（7 次迭代）
-- **regression 404→410**（6 个新断言覆盖 GIF 修复 + 切图归零 + 导航重构）
-- NSIS 构建偶发 os error 10054（网络抖动），重试即过
+- Chg-012 切图归零；Chg-013 edit-panel 重构一级 tab + 二级 sub-tab
+- Chg-018 edit-panel 移到 bottom-nav 前面；云账户→美图按钮
+- Chg-019/020 两轮空间压缩（~320px → ~110px）
+- CACHE v45→v52（7 次迭代）
 
-### 2026-10-08
-- Dc-008 GIF 解码策略定稿方案 B（原生播动画 + 坏 GIF 兜底）
-- Chg-010 lib.rs GIF 解码修复
-
-### 2026-10-07
-- 压缩包直看功能：lib.rs + zip crate + 前端懒加载
-- 批量加水印 drawWatermarkOnCanvas 纯函数 + 9 宫格 + tile -30°
-
-## 接手下一步
+## 接手下一步（新 AI 必做）
 
 ### 新电脑初始化
 ```
 git clone git@github.com:stvode-cyber/lvjiaoxi-viewer.git
 cd lvjiaoxi-viewer
 npm install
-# 需要 Rust 1.97+：rustup default stable
+rustup default stable
 cargo check src-tauri/
+node test/regression.cjs   # 必须 412/0 全绿
+node scripts/sync-dist.cjs
 ```
 
-### 环境验证
-```
-node test/regression.cjs   # 必须 414/0 全绿
-npm run tauri build         # 双产物（Setup.exe + MSI）
-```
+### ⚠️ Android 构建前置（新电脑必配）
+- 安装 Android SDK + build-tools 34+ + platform 35
+- 确认 `C:\Users\<USER>\.android-sdk\build-tools\XX.X.X\aapt2.exe` 存在
+- **关键**：nodejs 目录里**必须有 npm.bat**（不是只有 npm.cmd）
+  - 如果没有，手动复制：`copy npm.cmd npm.bat` → `C:\Users\<USER>\AppData\Local\Programs\nodejs\`
+- 手机 USB 连 → 开开发者模式 → 开 USB 调试 → `adb devices` 确认
+
+### 当前未完成（优先级排序）
+1. **🔴 Resolver 幽灵条目验证**：手机插 USB → `adb install -r src-tauri/gen/android/app/build/outputs/apk/release/app-release.apk` → 启动看 ghost 还弹不弹
+2. **🔴 还原 build.gradle.kts 注释**：修完验证后恢复 rust 插件（别让下次 `tauri android build` 再撞 npm.bat 坑）
+3. **🟡 commit manifest 修复 + 还原 gradle**
+4. **🟡 Android 签名**：配 keystore + 签 arm64/armv7/x86_64 多架构
+5. **🟢 Android SAF 图片选择**：Android 13+ file:// 权限用 SAF 授权
+6. **🟢 Android UI 进一步优化**：美图面板弹出效果 / 触控区域再加大
 
 ### 30 秒扫台账
 1. START_HERE.md（已读完）→ context.md 版本号落点 → issues.md 活跃坑 → changes.md 最近 10 条
-2. **新电脑先执行**：`node test/regression.cjs` 确认 414/0 全绿
-
-### 当前未完成
-- **step 9 目视验证**：Iss-005 Chg-022 修复后，用户需手动在 Tauri 窗口验证 3 件事（GIF 动画 / ZIP 内 GIF 静态第一帧 / 切图归零）
-- edit-panel 空间已优化三轮（~320px→~110px），如仍嫌大可做第 4 轮：sub-tab 合并进 tab 行
-- 云账户按钮已从 bottom-nav 移除 → 云端功能暂不可用（后续可恢复到设置面板内）
-- 鸿蒙/iOS 线已移除（harmony/ + icons/ios + icon.icns），后续再回归
+2. **新电脑先跑**：`node test/regression.cjs` 确认 412/0
 
 ---
 
