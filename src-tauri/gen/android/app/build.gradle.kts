@@ -3,8 +3,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    // TEMP: skip rust plugin for manual assemble (rustBuildArm64Release runs npm.bat not found)
-    // id("rust")
+    id("rust")
 }
 
 val tauriProperties = Properties().apply {
@@ -17,6 +16,15 @@ val tauriProperties = Properties().apply {
 android {
     compileSdk = 35
     namespace = "com.lvjiaoxi.viewer"
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("release.keystore")
+            storePassword = "lvjiaoxi2026"
+            keyAlias = "lvjiaoxi-release"
+            keyPassword = "lvjiaoxi2026"
+        }
+    }
 
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
@@ -41,7 +49,7 @@ android {
         }
         getByName("release") {
             isMinifyEnabled = true
-            signingConfig = signingConfigs.getByName("debug") // TODO: 后续换正式 release keystore
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 *fileTree(".") { include("**/*.pro") }
                     .plus(getDefaultProguardFile("proguard-android-optimize.txt"))
@@ -57,10 +65,9 @@ android {
     }
 }
 
-// TEMP: rust block disabled (plugin commented out)
-// rust {
-//     rootDirRel = "../../../"
-// }
+rust {
+    rootDirRel = "../../../"
+}
 
 dependencies {
     implementation("androidx.webkit:webkit:1.14.0")

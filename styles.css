@@ -416,3 +416,172 @@ body {
 .cloud-pane[data-pane="prof"] .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .cloud-pane[data-pane="prof"] .field span { font-size: 13px; color: var(--text-2); }
 .cloud-pane[data-pane="prof"] input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-2); color: var(--text); }
+
+/* ============================================================
+   ===== 移动端适配（@media max-width: 768px）====================
+   ===== 参考美图秀秀手机端布局思路 ======================
+   ===== 桌面端保持 AGENTS.md 硬约束（不在此 block） =======
+   ============================================================ */
+@media (max-width: 768px) {
+
+  /* ===== 调试标记：断点触发时 body 变粉色，确认 @media 是否生效 ===== */
+  /* TODO: [移动端] 验证断点后删除此行 */
+  /* body { background: #ff00ff !important; } */
+
+  /* ===== 顶栏精简：只保留打开文件 + 美图入口 ===== */
+  .toolbar {
+    padding: 6px 8px;
+    padding-top: calc(6px + env(safe-area-inset-top, 0px));
+    gap: 4px;
+    min-height: 44px;
+  }
+  /* 藏起缩放/旋转/搜索（整个中间组干掉） */
+  .tb-center,
+  .tb-center .tb-sep,
+  #thumbSearch,
+  .toolbar .tb-center .btn.icon {
+    display: none !important;
+  }
+  .tb-group { gap: 3px; }
+  .tb-right { gap: 3px; }
+  .toolbar .btn {
+    padding: 8px 10px;
+    font-size: 13px;
+    border-radius: 8px;
+    /* 移动端最小触控区 ≥44px（Apple）/ 48dp（Google） */
+    min-width: 44px; min-height: 44px;
+  }
+  .toolbar .btn.icon { width: 40px; height: 40px; font-size: 18px; }
+  .toolbar .btn.text { padding: 8px 12px; font-size: 14px; }
+  /* 撤销/重做/全屏/截图/信息在手机顶栏隐藏（底部导航已有美图入口） */
+  /* 注意：HTML 用 id 不用 class，所以必须 #id 选择器 */
+  #btnSnap, #btnUndo, #btnRedo, #btnFull, #btnInfo { display: none !important; }
+  /* 顶栏只保留 📂 图片 + 🎨 美图（文件夹按钮也隐藏） */
+  #btnOpenDir { display: none !important; }
+  #btnEdit { margin-left: auto; }
+
+  /* ===== 主画布充满屏幕 ===== */
+  body { overflow: hidden; }
+  .app-row {
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .viewer {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  /* ===== 缩略图栏：手机上隐藏（改点"最近"看） ===== */
+  .thumb-bar {
+    display: none !important;
+  }
+
+  /* ===== 底部导航：Material Design 3 标准尺寸 + 触控热区 ≥48px ===== */
+  .bottom-nav {
+    gap: 0;
+    padding: 6px 0 2px;
+    min-height: 72px;  /* M3 baseline: 80dp，但含 safe-area */
+    padding-bottom: calc(2px + env(safe-area-inset-bottom, 0px));
+  }
+  .bottom-nav .nav-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 48px;  /* Google 推荐触控热区 */
+    padding: 8px 2px;
+    gap: 4px;
+    font-size: 24px;   /* icon: M3 推荐 24dp */
+  }
+  .bottom-nav .nav-label {
+    font-size: 12px;   /* label: M3 推荐 12dp */
+    font-weight: 500;
+  }
+  /* active tab：M3 active indicator + accent 高亮 */
+  .bottom-nav .nav-btn.active {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ===== 美图面板：手机端 bottom sheet 35vh（美图秀秀风格：主图占 ~65%） ===== */
+  /* 桌面端保持 flex + border-top + max-height: 26vh（AGENTS.md §1 硬约束） */
+  .edit-panel:not([hidden]) {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 35vh;        /* 从 42vh 砍到 35vh，主图区 ~65%（美图秀秀风格） */
+    max-height: none;
+    flex: none;
+    z-index: 100;
+    border-top: none;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 24px rgba(0,0,0,.25);
+    overflow: hidden;
+  }
+  /* 伪元素遮罩：视觉层（点击关闭由 JS 实现，不能绑在伪元素上） */
+  .edit-panel:not([hidden])::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: calc(100vh - 35vh);
+    background: rgba(0,0,0,.28);
+    backdrop-filter: blur(1px);
+    z-index: -1;
+    pointer-events: none;  /* 让点击穿透到 panel 本身，JS 用 target 判断 */
+  }
+  /* 拖拽手柄：视觉提示 */
+  .edit-panel:not([hidden])::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(28,28,28,.25);
+    z-index: 10;
+  }
+
+  /* ===== 预览缩略图：手机端压到 8vh（主图就是预览） ===== */
+  .edit-preview-wrap { max-height: 8vh; padding: 4px 12px 2px; }
+  #editPreview { max-height: calc(8vh - 10px); }
+
+  /* ===== info-panel（图片信息）手机占满 ===== */
+  .info-panel {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    border: none;
+  }
+
+  /* ===== 导航箭头：缩小 + 更靠边 ===== */
+  .nav-arrow { width: 38px; height: 58px; font-size: 32px; opacity: .6; }
+  .nav-prev { left: 4px; }
+  .nav-next { right: 4px; }
+
+  /* ===== counter（序号）位置 ===== */
+  .counter { bottom: 60px; }
+
+  /* ===== beauty-bar 手机端更紧凑 ===== */
+  .beauty-bar { gap: 6px; padding: 5px 10px; }
+  .beauty-bar .mini-field input[type="range"] { width: 56px; }
+
+  /* ===== 空提示区 ===== */
+  .empty-hint { padding: 20px 20px; }
+  .empty-sub { font-size: 13px; }
+  .empty-tip { font-size: 12px; }
+
+  /* ===== modal/弹窗手机占满宽度 ===== */
+  .modal {
+    width: 94vw !important;
+    max-width: none !important;
+    max-height: 86vh;
+  }
+  .batch-modal { width: 96vw !important; }
+
+  /* ===== 删除按钮/缩放标签 ===== */
+  .zoom-label { min-width: 48px; font-size: 12px; }
+}

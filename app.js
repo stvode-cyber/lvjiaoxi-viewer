@@ -1741,6 +1741,8 @@
     return canvas;
   }
   function openEdit(tab) {
+    // toggle：已打开 → 关闭（底部导航/顶栏点同一个按钮就能开关）
+    if (!els.editMask.hidden) { els.editMask.hidden = true; return; }
     const item = state.items[state.index];
     if (!item) { toast('请先打开图片'); return; }
     els.editName.textContent = item.name;
@@ -5207,6 +5209,10 @@
     els.infoClose.addEventListener('click', () => els.infoPanel.hidden = true);
     // 图片工具弹窗
     els.editClose.addEventListener('click', () => els.editMask.hidden = true);
+    // 点击面板外部区域（遮罩）关闭——editMask 本身被点到就是外部，点内部子元素不算
+    els.editMask.addEventListener('click', (e) => {
+      if (e.target === els.editMask) els.editMask.hidden = true;
+    });
     $$('.edit-tab').forEach((t) => t.addEventListener('click', () => switchEditTab(t.dataset.tab)));
     // sub-tab 点击切换（每个 edit-pane 内部独立管理）
     $$('.edit-sub-tab').forEach((st) => {
@@ -5991,6 +5997,39 @@
           const pl = e.payload;
           const paths = Array.isArray(pl) ? pl : (pl && pl.path ? [pl.path] : []);
           if (paths.length) handleOpenPaths(paths, getSetting('files', 'recursive'));
+        });
+
+        // Android intent 处理：Kotlin MainActivity 通过 evaluateJavascript 推 __androidOpenFile(paths)
+        // paths 可能是 content:// Uri、file:// 路径或普通本地路径
+        window.__androidOpenFile = function(paths) {
+          if (!Array.isArray(paths) || !paths.length) return;
+          // content:// 走 WebView fetch 读 blob → 显示
+          // 其他路径交给 handleOpenPaths（Rust load_paths）
+          const contentUris = [], localPaths = [];
+          for (const p of paths) {
+            if (typeof p !== 'string') continue;
+            if (p.startsWith('content://')) contentUris.push(p);
+            else if (p.startsWith('file://')) localPaths.push(decodeURIComponent(p.replace(/^file:\/\//, '')));
+            else localPaths.push(p);
+          }
+          if (contentUris.length) {
+            // 第一张 content:// 直接显示
+            const first = contentUris[0];
+            fetch(first).then(r => r.blob()).then(b => {
+              const url = URL.createObjectURL(b);
+              showImage(url);
+              addRecent({ kind: 'file', path: first, name: first.split('/').pop() || 'image', ts: Date.now() });
+            }).catch(err => { console.warn('Android content:// fetch 失败:', err); });
+          }
+          if (localPaths.length) handleOpenPaths(localPaths, false);
+        };
+        // WebView 还没 ready 时 Kotlin 先推了 intent → 暂存到 __pendingAndroidOpenFile
+        if (Array.isArray(window.__pendingAndroidOpenFile) && window.__pendingAndroidOpenFile.length) {
+          window.__androidOpenFile(window.__pendingAndroidOpenFile);
+          window.__pendingAndroidOpenFile = null;
+        }
+        document.addEventListener('android-open-file', (e) => {
+          if (e.detail && Array.isArray(e.detail.paths)) window.__androidOpenFile(e.detail.paths);
         });
         // 启动参数拉取：双击关联文件/右键菜单启动时，Rust 端 setup 阶段的 emit 会因
         // WebView 未加载完成而丢失。改为启动后多次重试 invoke 拉取（取后即清空），
