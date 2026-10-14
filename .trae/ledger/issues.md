@@ -80,12 +80,15 @@
   1. Rust 依赖 `zstd-sys`（含 C 代码），`cc-rs` crate 在 armv7 交叉编译时需要 NDK 的 `clang.exe`
   2. NDK 有 `armv7a-linux-androideabi24-clang.cmd`（正确的 armv7 linker），但**通用 clang.exe 不在 PATH 里**
   3. `tauri android build` 只设置了 `CARGO_TARGET_*_LINKER`，没设置 `CC_armv7_linux_androideabi` 或把 NDK bin 加入 PATH
-- **解决（临时）**：先只构建 arm64。Gradle 传 `-PtargetList=aarch64 -PabiList=arm64-v8a -ParchList=arm64` 跳过 armv7/x86
-- **解决（正式 · 待做多架构签名时配）**：构建前设置环境变量：
-  - `CC_armv7_linux_androideabi = NDK/bin/armv7a-linux-androideabi24-clang.cmd`
-  - `CC_x86_64_linux_android = NDK/bin/x86_64-linux-android24-clang.cmd`
-  - 或把 NDK/bin 加入系统 PATH（clang.exe 在 NDK/bin 里）
-- **验证状态**：arm64 Rust 编译 + JNI 桥生成 ✅ 完全正常；armv7 缺 C 编译器 ❌
+- **解决（正式 · 2026-10-14 验证通过）**：构建前设置 3 组环境变量：
+  1. 把 NDK/bin 加入 PATH：`$env:PATH = "$env:NDK_BIN;$env:PATH"`（给 cc-rs 找通用 clang.exe）
+  2. 设 CC 变量：`CC_armv7_linux_androideabi` / `CC_x86_64_linux_android` / `CC_i686_linux_android` = NDK 对应 clang.cmd
+  3. 设 AR 变量（x86 架构）：`AR_x86_64_linux_android = llvm-ar.exe`（NDK 统一用 llvm-ar，不是每个架构各有 ar）
+- **真机验证通过**（2026-10-14）：
+  - arm64 + armv7 双架构 Rust 编译 + llvm-readelf 验符号干净
+  - Universal APK 28.45MB（release 签名）
+  - 真机 PID 28416 存活零崩溃
+- **验证状态**：arm64 ✅ armv7 ✅ | x86_64/i686 ⏸（模拟器用，暂跳过；未来需配 AR_*）
 - **关联路径**：`src-tauri/gen/android/buildSrc/.../RustPlugin.kt`（4 架构默认配置）
 - **重现次数**：1（2026-10-14 tauri android build 全管线验证时发现）
 

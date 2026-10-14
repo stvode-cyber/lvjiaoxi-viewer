@@ -363,3 +363,29 @@
   - `C:\Users\Administrator\AppData\Local\Programs\nodejs\npm.bat` ← 手动复制自 npm.cmd（解决 gradle 找不到 npm.bat）
 - **验证**：regression 412/0 全绿；sync-dist OK；Resolver priority 真机验证通过
 - **关联**：↔Iss-007 ↔Chg-025（真机验证基础） ↔Dc-008（GIF 兜底不影响本次）
+
+#### Chg-027（2026-10-14 · Iss-008 闭环：arm64+armv7 双架构 universal APK 构建通过）
+
+- **批次主题**：解决 `tauri android build --apk` 跨架构编译缺 C 编译器问题，首次出 arm64+armv7 双架构 universal APK + llvm-readelf 验符号 + release 签名真机启动
+- **根因链**（Iss-008 完整闭环）：
+  1. `tauri android build` 默认构建 4 架构（arm64/armv7/x86/x86_64）
+  2. Rust 依赖 zstd-sys（含 C 代码），cc-rs crate 交叉编译时要 NDK clang.exe
+  3. `CARGO_TARGET_*_LINKER`（tauri 自动设）只给 cargo linker，cc-rs 从 PATH 找 clang.exe
+  4. NDK/bin 不在 PATH → armv7/zstd-sys 报错 "failed to find tool clang.exe"
+  5. x86 架构还额外缺 `AR_x86_64_linux_android`（NDK 统一用 llvm-ar.exe，不是 `x86_64-linux-android-ar`）
+- **解法**（3 组环境变量，构建前必设）：
+  ```powershell
+  $env:NDK_BIN = "<NDK>/toolchains/llvm/prebuilt/windows-x86_64/bin"
+  $env:PATH = "$env:NDK_BIN;$env:PATH"                    # PATH 里必须有 clang.exe
+  $env:CC_armv7_linux_androideabi = "$env:NDK_BIN\armv7a-linux-androideabi35-clang.cmd"
+  # x86 系列额外需要：
+  $env:AR_x86_64_linux_android = "$env:NDK_BIN\llvm-ar.exe"
+  ```
+- **额外发现**：gradle symlinking 创建的 .so symlink 在 Windows 上 0 bytes（断链），需要手动 `Copy-Item` 拷实体文件到 jniLibs
+- **构建验证**：
+  - arm64 .so 16.7MB / armv7 .so 10.5MB（llvm-readelf 验：NEEDED 全是 libandroid/libdl/liblog/libm/libc，零第三方依赖）
+  - JNI 桥符号 `Java_com_lvjiaoxi_viewer_Rust_create` armv7 也有 ✅
+  - Universal APK 28.45MB（release 签名）
+  - 真机 PID 28416 存活零崩溃
+- **验证范围**：arm64 ✅ armv7 ✅ | x86_64/i686 ⏸（模拟器用，需额外 AR_* 环境变量）
+- **关联**：↔Iss-008 ↔Iss-007（完整管线闭环） ↔Chg-026 ↔Chg-025
