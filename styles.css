@@ -544,13 +544,14 @@ body {
   }
 
   /* ===== 美图 tab 横向滑动：不许换行，左右滑显现 ===== */
-  .edit-tools { flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  /* touch-action: pan-x 强制浏览器优先处理横向触摸，不让父级 edit-body 的 overflow-y 抢事件 */
+  .edit-tools { flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: hidden !important; -webkit-overflow-scrolling: touch; scrollbar-width: none; touch-action: pan-x; }
   .edit-tools::-webkit-scrollbar { display: none; }
   .edit-tab { flex-shrink: 0; white-space: nowrap; }
   .edit-tools .edit-name { margin-left: 8px; flex-shrink: 0; }
   .edit-head-btn { flex-shrink: 0; }
   /* 二级 sub-tab 也横向滑 */
-  .edit-sub-tabs { flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .edit-sub-tabs { flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: hidden !important; -webkit-overflow-scrolling: touch; scrollbar-width: none; touch-action: pan-x; }
   .edit-sub-tabs::-webkit-scrollbar { display: none; }
   .edit-sub-tab { flex-shrink: 0; white-space: nowrap; }
 

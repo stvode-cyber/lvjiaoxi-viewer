@@ -1,7 +1,7 @@
 // 绿角犀看图 · Service Worker
 // 仅缓存 app shell（index.html / styles.css / app.js / manifest / icon）。
 // 用户图片来自 <input type=file> / 拖放，不经过 http fetch，故不会被缓存，离线刷新应用壳后仍可浏览已选图片。
-const CACHE = 'lvjiaoxi-viewer-v57';
+const CACHE = 'lvjiaoxi-viewer-v58';
 const SHELL = [
   './',
   './index.html',
@@ -34,16 +34,16 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // 不拦截跨域（含 blob:/file:）
+  // Network First：每次先 fetch 最新，失败才回退缓存。解决 Cache Only 不更新问题
   event.respondWith(
-    caches.match(req).then((hit) => {
-      if (hit) return hit;
-      return fetch(req).then((res) => {
-        if (res && res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-        }
-        return res;
-      }).catch(() => hit || caches.match('./index.html'));
+    fetch(req).then((res) => {
+      if (res && res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy));
+      }
+      return res;
+    }).catch(() => {
+      return caches.match(req).then((hit) => hit || caches.match('./index.html'));
     })
   );
 });
