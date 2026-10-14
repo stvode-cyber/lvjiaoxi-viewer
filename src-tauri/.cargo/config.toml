@@ -1,0 +1,16 @@
+[target.aarch64-linux-android]
+linker = "aarch64-linux-android35-clang.cmd"
+ar = "aarch64-linux-android35-ar.cmd"
+
+[target.armv7-linux-androideabi]
+linker = "armv7a-linux-androideabi35-clang.cmd"
+
+[target.x86_64-linux-android]
+linker = "x86_64-linux-android35-clang.cmd"
+
+[target.i686-linux-android]
+linker = "i686-linux-android35-clang.cmd"
+
+# Android NDK lld 不支持中文路径！target-dir 必须 ASCII
+[build]
+target-dir = "D:/tauri-build/target"

@@ -327,3 +327,39 @@
 - **Android 13+ file:// 路径问题**：VIEW intent file:///sdcard/Pictures/test.jpg 未触发图片显示——Android 13+ 要求 SAF（Storage Access Framework）授权，是平台机制限制，非应用代码 bug
 - **验证**：regression 412/0 全绿；cargo check 零 warning；sync-dist OK
 - **关联**：↔Iss-007（新坑：Android mobile_entry_point JNI 符号缺失） ↔Chg-024
+
+#### Chg-026（2026-10-13 晚 ~ 2026-10-14 · Android 主线大推进：Resolver 修复 + Intent + Keystore + SAF 路径 + 移动端 CSS）
+
+- **批次主题**：跨两个会话，完成 Android 主线 35%→45% 的跳跃推进——ResolverActivity 幽灵条目修复真机验证通过 + 外部点图打开 intent 处理 + release 签名配置 + content:// SAF 路径 + styles.css 移动端适配 + 还原 rust 插件 + npm.bat 系统修复
+- **Commit 清单**：
+  1. `957073a docs: 跨电脑交接台账同步 + Android manifest priority 修复`
+     - AndroidManifest.xml intent-filter 加 `android:priority="100"`（绕过 Resolver 幽灵条目）
+     - build.gradle.kts 临时注释 rust 插件（gradle 找不到 npm.bat）
+     - 台账全量同步（Iss-007 / context / START_HERE / .session）
+  2. `94290a8 feat: Android intent 处理 + release keystore + SAF 图片路径`
+     - MainActivity.kt override onNewIntent → evaluateJavascript 推 `window.__androidOpenFile(paths)` 给前端
+     - app.js 加 `__androidOpenFile` handler：content:// 走 WebView fetch blob 显示，本地路径走 Rust load_paths；支持 `__pendingAndroidOpenFile` 冷启动竞态
+     - gen/android/app/build.gradle.kts 加 signingConfigs.release（RSA 2048, 10000 天）
+     - **还原 rust 插件**（之前临时注释）
+     - sw.js CACHE v55 → v56
+     - styles.css 移动端 @media(max-width:768px) 适配块（之前漏 commit）
+     - .gitignore 加 *.keystore / *.jks 规则
+- **真机验证（2026-10-14 上午）**：
+  - `adb install -r` 装带 priority=100 的 APK → 成功
+  - `am start -n com.lvjiaoxi.viewer/.MainActivity` → **ResolverActivity 不再弹出！** 直接进入（修复生效）
+  - 进程 PID 3374 持续存活，零崩溃
+- **踩坑沉淀**：
+  - npm.bat 缺失（gradle rust 插件硬调 npm.bat）→ 手动复制 npm.cmd → npm.bat 到 nodejs 安装目录
+  - manifest `<priority android:value="100" />` 子元素写法 AAPT 报错 → 正确写法是 `<intent-filter android:priority="100">` 属性
+- **文件列表**：
+  - `src-tauri/gen/android/app/src/main/AndroidManifest.xml` ← priority=100
+  - `src-tauri/gen/android/app/build.gradle.kts` ← signingConfigs.release + 还原 rust 插件
+  - `src-tauri/gen/android/app/src/main/java/com/lvjiaoxi/viewer/MainActivity.kt` ← onNewIntent
+  - `app.js` ← __androidOpenFile handler + __pendingAndroidOpenFile
+  - `styles.css` ← @media(max-width:768px) 移动端适配
+  - `sw.js` ← CACHE v56
+  - `.gitignore` ← keystore 规则
+- **系统级变更**：
+  - `C:\Users\Administrator\AppData\Local\Programs\nodejs\npm.bat` ← 手动复制自 npm.cmd（解决 gradle 找不到 npm.bat）
+- **验证**：regression 412/0 全绿；sync-dist OK；Resolver priority 真机验证通过
+- **关联**：↔Iss-007 ↔Chg-025（真机验证基础） ↔Dc-008（GIF 兜底不影响本次）

@@ -18,7 +18,7 @@
 | 打包交付 | 100% | ✅ | NSIS SimpChinese；内嵌 WebView2；installer.nsh 三段 hook |
 | 回归测试 | 100% | ✅ | regression.cjs **412** 项全绿 |
 | 鸿蒙主线 | — | ⏸ 暂缓 | 已移除 harmony/ + iOS 图标，后续再回归 |
-| **Android 主线** | **35%** | 🔄 | **真机验证通过**（2026-10-13 universal APK arm64 PID 19104 存活，零崩溃）；Rust JNI 20 符号齐全 + WebView chromium sandbox 起 + 空状态 UI 完整渲染；踩 Iss-007（手动 cargo build 缺 mobile_entry_point JNI 符号）；待 SAF 图片选择 + 签名 + 多架构 |
+| **Android 主线** | **45%** | 🔄 | **Resolver priority 真机验证通过**（2026-10-14 PID 3374 存活，ResolverActivity 不再弹）；Android intent 处理（onNewIntent + __androidOpenFile）+ release keystore 已配 + content:// SAF 路径支持 + styles.css 移动端适配；还原 rust 插件；npm.bat 系统修复；待多架构签名 + SAF 完整授权 + 完整 tauri android build 管线闭环 |
 | 后端服务 | 0% | ⬜ | server/mock-server.js 占位 |
 
 ## 版本号落点（2026-10-09 交接）
@@ -28,9 +28,9 @@
 | Tauri bundle.version | 0.1.0 | src-tauri/tauri.conf.json |
 | Cargo package.version | 0.1.0 | src-tauri/Cargo.toml |
 | manifest webmanifest version | 0.1.0 | manifest.webmanifest |
-| **sw.js CACHE** | **lvjiaoxi-viewer-v53** | sw.js ← **改 app.js/styles.css 必须再 +1** |
+| **sw.js CACHE** | **lvjiaoxi-viewer-v56** | sw.js ← **改 app.js/styles.css 必须再 +1** |
 | 显示版本 (app.js about) | v0.1.0 | app.js |
-| 最近 build | 2026-10-12 | Chg-023 代码审核安全修复（EXIF escape + BMP try/catch + CSP） |
+| 最近 build | 2026-10-14 | Chg-026 Android 主线大推进（Resolver 验证 + Intent + Keystore + SAF + CACHE v56） |
 
 ## UI 布局快照（2026-10-09 Dc-011 定稿）
 

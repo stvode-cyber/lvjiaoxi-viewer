@@ -73,6 +73,30 @@
 - **关联路径**：`src-tauri/src/lib.rs` run() 函数 / `src-tauri/gen/android/` 整个目录
 - **重现次数**：1（2026-10-13 真机验证首次发现）
 
+#### Iss-008（活跃 · 踩 1 次 · 2026-10-14 tauri android build 管线）armv7/x86_64 交叉编译缺 C 编译器 PATH
+
+- **问题**：`tauri android build --apk` 默认构建 4 架构（arm64/armv7/x86/x86_64），armv7 编译 Rust 代码报 `zstd-sys: failed to find tool "clang.exe": program not found` → 产物 `.so` 不生成 → gradle rust 插件报 `Library artifact not found`
+- **根因**：
+  1. Rust 依赖 `zstd-sys`（含 C 代码），`cc-rs` crate 在 armv7 交叉编译时需要 NDK 的 `clang.exe`
+  2. NDK 有 `armv7a-linux-androideabi24-clang.cmd`（正确的 armv7 linker），但**通用 clang.exe 不在 PATH 里**
+  3. `tauri android build` 只设置了 `CARGO_TARGET_*_LINKER`，没设置 `CC_armv7_linux_androideabi` 或把 NDK bin 加入 PATH
+- **解决（临时）**：先只构建 arm64。Gradle 传 `-PtargetList=aarch64 -PabiList=arm64-v8a -ParchList=arm64` 跳过 armv7/x86
+- **解决（正式 · 待做多架构签名时配）**：构建前设置环境变量：
+  - `CC_armv7_linux_androideabi = NDK/bin/armv7a-linux-androideabi24-clang.cmd`
+  - `CC_x86_64_linux_android = NDK/bin/x86_64-linux-android24-clang.cmd`
+  - 或把 NDK/bin 加入系统 PATH（clang.exe 在 NDK/bin 里）
+- **验证状态**：arm64 Rust 编译 + JNI 桥生成 ✅ 完全正常；armv7 缺 C 编译器 ❌
+- **关联路径**：`src-tauri/gen/android/buildSrc/.../RustPlugin.kt`（4 架构默认配置）
+- **重现次数**：1（2026-10-14 tauri android build 全管线验证时发现）
+
+#### Iss-009（活跃 · 踩 1 次 · 2026-10-14 Android 12+）force-stop 后 App 进入 stopped=true 状态
+
+- **问题**：`am force-stop com.lvjiaoxi.viewer` 之后，`am start -n com.lvjiaoxi.viewer/.MainActivity` 返回 `Warning: Activity not started, intent has been delivered to currently running top-most instance`，但 `ps -A | grep lvjiaoxi` 无进程，`pidof` 也找不到
+- **根因**：Android 12+（targetSdk >= 31）安全机制：App 被 force-stop 后进入 `stopped=true` 状态，**只有用户手动点击桌面图标/通知/快捷方式才能清除 stopped 状态**。`am start` 被认为是自动化启动，不清除 stopped
+- **解决**：force-stop 后让用户手动点击 App 图标启动一次，之后 adb 自动化测试才能正常工作
+- **预防规则**：adb 自动化测试前先检查 `dumpsys package | grep stopped=`，如 stopped=true 先让用户手动启动
+- **重现次数**：1（2026-10-14 intent 测试时 force-stop 踩坑）
+
 ---
 
 ## 归档区（已沉淀 / 已解决，只追加不准删）

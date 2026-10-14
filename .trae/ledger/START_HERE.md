@@ -4,8 +4,8 @@
 桌面图片浏览器 + 内嵌底部栏美图编辑器。零框架原生 JS 单文件 app.js（252KB）+ Rust Tauri v2 + WebView2 离线运行时。核心卖点：合并位移场变形（导出 = 预览同公式）、AI 超分 ONNX 推理失败自动降级 Lanczos、抠图高斯似然比 + 双边羽化、压缩包直看（ZIP/CBZ 懒加载）。
 
 ## 当前版本
-`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v53**）
-- **2026-10-12 最新 build**：Chg-023 代码审核安全修复 — EXIF escapeHtml + BMP try/catch + CSP 基础策略 + build 真机验证通过
+`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v56**）
+- **2026-10-14 最新 build**：Chg-026 Android 主线大推进 — Resolver priority 真机验证通过 + intent 处理 + release keystore + SAF content:// 路径 + styles.css 移动端适配
 
 ## 完成度（2026-10-13 晚）
 
@@ -21,7 +21,7 @@
 | 海报边框+emoji | ✅ 100% | BORDER_PRESETS + emojiBar + 一键生成 |
 | 打包交付 | ✅ 100% | NSIS 全中文 SimpChinese；installer.nsh PreInstall 仅留 taskkill |
 | 回归测试 | ✅ 100% | regression.cjs **412** 项全绿 |
-| **Android 主线** | **🔄 35%** | **真机验证通过**（PID 19104 存活零崩溃）；Rust JNI 20 符号齐全 + WebView chromium sandbox 起；踩 Iss-007（手动 cargo build 缺 JNI 桥）；Resolver 幽灵条目修复（manifest priority=100）待装新版验证；APK 已构建（18.44MB 带 priority） |
+| **Android 主线** | **🔄 45%** | **Resolver priority 真机验证通过**（PID 3374 存活，ResolverActivity 不再弹）；Android intent（onNewIntent + __androidOpenFile）+ release keystore 已配 + content:// SAF 路径 + styles.css 移动端适配 + 还原 rust 插件 + npm.bat 系统修复；待多架构签名 + 完整 tauri android build 管线闭环 |
 | 鸿蒙/iOS 线 | ⏸ 暂缓 | 已移除，后续再回归 |
 | 后端服务 | ⬜ 待接入 | |
 
@@ -107,12 +107,11 @@ node scripts/sync-dist.cjs
 - 手机 USB 连 → 开开发者模式 → 开 USB 调试 → `adb devices` 确认
 
 ### 当前未完成（优先级排序）
-1. **🔴 Resolver 幽灵条目验证**：手机插 USB → `adb install -r src-tauri/gen/android/app/build/outputs/apk/release/app-release.apk` → 启动看 ghost 还弹不弹
-2. **🔴 还原 build.gradle.kts 注释**：修完验证后恢复 rust 插件（别让下次 `tauri android build` 再撞 npm.bat 坑）
-3. **🟡 commit manifest 修复 + 还原 gradle**
-4. **🟡 Android 签名**：配 keystore + 签 arm64/armv7/x86_64 多架构
-5. **🟢 Android SAF 图片选择**：Android 13+ file:// 权限用 SAF 授权
-6. **🟢 Android UI 进一步优化**：美图面板弹出效果 / 触控区域再加大
+1. **🔴 完整管线闭环**：跑 `tauri android build --apk`（npm.bat 已有 + rust 插件已还原），验证 Iss-007 铁律闭环
+2. **🔴 Android intent 真机测试**：推图到手机 → Gallery/Files 打开 → 验证 content:// SAF 路径能否加载
+3. **🟡 多架构签名**：配 arm64-v8a / armeabi-v7a / x86_64 三架构 release APK
+4. **🟡 Android SAF 完整授权**：Android 13+ 内文件打开按钮调 SAF Picker
+5. **🟢 Android UI 优化**：美图面板弹出效果 / 触控区域再加大
 
 ### 30 秒扫台账
 1. START_HERE.md（已读完）→ context.md 版本号落点 → issues.md 活跃坑 → changes.md 最近 10 条
