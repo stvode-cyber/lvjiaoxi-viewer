@@ -4,8 +4,8 @@
 桌面图片浏览器 + 内嵌底部栏美图编辑器。零框架原生 JS 单文件 app.js（252KB）+ Rust Tauri v2 + WebView2 离线运行时。核心卖点：合并位移场变形（导出 = 预览同公式）、AI 超分 ONNX 推理失败自动降级 Lanczos、抠图高斯似然比 + 双边羽化、压缩包直看（ZIP/CBZ 懒加载）。
 
 ## 当前版本
-`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v56**）
-- **2026-10-14 最新 build**：Chg-026 Android 主线大推进 — Resolver priority 真机验证通过 + intent 处理 + release keystore + SAF content:// 路径 + styles.css 移动端适配
+`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v57**）
+- **2026-10-14 最新 build**：Chg-027 双架构 universal APK + 移动端 tab 横向滑动（commit 1aa4252）
 
 ## 完成度（2026-10-13 晚）
 

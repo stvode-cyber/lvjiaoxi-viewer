@@ -28,7 +28,7 @@
 | Tauri bundle.version | 0.1.0 | src-tauri/tauri.conf.json |
 | Cargo package.version | 0.1.0 | src-tauri/Cargo.toml |
 | manifest webmanifest version | 0.1.0 | manifest.webmanifest |
-| **sw.js CACHE** | **lvjiaoxi-viewer-v56** | sw.js ← **改 app.js/styles.css 必须再 +1** |
+| **sw.js CACHE** | **lvjiaoxi-viewer-v57** | sw.js ← **改 app.js/styles.css 必须再 +1** |
 | 显示版本 (app.js about) | v0.1.0 | app.js |
 | 最近 build | 2026-10-14 | Chg-026 Android 主线大推进（Resolver 验证 + Intent + Keystore + SAF + CACHE v56） |
 
