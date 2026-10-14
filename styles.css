@@ -543,6 +543,17 @@ body {
     z-index: 10;
   }
 
+  /* ===== 美图 tab 横向滑动：不许换行，左右滑显现 ===== */
+  .edit-tools { flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .edit-tools::-webkit-scrollbar { display: none; }
+  .edit-tab { flex-shrink: 0; white-space: nowrap; }
+  .edit-tools .edit-name { margin-left: 8px; flex-shrink: 0; }
+  .edit-head-btn { flex-shrink: 0; }
+  /* 二级 sub-tab 也横向滑 */
+  .edit-sub-tabs { flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .edit-sub-tabs::-webkit-scrollbar { display: none; }
+  .edit-sub-tab { flex-shrink: 0; white-space: nowrap; }
+
   /* ===== 预览缩略图：手机端压到 8vh（主图就是预览） ===== */
   .edit-preview-wrap { max-height: 8vh; padding: 4px 12px 2px; }
   #editPreview { max-height: calc(8vh - 10px); }
