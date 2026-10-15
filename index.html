@@ -200,27 +200,27 @@
           <input type="range" id="flSaturate" min="0" max="200" value="100"></label>
         <label class="field"><span>灰度 <b id="flGrayVal">0</b>%</span>
           <input type="range" id="flGray" min="0" max="100" value="0"></label>
-        <label class="field"><span>色温 <b id="flTempVal">0</b>（-冷 / +暖）</span>
+        <label class="field"><span>色温 <b id="flTempVal">0</b><small class="label-hint">（-冷 / +暖）</small></span>
           <input type="range" id="flTemp" min="-100" max="100" value="0"></label>
-        <label class="field"><span>色相 <b id="flHslHVal">0</b>°（-180..+180，绿→紫→红→橙）</span>
+        <label class="field"><span>色相 <b id="flHslHVal">0</b>°<small class="label-hint">（-180..+180）</small></span>
           <input type="range" id="flHslH" min="-180" max="180" value="0"></label>
-        <label class="field"><span>饱和度 <b id="flHslSVal">100</b>%（HSL 分通道，0 灰 / 200 翻倍鲜艳）</span>
+        <label class="field"><span>饱和度 <b id="flHslSVal">100</b>%<small class="label-hint">（HSL 分通道）</small></span>
           <input type="range" id="flHslS" min="0" max="200" value="100"></label>
-        <label class="field"><span>明度 <b id="flHslLVal">0</b>（-压暗 / +提亮，HSL 通道）</span>
+        <label class="field"><span>明度 <b id="flHslLVal">0</b><small class="label-hint">（-压暗 / +提亮）</small></span>
           <input type="range" id="flHslL" min="-100" max="100" value="0"></label>
         <label class="field"><span>模糊 <b id="flBlurVal">0</b>px</span>
           <input type="range" id="flBlur" min="0" max="10" step="0.1" value="0"></label>
-        <label class="field"><span>锐化 <b id="flSharpVal">0</b>%（导出时应用）</span>
+        <label class="field"><span>锐化 <b id="flSharpVal">0</b>%</span>
           <input type="range" id="flSharp" min="0" max="100" value="0"></label>
-        <label class="field"><span>高光 <b id="flHighlightVal">0</b>（-压暗 / +提亮）</span>
+        <label class="field"><span>高光 <b id="flHighlightVal">0</b><small class="label-hint">（-压暗 / +提亮）</small></span>
           <input type="range" id="flHighlight" min="-100" max="100" value="0"></label>
-        <label class="field"><span>暗部 <b id="flShadowVal">0</b>（-压暗 / +提亮）</span>
+        <label class="field"><span>暗部 <b id="flShadowVal">0</b><small class="label-hint">（-压暗 / +提亮）</small></span>
           <input type="range" id="flShadow" min="-100" max="100" value="0"></label>
-        <label class="field"><span>褪色 <b id="flFadeVal">0</b>（降低对比的怀旧感）</span>
+        <label class="field"><span>褪色 <b id="flFadeVal">0</b><small class="label-hint">（降低对比）</small></span>
           <input type="range" id="flFade" min="0" max="100" value="0"></label>
-        <label class="field"><span>颗粒 <b id="flGrainVal">0</b>（胶片噪点）</span>
+        <label class="field"><span>颗粒 <b id="flGrainVal">0</b><small class="label-hint">（胶片噪点）</small></span>
           <input type="range" id="flGrain" min="0" max="100" value="0"></label>
-        <label class="field"><span>暗角 <b id="flVignetteVal">0</b>（聚焦中心）</span>
+        <label class="field"><span>暗角 <b id="flVignetteVal">0</b><small class="label-hint">（聚焦中心）</small></span>
           <input type="range" id="flVignette" min="0" max="100" value="0"></label>
         </div>
         <div class="edit-actions">
@@ -235,7 +235,7 @@
           <label class="field"><span>阴影色调</span>
             <input type="color" id="flTintS" value="#a8863f"></label>
         </div>
-        <label class="field"><span>染色强度 <b id="flTintAmtVal">0</b>%（0 为不染色）</span>
+        <label class="field"><span>染色强度 <b id="flTintAmtVal">0</b>%</span>
           <input type="range" id="flTintAmt" min="0" max="100" value="0"></label>
       </div>
       </div><!-- /tone sub-pane -->

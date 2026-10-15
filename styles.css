@@ -258,6 +258,7 @@ body {
 .batch-body { padding: 18px; overflow-y: auto; }
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; font-size: 13px; }
 .field > span { color: var(--muted); }
+.label-hint { color: var(--muted); font-size: 11px; opacity: .8; }
 .field.inline { flex-direction: row; align-items: center; gap: 8px; }
 .field-row { display: flex; gap: 12px; }
 .field-row .field { flex: 1; }
@@ -563,8 +564,9 @@ body {
   .edit-sub-tab { flex-shrink: 0; white-space: nowrap; }
 
   /* ===== 内容密度压缩：让 55vh 面板能装下更多滑块（对标美图秀秀） ===== */
-  /* 隐藏 hint 说明段落——桌面端保留，移动端纯浪费空间 */
+  /* 隐藏 hint 说明段落和长解释——桌面端保留，移动端省空间 */
   .edit-section .hint { display: none !important; }
+  .label-hint { display: none !important; }
   /* section padding 收紧 */
   .edit-section { padding: 4px 10px; }
   .edit-section h4 { margin: 0 0 3px; font-size: 12px; }
