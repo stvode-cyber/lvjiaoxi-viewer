@@ -54,6 +54,12 @@ sw.js 缓存            → CACHE 常量（改 app.js 必须升）
 - 例（正确）："我准备做三件事：1. styles.css 移动端 @media 里 .edit-panel 从 55vh 改成 60vh；2. 隐藏 .edit-sub-pane 里的色调分离 section；3. CACHE +1。可以吗？"
 - 例（错误）："改好了！你去手机上看看效果"
 
+### 8. 回复必须用大白话
+- 禁止用技术黑话、学术腔、英文缩写（SW / CDP / APK / DOM / CSS class 名等，第一次提可以写括号解释）
+- 说人话，像和同事聊天一样，别像写论文
+- 例（正确）："Service Worker（浏览器后台缓存程序）存了旧样式，所以你手机看不到我改的新面板"
+- 例（错误）："CSP policy blocks script eval causing Runtime.evaluate exception"
+
 ## 代码风格
 
 ```
