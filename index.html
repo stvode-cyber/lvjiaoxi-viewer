@@ -198,10 +198,14 @@
           <input type="range" id="flContrast" min="0" max="200" value="100"></label>
         <label class="field"><span>饱和度 <b id="flSaturateVal">100</b>%</span>
           <input type="range" id="flSaturate" min="0" max="200" value="100"></label>
-        <label class="field"><span>灰度 <b id="flGrayVal">0</b>%</span>
-          <input type="range" id="flGray" min="0" max="100" value="0"></label>
         <label class="field"><span>色温 <b id="flTempVal">0</b><small class="label-hint">（-冷 / +暖）</small></span>
           <input type="range" id="flTemp" min="-100" max="100" value="0"></label>
+        </div>
+        <button class="btn-link" id="flAdvancedToggle">▼ 高级参数</button>
+        <div class="advanced-fields" hidden>
+        <div class="field-grid">
+        <label class="field"><span>灰度 <b id="flGrayVal">0</b>%</span>
+          <input type="range" id="flGray" min="0" max="100" value="0"></label>
         <label class="field"><span>色相 <b id="flHslHVal">0</b>°<small class="label-hint">（-180..+180）</small></span>
           <input type="range" id="flHslH" min="-180" max="180" value="0"></label>
         <label class="field"><span>饱和度 <b id="flHslSVal">100</b>%<small class="label-hint">（HSL 分通道）</small></span>
@@ -223,20 +227,21 @@
         <label class="field"><span>暗角 <b id="flVignetteVal">0</b><small class="label-hint">（聚焦中心）</small></span>
           <input type="range" id="flVignette" min="0" max="100" value="0"></label>
         </div>
+        <div class="edit-section">
+          <h4>色调分离（胶片刻色）</h4>
+          <div class="field-row">
+            <label class="field"><span>高光色调</span>
+              <input type="color" id="flTintH" value="#3d5a7a"></label>
+            <label class="field"><span>阴影色调</span>
+              <input type="color" id="flTintS" value="#a8863f"></label>
+          </div>
+          <label class="field"><span>染色强度 <b id="flTintAmtVal">0</b>%</span>
+            <input type="range" id="flTintAmt" min="0" max="100" value="0"></label>
+        </div>
+        </div><!-- /advanced-fields -->
         <div class="edit-actions">
           <button class="btn" id="flReset">重置滤镜</button>
         </div>
-      </div>
-      <div class="edit-section">
-        <h4>色调分离（胶片刻色：分别给高光与阴影染色）</h4>
-        <div class="field-row">
-          <label class="field"><span>高光色调</span>
-            <input type="color" id="flTintH" value="#3d5a7a"></label>
-          <label class="field"><span>阴影色调</span>
-            <input type="color" id="flTintS" value="#a8863f"></label>
-        </div>
-        <label class="field"><span>染色强度 <b id="flTintAmtVal">0</b>%</span>
-          <input type="range" id="flTintAmt" min="0" max="100" value="0"></label>
       </div>
       </div><!-- /tone sub-pane -->
       <div class="edit-sub-pane" data-sub="photo">

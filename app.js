@@ -499,7 +499,7 @@
       'cpFormat', 'cpQuality', 'cpQualityVal', 'cpQualityField', 'cpMaxEdge', 'cpPreview', 'cpPreviewLabel', 'wmText', 'wmSize', 'wmSizeVal', 'wmOpacity', 'wmOpacityVal', 'wmColor', 'wmPos', 'wmMargin', 'wmMarginVal', 'wmFormat', 'wmPreview', 'wmPreviewLabel', 'wmPresetCopyright', 'wmPresetPhotographer',
       'aboutMask', 'aboutClose', 'aboutBody',
       'editMask', 'editClose', 'editName', 'editPreview', 'cropReset',
-      'flBrightness', 'flBrightnessVal', 'flContrast', 'flContrastVal', 'flSaturate', 'flSaturateVal', 'flGray', 'flGrayVal', 'flReset',
+      'flBrightness', 'flBrightnessVal', 'flContrast', 'flContrastVal', 'flSaturate', 'flSaturateVal', 'flGray', 'flGrayVal', 'flReset', 'flAdvancedToggle',
       'flTemp', 'flTempVal', 'flHslH', 'flHslHVal', 'flHslS', 'flHslSVal', 'flHslL', 'flHslLVal', 'flBlur', 'flBlurVal', 'flSharp', 'flSharpVal',
       'flHighlight', 'flHighlightVal', 'flShadow', 'flShadowVal', 'flFade', 'flFadeVal', 'flGrain', 'flGrainVal', 'flVignette', 'flVignetteVal', 'flTintH', 'flTintS', 'flTintAmt', 'flTintAmtVal',
       'btnAutoEnhance', 'cvDenoise', 'cvBilateral', 'cvSharp', 'opsReset', 'aiScale', 'aiRun',
@@ -5225,6 +5225,16 @@
       });
     });
     els.flReset.addEventListener('click', resetFilters);
+    // 高级参数折叠展开
+    if (els.flAdvancedToggle) {
+      els.flAdvancedToggle.addEventListener('click', () => {
+        const adv = document.querySelector('.advanced-fields');
+        if (!adv) return;
+        const isHidden = adv.hasAttribute('hidden');
+        if (isHidden) { adv.removeAttribute('hidden'); els.flAdvancedToggle.textContent = '▲ 收起高级'; }
+        else { adv.setAttribute('hidden', ''); els.flAdvancedToggle.textContent = '▼ 高级参数'; }
+      });
+    }
     if (els.cropReset) els.cropReset.addEventListener('click', resetCrop);
     if (els.editPreview) {
       els.editPreview.addEventListener('pointerdown', onPreviewDown);
