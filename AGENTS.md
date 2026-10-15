@@ -46,6 +46,14 @@ sw.js 缓存            → CACHE 常量（改 app.js 必须升）
 - jsdom `<canvas>` 的 Uint8Array 是 window realm，`instanceof Uint8Array` 要用 `window.Uint8Array`
 - regression.cjs 共享同一 jsdom document，前序测试改的控件值会残留 → 断言前显式设目标值
 
+### 7. 改动前必须先说明，用户确认了再动手
+- 任何代码改动（改 CSS、改 HTML、改 JS、加文件、删文件）**必须先口头告诉用户要做什么**
+- 格式：大白话列出改动点 → 等用户说"可以"或"改吧" → 再执行
+- 用户没确认 = 不许动代码
+- 禁止先改了再说、禁止边改边宣布、禁止"我觉得应该这样"就直接动手
+- 例（正确）："我准备做三件事：1. styles.css 移动端 @media 里 .edit-panel 从 55vh 改成 60vh；2. 隐藏 .edit-sub-pane 里的色调分离 section；3. CACHE +1。可以吗？"
+- 例（错误）："改好了！你去手机上看看效果"
+
 ## 代码风格
 
 ```
