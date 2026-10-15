@@ -502,32 +502,39 @@ body {
     font-weight: 700;
   }
 
-  /* ===== 美图面板：手机端 bottom sheet 35vh（美图秀秀风格：主图占 ~65%） ===== */
+  /* ===== 美图面板：手机端 bottom sheet（可拖拽展开） ===== */
+  /* 初始 55vh，手指往上拉可展开到 75vh，往下拉可收起 */
   /* 桌面端保持 flex + border-top + max-height: 26vh（AGENTS.md §1 硬约束） */
   .edit-panel:not([hidden]) {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 35vh;        /* 从 42vh 砍到 35vh，主图区 ~65%（美图秀秀风格） */
-    max-height: none;
+    height: 55vh;
+    max-height: 75vh;
     flex: none;
     z-index: 100;
     border-top: none;
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -4px 24px rgba(0,0,0,.25);
     overflow: hidden;
+    transition: height .25s ease-out;
   }
+  /* 完全展开状态（JS 加 class） */
+  .edit-panel:not([hidden]).sheet-expanded { height: 75vh; }
+  /* 半折叠状态（JS 加 class） */
+  .edit-panel:not([hidden]).sheet-collapsed { height: 35vh; }
   /* 伪元素遮罩：视觉层（点击关闭由 JS 实现，不能绑在伪元素上） */
+  /* 用 bottom: 100% 自动跟随面板高度，不用写死 calc */
   .edit-panel:not([hidden])::before {
     content: '';
     position: fixed;
     top: 0; left: 0; right: 0;
-    height: calc(100vh - 35vh);
+    bottom: 100%;   /* 紧贴 panel 顶部，panel 多高遮罩自动多高 */
     background: rgba(0,0,0,.28);
     backdrop-filter: blur(1px);
     z-index: -1;
-    pointer-events: none;  /* 让点击穿透到 panel 本身，JS 用 target 判断 */
+    pointer-events: none;
   }
   /* 拖拽手柄：视觉提示 */
   .edit-panel:not([hidden])::after {
@@ -554,6 +561,26 @@ body {
   .edit-sub-tabs { flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: hidden !important; -webkit-overflow-scrolling: touch; scrollbar-width: none; touch-action: pan-x; }
   .edit-sub-tabs::-webkit-scrollbar { display: none; }
   .edit-sub-tab { flex-shrink: 0; white-space: nowrap; }
+
+  /* ===== 内容密度压缩：让 55vh 面板能装下更多滑块（对标美图秀秀） ===== */
+  /* 隐藏 hint 说明段落——桌面端保留，移动端纯浪费空间 */
+  .edit-section .hint { display: none !important; }
+  /* section padding 收紧 */
+  .edit-section { padding: 4px 10px; }
+  .edit-section h4 { margin: 0 0 3px; font-size: 12px; }
+  /* field-grid 两列滑块间距收紧 */
+  .field-grid { column-gap: 8px; }
+  .field-grid .field { margin-bottom: 4px; }
+  /* field 本身压缩 */
+  .field { gap: 2px; margin-bottom: 4px; font-size: 12px; }
+  .field > span { font-size: 11px; line-height: 1.2; }
+  /* range 滑块高度也紧一点 */
+  .field input[type=range] { height: 24px; }
+  /* 按钮行紧凑 */
+  .edit-actions { gap: 4px; margin-top: 0; }
+  .edit-actions .btn { padding: 5px 10px; font-size: 12px; }
+  /* 色调分离这种嵌套 section 也压缩 */
+  .field-row { gap: 8px; }
 
   /* ===== 预览缩略图：手机端压到 8vh（主图就是预览） ===== */
   .edit-preview-wrap { max-height: 8vh; padding: 4px 12px 2px; }
