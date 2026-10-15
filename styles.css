@@ -584,6 +584,12 @@ body {
   /* 色调分离这种嵌套 section 也压缩 */
   .field-row { gap: 8px; }
 
+  /* ===== 移动端面板：紧凑一屏装下（对标美图秀秀参考图） ===== */
+  /* 1. 面板再高一点 55→60vh */
+  .edit-panel:not([hidden]) { height: 60vh !important; }
+  /* 2. 色调分离是进阶功能，移动端隐藏（一屏装不下） */
+  .edit-sub-pane.active > .edit-section:has(.field-row) { display: none; }
+
   /* ===== 预览缩略图：手机端压到 8vh（主图就是预览） ===== */
   .edit-preview-wrap { max-height: 8vh; padding: 4px 12px 2px; }
   #editPreview { max-height: calc(8vh - 10px); }
