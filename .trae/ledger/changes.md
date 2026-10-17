@@ -84,6 +84,9 @@ lib.rs `for f in files` → `files.into_par_iter().filter_map()` + dbg_log 毫�
 rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信息 + 新增 get_image_data 单张拉。冷启动 5730ms→809ms（setup→showImage finish）。教训：generate_handler 必须显式列出所有命令（#[tauri::command] 不会自动注册）。
 - ↔Chg-031 / Chg-034 / Chg-035
 
+#### Chg-P4（2026-10-17 · 深色主题 S2 · commit 34649bb）
+对标 BandiView v7+/美图秀秀/腾讯管家 18.1 2025+ 深色主题趋势。styles.css 加 `:root.dark` 重定义 22 个色值（背景 #141416 / 卡片 #1e1e22 / 文字 #e8e8ea / 主色 #3aa888 青绿体系保持）+ 5 个特例覆盖。toolbar 右侧加 🌞/🌙 切换按钮。THEME_KEY='qjviewer_theme_v1' localStorage 持久化。踩坑：applyTheme 不能在 cacheDom 之前调用（els 未定义），移到 init() 里 cacheDom() 之后 L6518。CACHE v68→v69。regression +2 条断言（toggleTheme 函数 + :root.dark 变量覆盖）。
+
 ---
 
 ## 桌面偶发 bug 修复

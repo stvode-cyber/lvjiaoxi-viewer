@@ -14,6 +14,7 @@
 - 穿透文件夹递归扫描
 - 左侧缩略图栏虚拟滚动窗口 ±3（最多 7 张 DOM + thumbUrl 永久缓存）
 - 长图滚轮翻页 + Webtoon 模式（ratio=h/w > 1.7 自动启用纵向 pan，触底翻下一张，触顶翻上一张，Ctrl+滚轮保留缩放）
+- 深色主题（toolbar 右侧 🌞/🌙 切换按钮 + localStorage 持久化 + 启动立即应用）
 - 双击图片文件关联启动（Setup.exe ProgId 注册）
 - 最近访问历史
 
@@ -101,12 +102,13 @@
    - 依赖：零新依赖（exif-rs 已在依赖里）
    - 风险：低
 
-3. **深色主题**
+3. **深色主题** ✅ **已实现（2026-10-17 · commit 34649bb）**
    - 对标：全行业 2025+ 趋势（腾讯管家 18.1 / BandiView v7+ / 美图秀秀）
-   - 做什么：styles.css 加 `.dark` 变量集（配色对齐浅色：背景 #1a1a1a / 文字 #e0e0e0 / 主色保持现有 accent）；顶栏加太阳/月亮按钮切换；`localStorage.theme` 持久化
-   - 改什么：styles.css ~50 个选择器变量重映射 + app.js 一个 toggle 函数
+   - 实现：styles.css `:root.dark` 重定义 22 个色值变量 + 5 个特例覆盖；顶栏 toolbar 右侧加 🌞/🌙 按钮；THEME_KEY='qjviewer_theme_v1' localStorage 持久化；init() 后立即应用
+   - 代码位置：styles.css L29-56 + app.js L254-270/L6518 + index.html L42
+   - 测试：regression +2 条断言（toggleTheme classList 切换 / :root.dark 变量覆盖）
    - 依赖：零新依赖
-   - 风险：低（样式变量集中管理，改一处全局生效）
+   - 风险：低（CSS 变量集中管理，改一处全局生效）
 
 #### ★ A 级（中投入需架构，4-8h/个，**建议 v1.2.0**）
 
