@@ -161,8 +161,13 @@ adb logcat -d -t 20 | findstr /i "FATAL UnsatisfiedLinkError panic"  # 必须零
 ---
 
 ## 台账索引
-- 完整状态快照 → `context.md`
-- 所有技术决策 → `decisions.md`
-- 所有踩过的坑 → `issues.md`
-- 所有文件变化 → `changes.md`
-- 历史周报 → `weekly/`
+- 🟢 **接手入口（先读这个）** → 本文件 START_HERE.md
+- 👤 **用户行为偏好** → `user-preferences.md`（沟通方式/功能选择/硬约束/AI 工作流）
+- 🎯 **项目能力清单** → `capabilities.md`（能做什么/不能做什么/下一阶段补什么/核心卖点）
+- 🔐 **重要信息（敏感，.gitignore 排除）** → `credentials.md`（GitHub/keystore/版本号落点/构建路径/命令模板）
+- 📊 完整状态快照 → `context.md`
+- 💡 所有技术决策 → `decisions.md`
+- 🪤 所有踩过的坑 → `issues.md`
+- 📝 文件变化（聚合版）→ `changes.md`（UI布局/GIF修复/Android构建/性能优化 12 条）
+- 📅 历史周报 → `weekly/`
+- 🛠 SKILL 模板 → `skills/`（android-build 构建铁律）

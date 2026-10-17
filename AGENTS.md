@@ -123,12 +123,13 @@ SSH 推送（已配置）:
 ├── issues.md               ← 踩过的坑（活跃区 + 归档区，Iss-XXX 模板）
 ├── changes.md              ← 文件变化（Chg-XXX 模板）
 ├── .session.md             ← 会话临时内存（每次提炼后清空）
+├── skills/                  ← 项目 SKILL 模板（android-build 构建铁律）
 └── weekly/YYYY-MM-DD.md    ← 周报（每周一自动生成）
 ```
 
 #### 6.2 启动时先看台帐（每次新会话必做，没商量）
 
-1. **按序加载**：START_HERE.md → context.md → issues.md 活跃坑 → decisions.md → .session.md
+1. **按序加载**：START_HERE.md → **user-preferences.md（了解用户沟通偏好+硬约束）** → context.md → issues.md 活跃坑 → decisions.md → **capabilities.md（了解项目能/不能做什么）** → .session.md
 2. **第一轮回复开头必出**：用 3-5 行大白话给台账速读，别等用户问：
    ```
    📋 台账速读：
