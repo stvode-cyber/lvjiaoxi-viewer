@@ -14,6 +14,8 @@ const appJs = [
   fs.readFileSync(path.join(root, 'js', 'archive.js'), 'utf8'),
   fs.readFileSync(path.join(root, 'js', 'render.js'), 'utf8'),
   fs.readFileSync(path.join(root, 'js', 'init.js'), 'utf8'),
+  fs.readFileSync(path.join(root, 'js', 'edit.js'), 'utf8'),
+  fs.readFileSync(path.join(root, 'js', 'batch.js'), 'utf8'),
   fs.readFileSync(path.join(root, 'app.js'), 'utf8'),
 ].join('\n');
 
@@ -90,8 +92,11 @@ try {
   window.eval(fs.readFileSync(path.join(root, 'js', 'archive.js'), 'utf8'));
   window.eval(fs.readFileSync(path.join(root, 'js', 'render.js'), 'utf8'));
   window.eval(fs.readFileSync(path.join(root, 'js', 'init.js'), 'utf8'));
+  window.eval(fs.readFileSync(path.join(root, 'js', 'edit.js'), 'utf8'));
+  window.eval(fs.readFileSync(path.join(root, 'js', 'batch.js'), 'utf8'));
 } catch (e) { errors.push('eval js/*.js: ' + e.message); }
 try { window.eval(appJs); } catch (e) { errors.push('eval: ' + e.message); }
+
 
 // jsdom 无布局，给 stage 注入固定尺寸，否则 fit scale=0
 const stage = document.getElementById('stage');

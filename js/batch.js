@@ -158,7 +158,7 @@
   function initEmojiBar() {
     const bar = __API.els.emojiBar; if (!bar) return;
     bar.innerHTML = '';
-    EMOJI_PRESETS.forEach((e) => {
+    window.__API__.EMOJI_PRESETS.forEach((e) => {
       const btn = document.createElement('button');
       btn.textContent = e;
       btn.style.cssText = 'font-size:18px;border:none;background:transparent;cursor:pointer;padding:2px 4px;border-radius:4px;line-height:1';
@@ -426,8 +426,8 @@
 
   function switchBatchTab(tab) {
     batchTab = tab;
-    $$('.batch-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
-    $$('.batch-pane').forEach((p) => { p.hidden = p.dataset.pane !== tab; });
+    window.__API__.$$('.batch-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
+    window.__API__.$$('.batch-pane').forEach((p) => { p.hidden = p.dataset.pane !== tab; });
     if (tab === 'rename') updateRenamePreview();
     else if (tab === 'convert') renderCvPreview();
     else if (tab === 'resize') { updateRsUI(); renderRsPreview(); }
@@ -712,8 +712,8 @@
   }
 
   function switchEditTab(tab) {
-    $$('.edit-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
-    $$('.edit-pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === tab));
+    window.__API__.$$('.edit-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
+    window.__API__.$$('.edit-pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === tab));
   }
 
   function updateRenamePreview() {
@@ -730,14 +730,14 @@
 
   function applyRenameTemplate(tpl, name, idx) {
     const ext = __API.extOf(name) ? '.' + __API.extOf(name) : '';
-    const base = stripExt(name);
+    const base = window.__API__.stripExt(name);
     const date = new Date();
-    const y = date.getFullYear(), mo = pad(date.getMonth() + 1, 2), d = pad(date.getDate(), 2);
+    const y = date.getFullYear(), mo = window.__API__.pad(date.getMonth() + 1, 2), d = window.__API__.pad(date.getDate(), 2);
     const today = y + '-' + mo + '-' + d;
     const map = {
       '{name}': base,
       '{n}': String(idx + 1),
-      '{n:3}': pad(idx + 1, 3),
+      '{n:3}': window.__API__.pad(idx + 1, 3),
       '{date}': today,
       '{date:YYYYMMDD}': '' + y + mo + d,
     };
@@ -765,11 +765,11 @@
           await loadImage(it);
           let blob = null, name = it.name;
           if (batchTab === 'convert') blob = await batchConvert(it);
-          else if (batchTab === 'resize') { blob = await batchResize(it); name = stripExt(it.name) + extFromMime(getSettingResampleFormat()); }
+          else if (batchTab === 'resize') { blob = await batchResize(it); name = window.__API__.stripExt(it.name) + extFromMime(getSettingResampleFormat()); }
           else if (batchTab === 'rename') { blob = await fileToBlob(it.file); name = applyRenameTemplate(__API.els.rnTemplate.value, it.name, i); }
-          else if (batchTab === 'tone') { blob = await batchTone(it, __API.els.btPreset.value, __API.els.btFormat.value); if (__API.els.btKeepName.checked) name = stripExt(it.name) + extFromMime(__API.els.btFormat.value); }
+          else if (batchTab === 'tone') { blob = await batchTone(it, __API.els.btPreset.value, __API.els.btFormat.value); if (__API.els.btKeepName.checked) name = window.__API__.stripExt(it.name) + extFromMime(__API.els.btFormat.value); }
           else if (batchTab === 'compress') { const r = await batchCompress(it); blob = r.blob; name = r.name; }
-          else if (batchTab === 'watermark') { blob = await batchWatermark(it); if (blob) name = stripExt(it.name) + extFromMime(__API.els.wmFormat.value); }
+          else if (batchTab === 'watermark') { blob = await batchWatermark(it); if (blob) name = window.__API__.stripExt(it.name) + extFromMime(__API.els.wmFormat.value); }
           if (blob) entries.push({ name, data: new Uint8Array(await blob.arrayBuffer()) });
           else fail++;
         } catch (err) {
@@ -844,7 +844,7 @@
     const realFmt = fmtSel === 'same' ? mimeFromName(item.name, 'image/jpeg') : fmtSel;
     const blob = await canvasToBlob(canvas, realFmt, realFmt === 'image/png' ? undefined : quality);
     let name = item.name;
-    if (fmtSel !== 'same') name = stripExt(item.name) + (CP_EXT[realFmt] || '.img');
+    if (fmtSel !== 'same') name = window.__API__.stripExt(item.name) + (CP_EXT[realFmt] || '.img');
     return { blob, name };
   }
 
@@ -1075,7 +1075,7 @@
 
   function crc32(buf) {
     let c = 0xFFFFFFFF;
-    for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+    for (let i = 0; i < buf.length; i++) c = window.__API__.CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
     return (c ^ 0xFFFFFFFF) >>> 0;
   }
 
@@ -1191,4 +1191,51 @@
   __API.ID_PHOTO_SIZES = ID_PHOTO_SIZES;
   __API.ID_CANVAS_SIZES = ID_CANVAS_SIZES;
   __API.BORDER_PRESETS = BORDER_PRESETS;
+
+  // ============ __API__ 公共接口注册 ============
+  __API.borderSpec = borderSpec;
+  __API.applyBorder = applyBorder;
+  __API.roundRectPath = roundRectPath;
+  __API.initEmojiBar = initEmojiBar;
+  __API.addSticker = addSticker;
+  __API.addImageSticker = addImageSticker;
+  __API.clearStickers = clearStickers;
+  __API.buildIdPhotoCanvas = buildIdPhotoCanvas;
+  __API.renderIdPhotoPreview = renderIdPhotoPreview;
+  __API.exportIdPhoto = exportIdPhoto;
+  __API.generatePoster = generatePoster;
+  __API.openBatch = openBatch;
+  __API.switchBatchTab = switchBatchTab;
+  __API.updateWmUI = updateWmUI;
+  __API.drawWatermarkOnCanvas = drawWatermarkOnCanvas;
+  __API.renderWmPreview = renderWmPreview;
+  __API.batchWatermark = batchWatermark;
+  __API.updateCompressUI = updateCompressUI;
+  __API.renderCompressPreview = renderCompressPreview;
+  __API.renderCvPreview = renderCvPreview;
+  __API.renderRsPreview = renderRsPreview;
+  __API.updateRsUI = updateRsUI;
+  __API.switchEditTab = switchEditTab;
+  __API.updateRenamePreview = updateRenamePreview;
+  __API.applyRenameTemplate = applyRenameTemplate;
+  __API.runBatch = runBatch;
+  __API.getSettingResampleFormat = getSettingResampleFormat;
+  __API.extFromMime = extFromMime;
+  __API.batchTone = batchTone;
+  __API.mimeFromName = mimeFromName;
+  __API.canvasToBlob = canvasToBlob;
+  __API.batchCompress = batchCompress;
+  __API.renderTonePreview = renderTonePreview;
+  __API.batchConvert = batchConvert;
+  __API.batchResize = batchResize;
+  __API.fileToBlob = fileToBlob;
+  __API.encodeBMP = encodeBMP;
+  __API.setPngDpi = setPngDpi;
+  __API.setJpegDpi = setJpegDpi;
+  __API.buildExifTiff = buildExifTiff;
+  __API.setWebpDpi = setWebpDpi;
+  __API.embedDpi = embedDpi;
+  __API.crc32 = crc32;
+  __API.makeZip = makeZip;
+  __API.concatBytes = concatBytes;
 })();

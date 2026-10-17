@@ -645,6 +645,7 @@
     updateDeformUI,
     updateOpsUI,
     recordHistory,
+    stripExt, pad,
   });;;
 
   function cacheDom() {
