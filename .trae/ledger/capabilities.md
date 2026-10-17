@@ -15,6 +15,7 @@
 - 左侧缩略图栏虚拟滚动窗口 ±3（最多 7 张 DOM + thumbUrl 永久缓存）
 - 长图滚轮翻页 + Webtoon 模式（ratio=h/w > 1.7 自动启用纵向 pan，触底翻下一张，触顶翻上一张，Ctrl+滚轮保留缩放）
 - 深色主题（toolbar 右侧 🌞/🌙 切换按钮 + localStorage 持久化 + 启动立即应用）
+- EXIF GPS（读取 GPS IFD 方向 N/S/E/W + 十进制度显示 + 📌 高德地图可点击链接）
 - 双击图片文件关联启动（Setup.exe ProgId 注册）
 - 最近访问历史
 
@@ -95,12 +96,13 @@
    - 依赖：零新依赖
    - 风险：低（纯滚动行为优化，不碰核心渲染管线）
 
-2. **EXIF GPS 显示 + 地图链接**
+2. **EXIF GPS 显示 + 地图链接** ✅ **已实现（2026-10-17 · commit 0aa51e3）**
    - 对标：HoneyView / FastStone（已有 EXIF 面板但缺 GPS 可视化）
-   - 做什么：EXIF 面板加一行 `📌 GPS: 31.23°N, 121.47°E → 点击高德地图`（经纬度格式转换 + `https://uri.amap.com/marker`）
-   - 改什么：app.js EXIF 渲染函数 + lib.rs decode_fallback 返回 EXIF 时一并传 GPS（已有 exifread）
-   - 依赖：零新依赖（exif-rs 已在依赖里）
-   - 风险：低
+   - 实现：parseTiff GPS IFD (0x8825) 读 LatitudeRef(0x0001 N/S) + LongitudeRef(0x0003 E/W) + DMS→十进制度；renderInfo 生成高德地图 marker URL
+   - 显示格式：📌 GPS: 31.2345°N, 121.4567°E → 点击高德地图
+   - 代码位置：app.js parseTiff L1290-1302 + renderInfo L1194-1202
+   - 依赖：零新依赖（EXIF 全前端 JS 解析）
+   - 风险：低（GPS IFD 是 TIFF 标准，不影响其他 EXIF 字段）
 
 3. **深色主题** ✅ **已实现（2026-10-17 · commit 34649bb）**
    - 对标：全行业 2025+ 趋势（腾讯管家 18.1 / BandiView v7+ / 美图秀秀）

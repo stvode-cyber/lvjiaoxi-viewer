@@ -87,6 +87,9 @@ rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信�
 #### Chg-P4（2026-10-17 · 深色主题 S2 · commit 34649bb）
 对标 BandiView v7+/美图秀秀/腾讯管家 18.1 2025+ 深色主题趋势。styles.css 加 `:root.dark` 重定义 22 个色值（背景 #141416 / 卡片 #1e1e22 / 文字 #e8e8ea / 主色 #3aa888 青绿体系保持）+ 5 个特例覆盖。toolbar 右侧加 🌞/🌙 切换按钮。THEME_KEY='qjviewer_theme_v1' localStorage 持久化。踩坑：applyTheme 不能在 cacheDom 之前调用（els 未定义），移到 init() 里 cacheDom() 之后 L6518。CACHE v68→v69。regression +2 条断言（toggleTheme 函数 + :root.dark 变量覆盖）。
 
+#### Chg-P5（2026-10-17 · EXIF GPS S3 · commit 0aa51e3）
+对标 HoneyView / FastStone EXIF 面板 GPS 可视化。parseTiff GPS IFD (0x8825) 加 LatitudeRef(0x0001 N/S) + LongitudeRef(0x0003 E/W) 方向读取；result 新增 lat/lon 数值；显示格式从 '31.2345, 121.4567' → '31.2345°N, 121.4567°E'（带方向+度数符号）。renderInfo GPS 行改为高德地图 marker URL 可点击链接（`uri.amap.com/marker?position=lon,lat&name=文件名`）。发现 EXIF 全是前端 JS 解析，Rust 端完全没碰 GPS IFD——只需改 app.js。CACHE v69→v70。regression +1 条断言。
+
 ---
 
 ## 桌面偶发 bug 修复
