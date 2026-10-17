@@ -131,6 +131,21 @@
 - **关联 Chg**：Chg-P9
 - **关联路径**：无项目代码改动（PowerToys 系统级解决）
 
+#### Iss-012（已沉淀 · 2026-10-17 · 踩 3 次归档）渐进替换裸调与 regression 源码字符串断言冲突
+
+- **问题**：regression.cjs 用正则 `appSrc.includes('xxx')` 或 `appSrc.match(/裸调形式/)` 检查源码中裸调用的存在，渐进替换把裸调改成 `window.__API__.xxx()` 后源码字符串不再匹配 → regression 失败
+- **根因**：渐进替换改变了源码字符串形态，但 regression 用源码字符串断言锁定了裸调形式
+- **踩坑 3 次**：
+  - v1（Chg-032 第2批 render.js）：3 处源码断言 break → L942 renderDualPage / L1154 next / L1155 prev 改回裸调
+  - v2（Chg-033 第3批 init.js）：handleOpenPaths+getSetting 正则只匹配裸调 → 改正则兼容 `(?:window.__API__\.)?` 可选前缀
+  - v3（Chg-031 第1批 archive.js）：类似 Object.assign 注入问题（子文件独占函数不能注入）
+- **沉淀方案**：
+  1. 替换前先 grep regression.cjs 的 `appSrc.includes` 和源码正则，标记锁定行
+  2. 锁定行要么**保留裸调**（加 `// TODO: [regression-lock] 保留裸调用`），要么**改正则兼容两种写法**（加 `(?:window.__API__\.)?`）
+  3. 替换后必须跑 regression 验证
+- **关联 Chg**：Chg-031 / Chg-032 / Chg-033
+- **关联路径**：`app.js`、`test/regression.cjs`
+
 > Iss-000 / Iss-001 / Iss-002 活跃区仍在；Iss-003 踩够 3 次自动归档
 
 #### Iss-000（已沉淀）初始化占位

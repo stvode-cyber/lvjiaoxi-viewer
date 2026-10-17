@@ -170,3 +170,29 @@ rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信�
 - ledger 10 个 md 全部补 `📂 角色索引：` 首行标签（谁必读 + 跳过条件）
 - issues.md 活跃坑 TOP 标签：Iss-005 🔴 TOP1（踩 7 次）+ Iss-001/002 🟠 TOP2（各踩 2 次）
 - 活跃坑硬限 ≤10：当前 9 个，下次新坑自动挤踩最少的归档
+
+## app.js 渐进替换 P-006（2026-10-17 · 4 批共 ~375 处裸调替换）
+
+**commit**: `db6f6d5`（第1批）+ `2a3e538`（第2批）+ `7af9ed3`（第3批）| **regression**: 467/0 全绿
+
+#### Chg-031（第1批 · archive.js · 21 处裸调替换）
+- resolveItemSrc / buildItems / loadImage / handleOpenPaths 裸调 → window.__API__.xxx()
+- 删 app.js 冗余函数体 4 块（36 行）
+- 禁区：声明行跳过 / Object.assign 只注入 app.js IIFE 内部有声明的标识符
+
+#### Chg-032（第2批 · render.js · 115 处裸调替换）
+- 27 个函数：renderThumbWindow / showImage / computeFit / applyFit / applyActual 等
+- 3 大禁区全扫：ctx.xxx() 对象方法 0 误伤 / CSS 模板字符串含 deg 0 误伤 / regression 源码断言 3 处保留裸调
+- **踩 Iss-012 v1**：源码字符串断言 break → 改回裸调
+
+#### Chg-033（第3批 · init.js · 231 处裸调替换）
+- 21 个函数：toast(153) / getSetting(27) / extOf(7) / escapeHtml(11) 等
+- 禁区 L942 renderDualPage 保留裸调（regression 源码断言）
+- **踩 Iss-012 v2**：regression 正则只匹配裸调 → 改正则兼容 `(?:window.__API__\.)?` 可选前缀
+- sw.js CACHE v78 → v79
+
+**渐进替换铁律（已沉淀 Iss-012）**：
+1. 声明行永远跳过；ctx.xxx() 对象方法 / CSS deg 字符串永远跳过
+2. regression 源码断言检查的函数调用 → 要么保留裸调，要么改正则兼容两种写法
+3. Object.assign(__API, {...}) 只注入 app.js IIFE 内部有 function 声明的标识符
+4. 替换后必须跑 regression，再扫 3 大禁区

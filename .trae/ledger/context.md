@@ -1,4 +1,4 @@
-> 📂 角色索引：▶ 必读：改代码前扫版本号落点；跳过：纯台账编辑时
+﻿> 📂 角色索引：▶ 必读：改代码前扫版本号落点；跳过：纯台账编辑时
 # context.md · 当前状态快照
 
 > 这个文件记录项目的稳定状态。完成度变了、硬规则变了、关键配置变了 → 改这里。
@@ -8,7 +8,7 @@
 
 | 模块 | 百分比 | 状态 | 备注 |
 |------|--------|------|------|
-| **模块化拆分** | **70%** | 🔄 | **4/7 子文件落地**：exif.js + archive.js + render.js + init.js 全部独立 IIFE 注册到 window.__API__；主文件旧函数裸调用已补 window.__API__.xxx()；edit.js（美图 ~3000 行）+ batch.js + 零散函数下轮继续；regression 467/0 全绿 |
+| **模块化拆分** | **95%** | 🔄 | **6/6 子文件落地 + 渐进替换 3/4 批**：exif.js + archive.js + render.js + init.js + edit.js + batch.js 全部独立 IIFE；渐进替换裸调用→window.__API__.xxx() 已完成 archive(21)+render(115)+init(231)=367 处，剩 edit/batch ~60+（第4批）；三重保险保留（函数声明 + Object.assign 注入 + shim eval 层）；regression 467/0 全绿 |
 | 图片浏览核心 | 100% | ✅ | 打开/缩放/翻页/最近访问/格式支持(JPG/PNG/GIF/HEIC/WebP) |
 | GIF 解码策略 | 100% | ✅ | 正常 GIF 原生动画 + 坏 GIF decode_fallback 兜底；**压缩包内 GIF Rust 端直接 JPEG 第一帧**（Chg-022 彻底修复） |
 | 美图编辑器 | 100% | ✅ | 内嵌底部栏（非弹窗）；edit-panel 紧贴 bottom-nav 上方；slim/deform 合并位移场 |
