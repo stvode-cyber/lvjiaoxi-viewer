@@ -96,7 +96,7 @@
       applyComicMode(false);     // 切回单页模式
       els.emptyHint.hidden = true; // 与 Web loadFiles 一致：加载后隐藏空态提示，避免覆盖主视区
       if (items.length) {
-        renderThumbWindow(0);
+        window.__API__.renderThumbWindow(0);
         // 打开单张图片时会一并加载同文件夹相邻图，需定位到所打开的那张；
         // 打开文件夹/多文件则保持从第 0 张开始。
         let idx = 0;
@@ -105,11 +105,11 @@
           if (found >= 0) idx = found;
         }
         this.flog('loadPaths items=' + items.length + ' idx=' + idx + ' firstPath=' + String(items[0] && items[0].path));
-        showImage(idx);
-        this.flog('loadPaths after showImage(' + idx + ') imageHidden=' + els.image.hidden);
+        window.__API__.showImage(idx);
+        this.flog('loadPaths after window.__API__.showImage(' + idx + ') imageHidden=' + els.image.hidden);
         recordRecentFromLoad(paths, entries);
       }
-      updateChrome();
+      window.__API__.updateChrome();
       return true;
     },
     // 桌面版：打开压缩包（ZIP/CBZ），列出图片条目但不解压，按需懒加载
@@ -134,12 +134,12 @@
       state.items = items; state.index = -1;
       state.archivePath = path;  // 标记当前处于压缩包浏览模式
       els.emptyHint.hidden = true;
-      renderThumbWindow(0);
+      window.__API__.renderThumbWindow(0);
       toast('📦 ' + items.length + ' 张图片（压缩包直看）');
       // 📖 压缩包打开时显示漫画模式按钮 + 读取偏好
       applyComicMode(localStorage.getItem('qjviewer_comic_v1') === '1');
-      showImage(0);
-      updateChrome();
+      window.__API__.showImage(0);
+      window.__API__.updateChrome();
       return true;
     },
     // 桌面版：懒加载压缩包内指定索引的图片，返回 data URL
@@ -296,7 +296,7 @@
     applyComicMode(next);
     // 切到双页时对齐偶数索引（左页）
     if (next && state.index % 2 !== 0) { state.index = state.index - 1; }
-    showImage(state.index);
+    window.__API__.showImage(state.index);
   }
 
   // 📖 双页漫画渲染：同时加载 index 和 index+1 两张
@@ -322,8 +322,8 @@
     else { els.imageRight.hidden = true; els.imageRight.removeAttribute('src'); }
 
     els.loading.hidden = true;
-    updateChrome();
-    highlightThumb(index);
+    window.__API__.updateChrome();
+    window.__API__.highlightThumb(index);
     if (state.slide.active) { state.slide.pendingNext = false; startSlideshow(); }
   }
 
@@ -500,23 +500,23 @@
   });
   function runAction(a) {
     switch (a) {
-      case 'prev': prev(); break;
-      case 'next': next(); break;
-      case 'home': showImage(0); break;
-      case 'end': showImage(state.items.length - 1); break;
-      case 'zoomIn': zoomByCenter(1.2); break;
-      case 'zoomOut': zoomByCenter(1 / 1.2); break;
+      case 'prev': window.__API__.prev(); break;
+      case 'next': window.__API__.next(); break;
+      case 'home': window.__API__.showImage(0); break;
+      case 'end': window.__API__.showImage(state.items.length - 1); break;
+      case 'zoomIn': window.__API__.zoomByCenter(1.2); break;
+      case 'zoomOut': window.__API__.zoomByCenter(1 / 1.2); break;
       case 'rotateL': rotate(-1); break;
       case 'rotateR': rotate(1); break;
-      case 'flipH': flip(true); break;
-      case 'flipV': flip(false); break;
+      case 'flipH': window.__API__.flip(true); break;
+      case 'flipV': window.__API__.flip(false); break;
       case 'info': toggleInfo(); break;
       case 'slideshow': startSlideshow(); break;
       case 'fullscreen': if (document.fullscreenElement) exitFullscreen(); else enterFullscreen(); break;
-      case 'toggleThumbs': state.showThumbs = !state.showThumbs; updateChrome(); break;
+      case 'toggleThumbs': state.showThumbs = !state.showThumbs; window.__API__.updateChrome(); break;
       case 'copy': copyCurrentImage(); break;
       case 'edit': openEdit(); break;
-      case 'jump': openJump(); break;
+      case 'jump': window.__API__.openJump(); break;
       case 'closeInfo': els.infoPanel.hidden = true; break;
     }
   }
@@ -716,9 +716,9 @@
     state.index = -1;
     els.emptyHint.hidden = true;
     els.viewer.querySelector('.empty-hint') && (els.emptyHint.hidden = true);
-    showImage(0);
-    renderThumbWindow(0);
-    updateChrome();
+    window.__API__.showImage(0);
+    window.__API__.renderThumbWindow(0);
+    window.__API__.updateChrome();
   }
 
   function openFiles() {
@@ -977,20 +977,20 @@
       els.image.src = img.src;
       if (state.slide.active) { /* 幻灯片转场由 applyTransition 作用于 imgWrap，避免与图片自身 transform 冲突 */ }
       else if (opts.fade !== false) { els.image.classList.remove('fade'); void els.image.offsetWidth; els.image.classList.add('fade'); }
-      computeFit();
-      if (state.mode === 'actual') applyActual();
-      else applyFit();
-      updateZoomLabel();
-      updateChrome();
-      highlightThumb(index);
-      preloadAround(index);
+      window.__API__.computeFit();
+      if (state.mode === 'actual') window.__API__.applyActual();
+      else window.__API__.applyFit();
+      window.__API__.updateZoomLabel();
+      window.__API__.updateChrome();
+      window.__API__.highlightThumb(index);
+      window.__API__.preloadAround(index);
       if (els.infoPanel.hidden === false) window.__API__.renderInfo();
       // 自动读取 EXIF（延迟，避免阻塞）
       if (!item.exif && (item.type === 'image/jpeg' || item.type === 'image/png')) window.__API__.readExif(item);
       // 记录浏览历史（登录态下自动上传云端）
       recordHistory(item);
       // 长图检测：height/width > 1.7（对应约 16:9 的反面），自动启用滚轮翻页模式
-      detectLongImage(item);
+      window.__API__.detectLongImage(item);
       // 切图后若编辑面板打开，预览 canvas 用新图重绘（filter/slim/deform 已 reset，预览即干净原图）
       if (typeof renderEditPreview === 'function') renderEditPreview();
     };
@@ -1023,7 +1023,7 @@
             if (!url) { fail(); return; }
             item.url = url;
             state.cache.delete(index);
-            renderThumbWindow(index);
+            window.__API__.renderThumbWindow(index);
             return window.__API__.loadImage(item).then((img) => { state.cache.set(index, img); if (state.index === index) finish(img); });
           }).catch(fail);
         });
@@ -1069,7 +1069,7 @@
     // 如果是 free/actual 模式且 offsetY 在中间，自动拉到顶端方便阅读
     if (state.isLongImage && state.mode === 'fit') {
       state.offsetX = 0; state.offsetY = 0;
-      applyTransform(); clampOffset();
+      window.__API__.applyTransform(); window.__API__.clampOffset();
     }
   }
 
@@ -1090,11 +1090,11 @@
   }
   function applyFit() {
     state.scale = state.fitScale || 1; state.offsetX = 0; state.offsetY = 0; state.mode = 'fit';
-    applyTransform(); clampOffset();
+    window.__API__.applyTransform(); window.__API__.clampOffset();
   }
   function applyActual() {
     state.scale = 1; state.offsetX = 0; state.offsetY = 0; state.mode = 'actual';
-    applyTransform(); clampOffset();
+    window.__API__.applyTransform(); clampOffset();
   }
   function clampOffset() {
     const o = currentOrient();
@@ -1102,11 +1102,11 @@
     const { w, h } = displayDims();
     const dw = w * state.scale, dh = h * state.scale;
     const sw = els.stage.clientWidth, sh = els.stage.clientHeight;
-    if (dw <= sw && dh <= sh) { state.offsetX = 0; state.offsetY = 0; applyTransform(); return; }
+    if (dw <= sw && dh <= sh) { state.offsetX = 0; state.offsetY = 0; window.__API__.applyTransform(); return; }
     const ox = Math.max(0, (dw - sw) / 2), oy = Math.max(0, (dh - sh) / 2);
     state.offsetX = Math.max(-ox, Math.min(ox, state.offsetX));
     state.offsetY = Math.max(-oy, Math.min(oy, state.offsetY));
-    applyTransform();
+    window.__API__.applyTransform();
   }
 
   // 锚点缩放（支持旋转/翻转）
@@ -1127,11 +1127,11 @@
     const rspx = cos * spx - sin * spy, rspy = sin * spx + cos * spy;
     state.offsetX = dx - rspx; state.offsetY = dy - rspy;
     state.scale = newScale; state.mode = 'free';
-    applyTransform(); clampOffset(); updateZoomLabel();
+    window.__API__.applyTransform(); window.__API__.clampOffset(); window.__API__.updateZoomLabel();
   }
   function zoomByCenter(factor) {
     const cx = els.stage.clientWidth / 2, cy = els.stage.clientHeight / 2;
-    zoomAt(cx, cy, state.scale * factor);
+    window.__API__.zoomAt(cx, cy, state.scale * factor);
   }
   function updateZoomLabel() {
     els.btnZoomFit.textContent = Math.round(state.scale * 100) + '%';
@@ -1139,14 +1139,14 @@
 
   function rotate(dir) {
     state.rotation = (state.rotation + dir * 90 + 360) % 360;
-    computeFit();
-    if (state.mode === 'fit') applyFit(); else { applyTransform(); clampOffset(); }
+    window.__API__.computeFit();
+    if (state.mode === 'fit') window.__API__.applyFit(); else { window.__API__.applyTransform(); window.__API__.clampOffset(); }
     if (els.infoPanel.hidden === false) window.__API__.renderInfo();
     if (!els.editMask.hidden) renderEditPreview();
   }
   function flip(h) {
     if (h) state.flipH = !state.flipH; else state.flipV = !state.flipV;
-    applyTransform(); clampOffset();
+    window.__API__.applyTransform(); window.__API__.clampOffset();
     if (!els.editMask.hidden) renderEditPreview();
   }
 
@@ -1159,7 +1159,7 @@
     els.navPrev.hidden = !has; els.navNext.hidden = !has;
     els.edgeLeft.hidden = !has; els.edgeRight.hidden = !has;
     els.counter.hidden = !has;
-    applyThumbVisibility();
+    window.__API__.applyThumbVisibility();
     if (has) els.counter.textContent = (state.index + 1) + ' / ' + state.items.length;
   }
 
@@ -1177,7 +1177,7 @@
     clearTimeout(fsHideTimer);
     if (!has) { els.thumbBar.hidden = true; return; }
     if (document.fullscreenElement) {
-      if (state.showThumbs) { els.thumbBar.hidden = false; scheduleFsHide(); }
+      if (state.showThumbs) { els.thumbBar.hidden = false; window.__API__.scheduleFsHide(); }
       else { els.thumbBar.hidden = true; }
     } else {
       els.thumbBar.hidden = !state.showThumbs;
@@ -1193,13 +1193,13 @@
   }
   function closeJump() {
     els.jumpInput.hidden = true; els.counter.hidden = !!(!state.items.length);
-    updateChrome();
+    window.__API__.updateChrome();
   }
   function goToIndex(n) {
     const total = state.items.length;
     if (!total) return;
     n = Math.max(1, Math.min(total, Math.floor(n) || 1));
-    showImage(n - 1);
+    window.__API__.showImage(n - 1);
   }
   function applyThumbFilter() {
     const q = (els.thumbSearch.value || '').trim().toLowerCase();
@@ -1208,7 +1208,7 @@
       state.thumbFilter = q;
       state.thumbWindow = null; // 强制 renderThumbWindow 跳过"窗口没变"的短路
       const targetIdx = state.index >= 0 ? state.index : 0;
-      renderThumbWindow(q ? 0 : targetIdx);
+      window.__API__.renderThumbWindow(q ? 0 : targetIdx);
       if (q) { // 有搜索 → 重建完窗口后立即应用过滤
         let shown = 0;
         $$('.thumb').forEach((t) => {
@@ -1248,7 +1248,7 @@
     const end = hasFilter ? total - 1 : Math.min(total - 1, center + THUMB_HALF_WIN);
     // 窗口边界没变 → 跳过重建（避免每次切图都清空重绘）
     if (state.thumbWindow && state.thumbWindow.start === start && state.thumbWindow.end === end) {
-      highlightThumb(state.index >= 0 ? state.index : center);
+      window.__API__.highlightThumb(state.index >= 0 ? state.index : center);
       return;
     }
     state.thumbWindow = { start, end };
@@ -1260,17 +1260,17 @@
       div.className = 'thumb' + (i === state.index ? ' active' : '');
       div.dataset.index = i;
       div.innerHTML = `<span class="t-index">${i + 1}</span><span class="t-fmt">${extOf(item.name)}</span>`;
-      div.addEventListener('click', () => showImage(i));
+      div.addEventListener('click', () => window.__API__.showImage(i));
       wrap.appendChild(div);
       // 有缓存 thumbUrl → 直接复用；没有 → 异步生成（genThumb 内部也会缓存到 item 上）
       if (item.thumbUrl) {
         const im = document.createElement('img'); im.src = item.thumbUrl; div.insertBefore(im, div.firstChild);
       } else {
-        setTimeout(() => genThumb(item, div), 0);
+        setTimeout(() => window.__API__.genThumb(item, div), 0);
       }
     }
     // 全量渲染完 → 如果有搜索词，立即应用过滤（display:none 隐藏不匹配的）
-    if (hasFilter && typeof applyThumbFilter === 'function') applyThumbFilter();
+    if (hasFilter && typeof applyThumbFilter === 'function') window.__API__.applyThumbFilter();
   }
   function genThumb(item, div) {
     const im = new Image();
@@ -1302,7 +1302,7 @@
     // index 不在当前窗口 → 先把窗口移动过去再高亮
     const w = state.thumbWindow;
     if (w && (index < w.start || index > w.end)) {
-      renderThumbWindow(index);
+      window.__API__.renderThumbWindow(index);
       return; // renderThumbWindow 内部已经调了 highlightThumb，这里返回避免重复
     }
     $$('.thumb').forEach((t) => {
@@ -1325,7 +1325,7 @@
       if (it.broken) return; // 已损坏图片不再重试预加载
       if (it.file && it.file.size > 50 * 1024 * 1024) return; // 大图不预加载
       const img = new Image();
-      img.onload = () => { state.cache.set(i, img); trimCache(cap); };
+      img.onload = () => { state.cache.set(i, img); window.__API__.trimCache(cap); };
       img.onerror = () => {};
       window.__API__.resolveItemSrc(it).then((src) => { img.src = src; }).catch(() => {});
     });
@@ -4048,11 +4048,11 @@
     state.slide.raf = requestAnimationFrame(step);
   }
   function slideNext() {
-    showImage(nextIndex());
+    window.__API__.showImage(nextIndex());
     applyTransition();
   }
   function slidePrev() {
-    showImage(prevIndex());
+    window.__API__.showImage(prevIndex());
     applyTransition();
   }
   function nextIndex() {
@@ -5278,13 +5278,13 @@
       }
       e.target.value = '';
     });
-    els.btnZoomIn.addEventListener('click', () => zoomByCenter(1.2));
-    els.btnZoomOut.addEventListener('click', () => zoomByCenter(1 / 1.2));
-    els.btnZoomFit.addEventListener('click', () => { if (state.mode === 'fit') applyActual(); else applyFit(); });
+    els.btnZoomIn.addEventListener('click', () => window.__API__.zoomByCenter(1.2));
+    els.btnZoomOut.addEventListener('click', () => window.__API__.zoomByCenter(1 / 1.2));
+    els.btnZoomFit.addEventListener('click', () => { if (state.mode === 'fit') window.__API__.applyActual(); else window.__API__.applyFit(); });
     els.btnRotL.addEventListener('click', () => rotate(-1));
     els.btnRotR.addEventListener('click', () => rotate(1));
-    els.btnFlipH.addEventListener('click', () => flip(true));
-    els.btnFlipV.addEventListener('click', () => flip(false));
+    els.btnFlipH.addEventListener('click', () => window.__API__.flip(true));
+    els.btnFlipV.addEventListener('click', () => window.__API__.flip(false));
     els.btnCopy.addEventListener('click', copyCurrentImage);
     els.btnEdit.addEventListener('click', openEdit);
     if (els.btnBeauty) els.btnBeauty.addEventListener('click', openEdit);
@@ -5771,10 +5771,10 @@
     // 跳转指定序号 + 缩略图搜索
     els.counter.addEventListener('click', openJump);
     els.jumpInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { goToIndex(+els.jumpInput.value); closeJump(); }
-      else if (e.key === 'Escape') { closeJump(); }
+      if (e.key === 'Enter') { window.__API__.goToIndex(+els.jumpInput.value); window.__API__.closeJump(); }
+      else if (e.key === 'Escape') { window.__API__.closeJump(); }
     });
-    els.jumpInput.addEventListener('blur', () => { if (!els.jumpInput.hidden) { goToIndex(+els.jumpInput.value); closeJump(); } });
+    els.jumpInput.addEventListener('blur', () => { if (!els.jumpInput.hidden) { window.__API__.goToIndex(+els.jumpInput.value); window.__API__.closeJump(); } });
     els.thumbSearch.addEventListener('input', applyThumbFilter);
     els.edgeLeft.addEventListener('click', prev);
     els.edgeRight.addEventListener('click', next);
@@ -5789,15 +5789,15 @@
         const panStep = Math.max(40, Math.round(els.stage.clientHeight * 0.12));
         state.offsetY -= e.deltaY > 0 ? panStep : -panStep;
         state.mode = 'free';
-        applyTransform(); clampOffset();
+        window.__API__.applyTransform(); window.__API__.clampOffset();
         // 滚到顶 → 翻上一张；滚到底 → 翻下一张（翻页时保留当前缩放和 offset 位置）
         const { w, h } = displayDims();
         const dh = h * state.scale;
         const sw = els.stage.clientHeight;
         if (dh > sw) {
           const maxY = -(dh - sw) / 2;  // clampOffset 保证 offsetY ∈ [maxY, -maxY]
-          if (e.deltaY > 0 && state.offsetY <= maxY + 1) { next(); return; }
-          if (e.deltaY < 0 && state.offsetY >= -maxY - 1) { prev(); return; }
+          if (e.deltaY > 0 && state.offsetY <= maxY + 1) { window.__API__.next(); return; }
+          if (e.deltaY < 0 && state.offsetY >= -maxY - 1) { window.__API__.prev(); return; }
         }
         return;
       }
@@ -5806,9 +5806,9 @@
       if ((zoomMode && !e.ctrlKey) || (!zoomMode && e.ctrlKey)) {
         const rect = els.stage.getBoundingClientRect();
         const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-        zoomAt(mx, my, state.scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+        window.__API__.zoomAt(mx, my, state.scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
       } else {
-        if (e.deltaY > 0) next(); else prev();
+        if (e.deltaY > 0) window.__API__.next(); else window.__API__.prev();
       }
     }, { passive: false });
 
@@ -5825,14 +5825,14 @@
       state.offsetX = state.dragStart.ox + (e.clientX - state.dragStart.x);
       state.offsetY = state.dragStart.oy + (e.clientY - state.dragStart.y);
       state.mode = 'free';
-      applyTransform(); clampOffset();
+      window.__API__.applyTransform(); window.__API__.clampOffset();
     });
     window.addEventListener('mouseup', () => { state.dragging = false; els.stage.classList.remove('dragging'); });
 
     // 双击切换（鼠标 + 触摸共用）
     function dblToggle() {
-      if (state.mode === 'fit') { state.scale = Math.max(state.fitScale, 2.5); state.offsetX = 0; state.offsetY = 0; state.mode = 'free'; applyTransform(); clampOffset(); updateZoomLabel(); }
-      else applyFit();
+      if (state.mode === 'fit') { state.scale = Math.max(state.fitScale, 2.5); state.offsetX = 0; state.offsetY = 0; state.mode = 'free'; window.__API__.applyTransform(); window.__API__.clampOffset(); window.__API__.updateZoomLabel(); }
+      else window.__API__.applyFit();
     }
     els.image.addEventListener('dblclick', dblToggle);
 
@@ -5867,7 +5867,7 @@
         state.offsetX = state.dragStart.ox + dx;
         state.offsetY = state.dragStart.oy + dy;
         state.mode = 'free';
-        applyTransform(); clampOffset();
+        window.__API__.applyTransform(); window.__API__.clampOffset();
       } else if (state.touch.mode === 'pinch' && e.touches.length === 2) {
         const [a, b] = [e.touches[0], e.touches[1]];
         const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
@@ -5875,7 +5875,7 @@
           const rect = stage.getBoundingClientRect();
           const midX = (a.clientX + b.clientX) / 2 - rect.left;
           const midY = (a.clientY + b.clientY) / 2 - rect.top;
-          zoomAt(midX, midY, state.touch.startScale * (dist / state.touch.startDist));
+          window.__API__.zoomAt(midX, midY, state.touch.startScale * (dist / state.touch.startDist));
         }
       }
     }, { passive: false });
@@ -5979,13 +5979,13 @@
     }, true);
 
     // 窗口尺寸变化 → 重新 fit
-    window.addEventListener('resize', () => { if (state.items.length && state.mode === 'fit') { computeFit(); applyFit(); } });
+    window.addEventListener('resize', () => { if (state.items.length && state.mode === 'fit') { window.__API__.computeFit(); window.__API__.applyFit(); } });
 
     // 全屏时缩略图栏 3 秒后自动隐藏，鼠标移动重新显示并重置计时
-    document.addEventListener('fullscreenchange', () => { applyThumbVisibility(); });
+    document.addEventListener('fullscreenchange', () => { window.__API__.applyThumbVisibility(); });
     window.addEventListener('mousemove', () => {
       if (document.fullscreenElement && state.showThumbs && state.items.length) {
-        els.thumbBar.hidden = false; scheduleFsHide();
+        els.thumbBar.hidden = false; window.__API__.scheduleFsHide();
       }
     });
 
@@ -6120,7 +6120,7 @@
             const first = contentUris[0];
             fetch(first).then(r => r.blob()).then(b => {
               const url = URL.createObjectURL(b);
-              showImage(url);
+              window.__API__.showImage(url);
               addRecent({ kind: 'file', path: first, name: first.split('/').pop() || 'image', ts: Date.now() });
             }).catch(err => { console.warn('Android content:// fetch 失败:', err); });
           }
