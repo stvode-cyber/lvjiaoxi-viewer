@@ -923,6 +923,24 @@ test('深色主题：styles.css 有 :root.dark 变量集 + 22 个色值变量覆
   assert(covered >= 7, `深色主题至少覆盖 7 个变量（实际 ${covered}）`);
 });
 
+// ---- EXIF GPS + 高德地图链接（2026-10-17 · S3 竞品对标 HoneyView）----
+test('EXIF GPS: parseTiff GPS IFD 读取方向（N/S/E/W）+ lat/lon 数值存储 + 高德地图链接生成', async () => {
+  const fs = require('fs');
+  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  // parseTiff 里必须读 GPS LatitudeRef / LongitudeRef
+  assert(appSrc.includes('0x0001'), 'GPS LatitudeRef tag 0x0001 已在读');
+  assert(appSrc.includes('0x0003'), 'GPS LongitudeRef tag 0x0003 已在读');
+  // result 必须存 lat/lon 数值
+  assert(appSrc.includes('result.lat'), 'parseTiff 存 result.lat 数值');
+  assert(appSrc.includes('result.lon'), 'parseTiff 存 result.lon 数值');
+  // 方向判定（南北半球）
+  assert(appSrc.includes("latRef === 'S'"), '纬度参考方向 S → 负号');
+  assert(appSrc.includes("lonRef === 'W'"), '经度参考方向 W → 负号');
+  // 高德地图链接生成
+  assert(appSrc.includes('uri.amap.com/marker'), 'renderInfo 生成高德地图 marker URL');
+  assert(appSrc.includes('result.gps'), 'GPS 显示格式含方向');
+});
+
 // ---- 穿透文件夹递归扫描（对标 XnView MP）----
 test('穿透文件夹：设置开关 files.recursive 存在 + recursive 参数语义（默认 false 穿透=关）', async () => {
   const qj = window.__qj;

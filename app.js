@@ -1191,7 +1191,15 @@
       if (e.camera) { html += '<div class="info-group-title">相机信息 (EXIF)</div>'; html += row('设备', escapeHtml(e.camera)); }
       if (e.datetime) html += row('拍摄时间', escapeHtml(e.datetime));
       if (e.params) { html += row('光圈', escapeHtml(e.params.fnumber || '—')); html += row('快门', escapeHtml(e.params.exposure || '—')); html += row('ISO', escapeHtml(e.params.iso || '—')); html += row('焦距', escapeHtml(e.params.focal || '—')); }
-      if (e.gps) html += row('GPS', escapeHtml(e.gps));
+      if (e.gps) {
+        const lat = e.lat, lon = e.lon;
+        if (lat != null && lon != null) {
+          const mapUrl = `https://uri.amap.com/marker?position=${lon.toFixed(6)},${lat.toFixed(6)}&name=${encodeURIComponent(item.name || '图片位置')}`;
+          html += row('📌 GPS', `<a href="${mapUrl}" target="_blank" style="color:var(--accent);text-decoration:underline">${escapeHtml(e.gps)} → 点击高德地图</a>`);
+        } else {
+          html += row('📌 GPS', escapeHtml(e.gps));
+        }
+      }
     } else if (item.type === 'image/jpeg') {
       html += '<div class="info-group-title">相机信息 (EXIF)</div>';
       html += row('', '读取中…');
@@ -1289,9 +1297,16 @@
       }
       if (g(0x8825)) {
         const gpsIfd = readIfd(tiff, get32(g(0x8825)), le, get16, get32);
-        const lat = gpsCoord(tiff, gpsIfd[0x0002], le, get32);
-        const lon = gpsCoord(tiff, gpsIfd[0x0004], le, get32);
-        if (lat && lon) result.gps = lat.toFixed(4) + ', ' + lon.toFixed(4);
+        const latDeg = gpsCoord(tiff, gpsIfd[0x0002], le, get32);
+        const lonDeg = gpsCoord(tiff, gpsIfd[0x0004], le, get32);
+        const latRef = readAscii(tiff, gpsIfd[0x0001], le, get32).trim() || 'N';
+        const lonRef = readAscii(tiff, gpsIfd[0x0003], le, get32).trim() || 'E';
+        if (latDeg != null && lonDeg != null) {
+          const lat = latRef === 'S' ? -latDeg : latDeg;
+          const lon = lonRef === 'W' ? -lonDeg : lonDeg;
+          result.lat = lat; result.lon = lon;  // 存数值给 renderInfo 做地图链接
+          result.gps = latDeg.toFixed(4) + '°' + latRef + ', ' + lonDeg.toFixed(4) + '°' + lonRef;
+        }
       }
     } catch (e) {}
     return result;
