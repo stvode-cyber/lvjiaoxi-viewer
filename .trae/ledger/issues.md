@@ -121,6 +121,16 @@
 
 ## 归档区（已沉淀 / 已解决，只追加不准删）
 
+#### Iss-011（已解决 · 2026-10-17）Windows 资源管理器缩略图变程序图标
+
+- **问题**：绿角犀看图设为默认图片打开方式后，资源管理器里 .png/.jpg/.gif 等缩略图显示成绿角犀程序图标，不是图片真实内容
+- **根因**：Tauri 注册了 Shell 关联（双击打开），但没注册 Windows Shell Thumbnail Provider COM 组件。Windows 问不到真实缩略图就退而用程序图标顶上
+- **解决**：装 Microsoft PowerToys（winget install --id Microsoft.PowerToys），其 File Explorer 模块内置 Thumbnail Provider 覆盖所有常见图片格式；重启 explorer.exe 生效
+- **为什么不自己写**：Tauri 原生实现需要 ~200 行 Rust + COM 注册 + NSIS 安装时注册 COM 组件，维护成本高，且只覆盖 png/jpg。PowerToys 一次覆盖 png/jpg/gif/webp/heic/psd 等 + 零代码
+- **预防规则**：涉及 Windows Shell 缩略图问题直接走 PowerToys，不自己实现 Thumbnail Provider COM 组件
+- **关联 Chg**：Chg-P9
+- **关联路径**：无项目代码改动（PowerToys 系统级解决）
+
 > Iss-000 / Iss-001 / Iss-002 活跃区仍在；Iss-003 踩够 3 次自动归档
 
 #### Iss-000（已沉淀）初始化占位

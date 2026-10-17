@@ -8,7 +8,7 @@
 
 ## 2026-10-17 · app.js 模块化拆分（Chg-029 + Chg-P8）
 
-**commit**: `7842128` + `待填`（P-004）| **涉及**: 32 files | **regression**: 467/0 全绿
+**commit**: `7842128` + `c734fb7`（P-004）| **涉及**: 32 files | **regression**: 467/0 全绿
 
 **Chg-029（第一轮 · 4 子文件）**：
 - 新增 `js/exif.js`（273 行）— renderInfo + EXIF 全部 + parsePngTextChunks
@@ -106,6 +106,14 @@ showImage 入口全量重置 filters/slim/deform/crop/ops/matting/texts/mosaic/e
 - sw.js CACHE v73→v74；regression 467/0 全绿
 - **差真机验证 + 重新构建 Universal APK**（手机连上即测）
 - ↔Chg-A1 / Iss-007 / Iss-010
+
+#### Chg-P9（2026-10-17 · PowerToys 解决缩略图问题 · 无 commit · 系统级）
+**Windows 资源管理器缩略图变程序图标问题**：
+- 设绿角犀为默认图片打开方式后，资源管理器里缩略图显示成绿角犀程序图标而非真实图片内容
+- 根因：Tauri 注册了 Shell 双击打开关联，但没注册 Windows Shell Thumbnail Provider COM 组件
+- 系统级解决：winget install --id Microsoft.PowerToys，File Explorer 模块内置 Thumbnail Provider
+- 重启 explorer.exe 生效；零项目代码改动，零构建影响
+- 关联 Iss-011（已归档 · 已解决）
 
 ---
 
