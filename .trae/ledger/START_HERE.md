@@ -11,7 +11,7 @@
 | 2 | **读 user-preferences.md** | 1 min | ✅ 了解用户沟通偏好 + 硬约束 |
 | 3 | **context.md 版本号落点快速扫** | 30s | ✅ 6 落点全同 + sw.js CACHE 不落后 |
 | 4 | **issues.md 活跃坑 top 5** | 30s | ✅ 避免踩已知坑 |
-| 5 | **跑 regression.cjs** | 10s | ✅ 必须全绿，否则先修测试 |
+| 5 | **跑 regression.cjs** | 10s | ✅ 必须 467/0 全绿，否则先修测试 |
 | 6 | **宣告 P-XXX 动作清单 → 等用户 OK** | 1 min | ✅ 再动手 |
 
 ## 一句话定位

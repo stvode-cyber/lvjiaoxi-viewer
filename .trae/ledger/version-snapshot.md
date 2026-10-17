@@ -17,7 +17,7 @@
 | 4 | EXE ProductVersion (自动) | `0.1.0` | 从 tauri.conf.json 同步 |
 | 5 | manifest.webmanifest version | `0.1.0` | `manifest.webmanifest` L14 |
 | 6 | app.js aboutContent 标题 | `v0.1.0` | `app.js` L5052 |
-| — | sw.js CACHE 常量（前端缓存版本） | `v68` | `sw.js` L4（改前端必须 +1） |
+| — | sw.js CACHE 常量（前端缓存版本） | `v80` | `sw.js` L4（改前端必须 +1） |
 
 ### 构建产物
 
@@ -46,10 +46,10 @@
 
 | 项目 | 值 | 位置 |
 |------|-----|------|
-| keystore 文件 | — | 待生成（当前 debug 构建）|
-| key alias | — | — |
-| 密码 | — | — |
-| **当前状态** | **debug 构建，无 release 签名** | 真机测试用 debug keystore |
+| keystore 文件 | `release.keystore` | `src-tauri/gen/android/app/release.keystore` |
+| alias | 见 keystore.properties | `src-tauri/gen/android/app/keystore.properties` |
+| 密码 | 见 keystore.properties | 同上 |
+| **当前状态** | **release 签名就绪，Universal APK 35.38MB** | 2026-10-17 Chg-030 验证通过 |
 
 ### 发版流水线（步骤）
 

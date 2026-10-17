@@ -24,18 +24,6 @@
 | alias | 见 keystore.properties |
 | storePassword | 见 keystore.properties |
 
-## 版本号落点（7 处必须全同）
-
-| 落点 | 文件 | 示例查询 |
-|------|------|---------|
-| Tauri version | src-tauri/tauri.conf.json | `JSON.parse(f).version` |
-| Cargo version | src-tauri/Cargo.toml | `^version = "0.1.0"` |
-| manifest | manifest.webmanifest | `JSON.parse(f).version` |
-| app.js about | app.js | `绿角犀看图 .*v0.1.0` |
-| sw.js CACHE | sw.js | `lvjiaoxi-viewer-v68` |
-| EXE 元数据 | 构建时自动写入 | FileVersion / ProductVersion |
-| **自检脚本** | scripts/check-versions.cjs | `node scripts/check-versions.cjs` |
-
 ## 构建环境关键路径（新电脑必配）
 
 | 项 | 值 | 备注 |

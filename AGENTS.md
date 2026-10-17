@@ -10,7 +10,7 @@
 前端: 原生 JS 单文件 app.js (252KB) + index.html + styles.css，零框架
 桌面: Rust 1.97 + Tauri v2 + WebView2 离线运行时
 打包: NSIS (中文界面) + MSI，内嵌 WebView2 离线安装包
-测试: test/regression.cjs (Node + jsdom)，224 项断言
+测试: test/regression.cjs (Node + jsdom)，**467 项断言**（2026-10-18 基线）
 ```
 
 ## 硬约束（违反即踩坑）
@@ -45,68 +45,6 @@ sw.js 缓存            → CACHE 常量（改 app.js 必须升）
 ### 5. 测试环境限制
 - jsdom `<canvas>` 的 Uint8Array 是 window realm，`instanceof Uint8Array` 要用 `window.Uint8Array`
 - regression.cjs 共享同一 jsdom document，前序测试改的控件值会残留 → 断言前显式设目标值
-
-### 7. 改动前必须先说明，用户确认了再动手
-- 任何代码改动（改 CSS、改 HTML、改 JS、加文件、删文件）**必须先口头告诉用户要做什么**
-- 格式：大白话列出改动点 → 等用户说"可以"或"改吧" → 再执行
-- 用户没确认 = 不许动代码
-- 禁止先改了再说、禁止边改边宣布、禁止"我觉得应该这样"就直接动手
-- 例（正确）："我准备做三件事：1. styles.css 移动端 @media 里 .edit-panel 从 55vh 改成 60vh；2. 隐藏 .edit-sub-pane 里的色调分离 section；3. CACHE +1。可以吗？"
-- 例（错误）："改好了！你去手机上看看效果"
-
-### 8. 回复必须用大白话
-- 禁止用技术黑话、学术腔、英文缩写（SW / CDP / APK / DOM / CSS class 名等，第一次提可以写括号解释）
-- 说人话，像和同事聊天一样，别像写论文
-- 例（正确）："Service Worker（浏览器后台缓存程序）存了旧样式，所以你手机看不到我改的新面板"
-- 例（错误）："CSP policy blocks script eval causing Runtime.evaluate exception"
-
-### 9. 用户说什么就做什么，不许自作主张
-- 用户指令是**精确执行**，不是"参考意见"
-- 禁止擅自添加用户没要求的功能、禁止"我觉得应该这样"就改方向
-- 禁止先改了再说、禁止边改边宣布、禁止替用户做产品决策
-- 例（正确）：用户说"改成左右滑动"→ 我就只改左右滑动，不压缩间距、不改面板高度、不折叠滑块
-- 例（错误）：用户说"改成左右滑动"→ 我顺便把面板高度也改了、把滑块也折叠了（这是自作主张）
-
-## 代码风格
-
-```
-原生 JS，无 TypeScript，无框架
-- 函数命名: camelCase（slimCanvas, renderEditPreview）
-- UI id: kebab-case（slim-reset, edit-history-btn）
-- CSS 类: kebab-case（.deform-btn, .edit-section）
-- 变量: 全局 state 对象（state.filters, state.slim, state.deform）
-- 常量: UNDO_MAX, CACHE, STYLE_PRESETS
-- 注释: // 单行，中文
-```
-
-## Git 规范
-
-```
-commit message: 中文前缀 + 短描述
-  feat: 新增美型微调五大变形
-  fix: NSIS 安装界面全中文
-  refactor: 合并位移场替换 slimCanvas
-
-SSH 推送（已配置）:
-  git push origin master
-
-分支: 只用 master（单主线开发）
-```
-
-## 关键文件入口
-
-| 文件 | 角色 |
-|---|---|
-| `app.js` | 全部前端逻辑（252KB，单文件） |
-| `index.html` | 全部 UI 结构 |
-| `styles.css` | 全部样式 |
-| `sw.js` | Service Worker 缓存（CACHE 常量必须跟版本） |
-| `src-tauri/tauri.conf.json` | Tauri 配置 + NSIS 语言 + bundle.version |
-| `src-tauri/Cargo.toml` | Rust 版本号 |
-| `src-tauri/src/lib.rs` | Tauri 命令层（文件/剪贴板/壁纸） |
-| `test/regression.cjs` | 224 项前端回归测试 |
-| `scripts/sync-dist.cjs` | 打包前资源同步 |
-| `nsis_x/*.exe` | 交付产物（Setup + MSI） |
 
 ### 6. 台帐系统（成长型 · 跨会话交接入口）
 
@@ -170,12 +108,6 @@ SSH 推送（已配置）:
 - **每条 ≤15 行**：只写事实不写流水，长篇过程放 .session.md 临时区，提炼时压缩
 - **TOP 标签硬规则**（防新 AI 漏扫高频坑）：活跃区自动维护 🔴 TOP1（踩最多）+ 🟠 TOP2（踩 2 次并列第二），每次 session 开头检查、踩新坑后更新
 
-**自动归档硬限示例（当前活跃坑 9 个）**：
-```
-当前活跃坑：Iss-001/002/004/005/006/007/008/009/010（9 个）
-踩新坑 Iss-011（= 10 个）→ 检查踩最少的 → Iss-006/007/008/009/010 各踩 1 次 → 挤掉 Iss-006（最早）归档
-```
-
 #### 6.6 每轮工作结束必须总汇（会话收尾必做）
 
 会话快结束（用户说"就这样"、一轮大任务完成、或跑了 20+ 轮）时：
@@ -200,6 +132,70 @@ SSH 推送（已配置）:
 
 ---
 
+### 7. 改动前必须先说明，用户确认了再动手
+- 任何代码改动（改 CSS、改 HTML、改 JS、加文件、删文件）**必须先口头告诉用户要做什么**
+- 格式：大白话列出改动点 → 等用户说"可以"或"改吧" → 再执行
+- 用户没确认 = 不许动代码
+- 禁止先改了再说、禁止边改边宣布、禁止"我觉得应该这样"就直接动手
+- 例（正确）："我准备做三件事：1. styles.css 移动端 @media 里 .edit-panel 从 55vh 改成 60vh；2. 隐藏 .edit-sub-pane 里的色调分离 section；3. CACHE +1。可以吗？"
+- 例（错误）："改好了！你去手机上看看效果"
+
+### 7. 回复必须用大白话
+- 禁止用技术黑话、学术腔、英文缩写（SW / CDP / APK / DOM / CSS class 名等，第一次提可以写括号解释）
+- 说人话，像和同事聊天一样，别像写论文
+- 例（正确）："Service Worker（浏览器后台缓存程序）存了旧样式，所以你手机看不到我改的新面板"
+- 例（错误）："CSP policy blocks script eval causing Runtime.evaluate exception"
+
+### 8. 用户说什么就做什么，不许自作主张
+- 用户指令是**精确执行**，不是"参考意见"
+- 禁止擅自添加用户没要求的功能、禁止"我觉得应该这样"就改方向
+- 禁止先改了再说、禁止边改边宣布、禁止替用户做产品决策
+- 例（正确）：用户说"改成左右滑动"→ 我就只改左右滑动，不压缩间距、不改面板高度、不折叠滑块
+- 例（错误）：用户说"改成左右滑动"→ 我顺便把面板高度也改了、把滑块也折叠了（这是自作主张）
+
+## 代码风格
+
+```
+原生 JS，无 TypeScript，无框架
+- 函数命名: camelCase（slimCanvas, renderEditPreview）
+- UI id: kebab-case（slim-reset, edit-history-btn）
+- CSS 类: kebab-case（.deform-btn, .edit-section）
+- 变量: 全局 state 对象（state.filters, state.slim, state.deform）
+- 常量: UNDO_MAX, CACHE, STYLE_PRESETS
+- 注释: // 单行，中文
+```
+
+## Git 规范
+
+```
+commit message: 中文前缀 + 短描述
+  feat: 新增美型微调五大变形
+  fix: NSIS 安装界面全中文
+  refactor: 合并位移场替换 slimCanvas
+
+SSH 推送（已配置）:
+  git push origin master
+
+分支: 只用 master（单主线开发）
+```
+
+## 关键文件入口
+
+| 文件 | 角色 |
+|---|---|
+| `app.js` | 全部前端逻辑（252KB，单文件） |
+| `index.html` | 全部 UI 结构 |
+| `styles.css` | 全部样式 |
+| `sw.js` | Service Worker 缓存（CACHE 常量必须跟版本） |
+| `src-tauri/tauri.conf.json` | Tauri 配置 + NSIS 语言 + bundle.version |
+| `src-tauri/Cargo.toml` | Rust 版本号 |
+| `src-tauri/src/lib.rs` | Tauri 命令层（文件/剪贴板/壁纸） |
+| `test/regression.cjs` | 467 项前端回归测试（当前基线） |
+| `scripts/sync-dist.cjs` | 打包前资源同步 |
+| `nsis_x/*.exe` | 交付产物（Setup + MSI） |
+
+---
+
 ## 交付流程（每次改动后）
 
 ```
@@ -221,6 +217,7 @@ SSH 推送（已配置）:
 ## 10. 进程追踪铁律（P-YYYYMMDD-NNN）
 
 > 每次会话必用，杜绝"干到一半忘了在干嘛"和"换 AI 接不上"。
+> **每轮开头必复述当前 P 编号 + 动作清单状态**（不是只在会话开头出一次）。
 
 ### 10.1 编号规则
 ```

@@ -211,3 +211,22 @@ rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信�
 - regression.cjs appJs 合并 edit.js + batch.js + 独立 eval 块 + 删 DEBUG
 
 **踩坑沉淀 Iss-013**：TDZ 铁律 + Node $$ replace + 子文件闭包变量 + 嵌套函数注册陷阱
+
+---
+
+## 台账瘦身 + 设定补全（2026-10-18 · P-20261018-001）
+
+**regression**: 467/0 全绿 | **sw.js**: 未变（只改 md）
+
+**动作清单**（8 文件，零源码改动）：
+1. **AGENTS.md**：章节编号修正（§6 台帐系统从底部移到硬约束之后）+ 测试断言数 224→467 + §10 进程追踪补"每轮必复述"铁律
+2. **user-preferences.md**：补 2026-10-18 新偏好（美术部定位 + 墨玉绿主色 + 视觉统一质感）+ AI 工作流偏好 3 条（联网学习 + 后端取舍 + 前端体验）
+3. **START_HERE.md**：接手清单测试数 412→467
+4. **issues.md**：Iss-004（已踩 3 次归档）从活跃区移归档区 + 更新 TOP 标签（活跃坑从 10→9，合规）：🔴 TOP1 Iss-005 踩 7 次 / 🟠 TOP2 Iss-013 踩 5 次 + Iss-001/002 各踩 2 次
+5. **credentials.md**：删掉与 version-snapshot.md 重复的"版本号落点"表（保留构建命令模板）
+6. **version-snapshot.md**：Android 签名从"debug 无 release"修正为 release 签名就绪 + sw.js CACHE v68→v80
+7. **.session.md**：清空会话流水，留骨架模板
+8. **weekly/2026-10-17.md**：新建周报（14 个 commit + 6 子文件 + 4 批渐进替换）
+
+**台账状态**：活跃坑 9 个（硬限 ≤10 ✓），6 文件体系完整，无重复条目
+**关联**：↔AGENTS §6 台帐系统 / §10 进程追踪铁律

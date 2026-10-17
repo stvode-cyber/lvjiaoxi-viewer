@@ -24,27 +24,6 @@
 - **预防规则**：写 `# TODO: [PS5-GBK] 预防：参数行纯 ASCII，中文注释单独 # 行` 到构建脚本头部
 - **关联路径**：`scripts/sync-dist.cjs` 调用的 PS 脚本、`build-windows.bat` 间接调用的 PS
 
-#### Iss-004（活跃 · 踩 3 次归档 · 根因确认）Tauri NSIS Setup.exe /S 静默安装在当前环境不可靠
-
-- **问题**：Setup.exe 静默安装不可靠，三类表现：
-  - **v1（踩 2 次）**：装上了但沿用 Registry 记录的旧路径，/D 被忽略 → lnk 指向已删目录
-  - **v2（Chg-023）**：Setup.exe /S /D=C:\XXX 没装到 /D 指定路径，实际装到 Registry 最早的残留路径
-  - **v3（Chg-024 根因锁定）**：**纯 Tauri NSIS 模板（无任何 hook）/S 也卡！** 临时移除 installerHooks 后 Build 测试 — Setup.exe /S 15s 不退出；但 C:\LVJX_NOHooks 里已经有 EXE 了（复制了一半但没走完安装流程）
-- **根因**：**Tauri bundler 内嵌的 NSIS 模板 Setup.exe /S 在当前 Windows 10 管理员环境下有缺陷** — 不是 installer.nsh hook 的问题。已通过两轮隔离验证：
-  1. 简化 PreInstall 只留 taskkill → /S 仍卡
-  2. 完全移除 installerHooks → /S 仍卡，EXE 落盘但安装未完成
-- **已做改进**（Chg-024 installer.nsh 简化）：
-  - PreInstall 里的卸载逻辑全删（ExecWait uninstall.exe /S、cmd /c /qn /norestart、文件删除）— 这些在 /S 模式下会卡住或执行顺序错
-  - 只留 `nsExec::ExecToLog 'taskkill /F /IM "lvjiaoxi-viewer.exe"'` — 最轻量、最安全
-  - 旧版卸载交给用户「设置-应用」或手动删残留目录
-- **最终 Workaround**：
-  - **发版自动化验证**：release EXE 直接运行（二进制与安装版一致，已验证可启动 + Responding=True）
-  - **Setup.exe 定位**：只做**用户交互式**安装包发布（双击运行有 UI 引导），不用于自动化 /S
-  - **如需静默安装**：走 MSI（WiX）通道或 SCCM/GPO
-- **关联路径**：`src-tauri/installer.nsh`、`src-tauri/target/release/bundle/nsis/绿角犀看图_*setup.exe`
-- **重现次数**：3（2026-09-30 / 2026-10-01 / 2026-10-12 Chg-023+024）
-- **归档原因**：根因锁定 + Workaround 确立 + 代码已简化
-
 #### Iss-005 🔴 TOP1（活跃 · 踩 7 次）WebView2 对某些 GIF 变种原生解码失败
 
 - **问题**：GIF 文件在 Rust 侧正确透传 data URL（data:image/gif;base64,...），但前端 <img src> 触发 onerror → "无法解码：xxx.gif"
@@ -120,7 +99,7 @@
 ---
 
 
-#### Iss-013（活跃 · 踩 5 次 · 2026-10-18 P-006 第4批）渐进替换 sub-file + TDZ + replace 特殊序列
+#### Iss-013 🟠 TOP2（活跃 · 踩 5 次 · 2026-10-18 P-006 第4批）渐进替换 sub-file + TDZ + replace 特殊序列
 
 - **问题**：app.js 渐进替换裸调 → window.__API__.xxx() 过程中，子文件（edit.js/batch.js）闭包访问不到 app.js IIFE 内部变量；Object.assign 之前调用 window.__API__.xxx() 触发 TDZ；Node.js str.replace 的 $$ 被解释成单个 $
 - **根因**：三重机制叠加——(1) IIFE 作用域隔离：子文件 IIFE 闭包看不到 app.js IIFE 内部顶层 const/let；(2) TDZ：Object.assign(__API, {...}) 之后才能安全调 __API.xxx()，之前调函数声明提升的裸调能跑但调 __API.xxx() 会炸；(3) Node.js String.prototype.replace 的 replaceValue 里 $$ 是特殊序列（代表单个 $），不是正则里的 $$ 匹配
@@ -141,6 +120,21 @@
 
 ---
 ## 归档区（已沉淀 / 已解决，只追加不准删）
+
+#### Iss-004（已沉淀 · 踩 3 次归档 · 2026-10-12）Tauri NSIS Setup.exe /S 静默安装在当前环境不可靠
+
+- **问题**：Setup.exe 静默安装不可靠，三类表现：
+  - **v1（踩 2 次）**：装上了但沿用 Registry 记录的旧路径，/D 被忽略 → lnk 指向已删目录
+  - **v2（Chg-023）**：Setup.exe /S /D=C:\XXX 没装到 /D 指定路径，实际装到 Registry 最早的残留路径
+  - **v3（Chg-024 根因锁定）**：**纯 Tauri NSIS 模板（无任何 hook）/S 也卡！** 临时移除 installerHooks 后 Build 测试 — Setup.exe /S 15s 不退出；但 C:\LVJX_NOHooks 里已经有 EXE 了
+- **根因**：**Tauri bundler 内嵌的 NSIS 模板 Setup.exe /S 在当前 Windows 10 管理员环境下有缺陷** — 不是 installer.nsh hook 的问题。两轮隔离验证确认
+- **最终 Workaround**：
+  - **发版自动化验证**：release EXE 直接运行（二进制与安装版一致）
+  - **Setup.exe 定位**：只做**用户交互式**安装包发布，不用于自动化 /S
+  - **如需静默安装**：走 MSI（WiX）通道或 SCCM/GPO
+- **关联 Chg**：Chg-023 / Chg-024 / Chg-S1
+- **关联路径**：`src-tauri/installer.nsh`
+- **归档原因**：根因锁定 + Workaround 确立 + 代码已简化
 
 #### Iss-011（已解决 · 2026-10-17）Windows 资源管理器缩略图变程序图标
 
