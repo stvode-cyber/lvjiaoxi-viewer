@@ -41,6 +41,11 @@ Thumbs.db
 .verif/
 .trae/*                # 忽略 .trae 下所有（TRAE IDE 本地配置）
 !.trae/ledger/          # 但台帐目录必须跟项目走，git 可提交（见 AGENTS.md §6）
+.trae/ledger/credentials.md   # ⚠️ 含敏感信息（keystore 密码/证书路径），不进 git
+.trae/ledger/screen_*.png      # 临时截图，不要提交
+.trae/ledger/version-snapshot.md  # 临时版本快照，不要提交
+src-tauri/gen/android/app/src/main/assets/  # Android 构建自动生成，不跟源码走
+screencap*.png         # 临时截图
 .workbuddy/
 
 # === NSIS 临时 ===
