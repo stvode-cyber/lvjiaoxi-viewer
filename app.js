@@ -309,7 +309,7 @@
     // 渲染单张图（dualStage 下）
     const loadOne = (item, imgEl, wrapEl) => {
       if (!item) { imgEl.hidden = true; imgEl.removeAttribute('src'); return; }
-      resolveItemSrc(item).then((url) => {
+      window.__API__.resolveItemSrc(item).then((url) => {
         imgEl.hidden = false;
         imgEl.src = url;
       }).catch((e) => {
@@ -560,12 +560,92 @@
 
   // ============ 依赖注入：把主文件核心对象暴露给子文件 IIFE ============
   Object.assign(__API, {
-    state, els, desktop, settings,
-    $, $$,
-    IMG_EXT, NATIVE_EXT, ARCHIVE_EXT,
-    naturalCompare, escapeHtml, toast, download, showLoadingError, resetLoading,
-    extOf, isImageFile, isArchiveFile, formatBytes, formatDate,
-  });
+    state,
+    els,
+    desktop,
+    settings,
+    $,
+    $,
+    IMG_EXT,
+    NATIVE_EXT,
+    ARCHIVE_EXT,
+    naturalCompare,
+    escapeHtml,
+    toast,
+    download,
+    showLoadingError,
+    resetLoading,
+    extOf,
+    isImageFile,
+    isArchiveFile,
+    formatBytes,
+    formatDate,
+    showImage,
+    renderThumbWindow,
+    updateChrome,
+    isHeicItem,
+    decodeHeicToUrl,
+    resolveItemSrc,
+    handleOpenPaths,
+    buildItems,
+    loadImage,
+    copyText,
+    isLoggedIn,
+    pushSettings,
+    applyTheme,
+    applyComicMode,
+    highlightThumb,
+    startSlideshow,
+    cacheDom,
+    bindEvents,
+    renderRecentInline,
+    registerServiceWorker,
+    initAuth,
+    refreshAccountUI,
+    renderFavList,
+    renderHistList,
+    flushQueue,
+    loadSettings,
+    saveSettings,
+    getSetting,
+    loadTheme,
+    toggleTheme,
+    toggleComicMode,
+    renderDualPage,
+    init,
+    renderEditPreview,
+    applyThumbFilter,
+    currentOrient,
+    orientSwaps,
+    displayDims,
+    detectLongImage,
+    computeFit,
+    applyTransform,
+    applyFit,
+    applyActual,
+    clampOffset,
+    zoomAt,
+    zoomByCenter,
+    updateZoomLabel,
+    rotate,
+    flip,
+    next,
+    prev,
+    scheduleFsHide,
+    applyThumbVisibility,
+    openJump,
+    closeJump,
+    goToIndex,
+    genThumb,
+    preloadAround,
+    trimCache,
+    syncFilterUI,
+    syncBeautyBar,
+    updateSlimUI,
+    updateDeformUI,
+    updateOpsUI,
+    recordHistory,
+  });;;
 
   function cacheDom() {
     [
@@ -682,9 +762,9 @@
     }
     if (entries.length) {
       for (const en of entries) await traverseEntry(en, out);
-      buildItems(out, getSetting('view', 'recursive'));
+      window.__API__.buildItems(out, getSetting('view', 'recursive'));
     } else if (dt.files && dt.files.length) {
-      buildItems(dt.files, getSetting('view', 'recursive'));
+      window.__API__.buildItems(dt.files, getSetting('view', 'recursive'));
     }
   });
 
@@ -827,7 +907,7 @@
   function loadImage(item) {
     return new Promise((resolve, reject) => {
       if (item.img && item.img.complete && item.img.naturalWidth) { resolve(item.img); return; }
-      resolveItemSrc(item).then((src) => {
+      window.__API__.resolveItemSrc(item).then((src) => {
         const img = new Image();
         img.onload = () => { item.img = img; item.natW = img.naturalWidth; item.natH = img.naturalHeight; resolve(img); };
         img.onerror = () => reject(new Error('解码失败: ' + item.name));
@@ -931,7 +1011,7 @@
         }
       };
       const doLoadImage = () => {
-        loadImage(item).then((img) => {
+        window.__API__.loadImage(item).then((img) => {
           state.cache.set(index, img);
           if (state.index === index) finish(img);
         }).catch(() => {
@@ -944,7 +1024,7 @@
             item.url = url;
             state.cache.delete(index);
             renderThumbWindow(index);
-            return loadImage(item).then((img) => { state.cache.set(index, img); if (state.index === index) finish(img); });
+            return window.__API__.loadImage(item).then((img) => { state.cache.set(index, img); if (state.index === index) finish(img); });
           }).catch(fail);
         });
       };
@@ -1216,7 +1296,7 @@
         if (url) im.src = url;
       }).catch(() => {});
     };
-    resolveItemSrc(item).then((src) => { im.src = src; }).catch(() => {});
+    window.__API__.resolveItemSrc(item).then((src) => { im.src = src; }).catch(() => {});
   }
   function highlightThumb(index) {
     // index 不在当前窗口 → 先把窗口移动过去再高亮
@@ -1247,7 +1327,7 @@
       const img = new Image();
       img.onload = () => { state.cache.set(i, img); trimCache(cap); };
       img.onerror = () => {};
-      resolveItemSrc(it).then((src) => { img.src = src; }).catch(() => {});
+      window.__API__.resolveItemSrc(it).then((src) => { img.src = src; }).catch(() => {});
     });
     trimCache(cap);
   }
@@ -1288,7 +1368,7 @@
   async function copyCurrentImage() {
     const item = state.items[state.index];
     if (!item) return;
-    try { await loadImage(item); } catch (e) { toast('无法加载图片'); return; }
+    try { await window.__API__.loadImage(item); } catch (e) { toast('无法加载图片'); return; }
     const canvas = makeCanvasOfCurrent(1);
     if (!canvas) return;
     canvas.toBlob(async (blob) => {
@@ -1330,7 +1410,7 @@
     const item = state.items[state.index];
     if (!item) return;
     if (await desktop.setWallpaper(item).catch(() => false)) { toast('已设置为桌面壁纸'); return; }
-    try { await loadImage(item); } catch (e) { toast('无法加载图片'); return; }
+    try { await window.__API__.loadImage(item); } catch (e) { toast('无法加载图片'); return; }
     const src = makeCanvasOfCurrent(1);
     if (!src) { toast('无法生成壁纸'); return; }
     const mode = getSetting('view', 'wallpaperMode') || 'fit';
@@ -3895,7 +3975,7 @@
   async function exportCurrent() {
     const item = state.items[state.index];
     if (!item) return;
-    try { await loadImage(item); } catch (e) { toast('无法加载图片'); return; }
+    try { await window.__API__.loadImage(item); } catch (e) { toast('无法加载图片'); return; }
     let canvas = await exportCanvasOfCurrent();
     if (!canvas) return;
     // 美工烘焙：消除笔（全尺寸 inpaint）→ 马赛克 → 文字 → 边框（OpenCV/AI 之后、编码之前）
@@ -4296,7 +4376,7 @@
     const fmt = els.wmFormat ? els.wmFormat.value : 'image/jpeg';
     const text = els.wmText ? els.wmText.value.trim() : '';
     if (!text) { toast('请先输入水印文字'); return null; }
-    await loadImage(it);
+    await window.__API__.loadImage(it);
     if (!it.img) return null;
     const canvas = document.createElement('canvas');
     canvas.width = it.img.naturalWidth;
@@ -4478,7 +4558,7 @@
         if (batchCancelled) break;
         const it = items[i];
         try {
-          await loadImage(it);
+          await window.__API__.loadImage(it);
           let blob = null, name = it.name;
           if (batchTab === 'convert') blob = await batchConvert(it);
           else if (batchTab === 'resize') { blob = await batchResize(it); name = stripExt(it.name) + extFromMime(getSettingResampleFormat()); }
@@ -4720,7 +4800,7 @@
       ? (entry.path ? [entry.path] : [])
       : (entry.paths || []);
     if (desktop.available() && paths.length) {
-      handleOpenPaths(paths, getSetting('files', 'recursive'))
+      window.__API__.handleOpenPaths(paths, getSetting('files', 'recursive'))
         .then((ok) => { if (!ok) toast('打开失败：' + entry.name); })
         .catch(() => toast('打开失败：' + entry.name));
       return;
@@ -5176,7 +5256,7 @@
     els.fileInput.addEventListener('change', (e) => {
       if (e.target.files.length) {
         addRecentFiles(e.target.files);
-        buildItems(e.target.files, false);
+        window.__API__.buildItems(e.target.files, false);
       }
       e.target.value = '';
     });
@@ -5194,7 +5274,7 @@
           top = first.webkitRelativePath.split('/')[0];
         }
         if (top) addRecentFolder(top, files.length);
-        buildItems(files, getSetting('view', 'recursive'));
+        window.__API__.buildItems(files, getSetting('view', 'recursive'));
       }
       e.target.value = '';
     });
@@ -5496,7 +5576,7 @@
           for (let i = 0; i < items.length; i++) {
             if (els.gifStatus) els.gifStatus.textContent = '⏳ 加载帧 ' + (i + 1) + ' / ' + items.length;
             const item = items[i];
-            const resolved = await resolveItemSrc(item);
+            const resolved = await window.__API__.resolveItemSrc(item);
             const url = resolved.url || resolved.displayUrl;
             if (!url) continue;
 
@@ -6013,12 +6093,12 @@
         const ev = window.__TAURI__.event;
         ev.listen('tauri://file-drop', (e) => {
           const paths = (e.payload && e.payload.paths) || [];
-          if (paths.length) handleOpenPaths(paths, getSetting('files', 'recursive'));
+          if (paths.length) window.__API__.handleOpenPaths(paths, getSetting('files', 'recursive'));
         });
         ev.listen('open-file', (e) => {
           const pl = e.payload;
           const paths = Array.isArray(pl) ? pl : (pl && pl.path ? [pl.path] : []);
-          if (paths.length) handleOpenPaths(paths, getSetting('files', 'recursive'));
+          if (paths.length) window.__API__.handleOpenPaths(paths, getSetting('files', 'recursive'));
         });
 
         // Android intent 处理：Kotlin MainActivity 通过 evaluateJavascript 推 __androidOpenFile(paths)
@@ -6044,7 +6124,7 @@
               addRecent({ kind: 'file', path: first, name: first.split('/').pop() || 'image', ts: Date.now() });
             }).catch(err => { console.warn('Android content:// fetch 失败:', err); });
           }
-          if (localPaths.length) handleOpenPaths(localPaths, false);
+          if (localPaths.length) window.__API__.handleOpenPaths(localPaths, false);
         };
         // WebView 还没 ready 时 Kotlin 先推了 intent → 暂存到 __pendingAndroidOpenFile
         if (Array.isArray(window.__pendingAndroidOpenFile) && window.__pendingAndroidOpenFile.length) {
@@ -6062,7 +6142,7 @@
           desktop.invoke('get_pending_paths').then((paths) => {
             if (Array.isArray(paths) && paths.length) {
               const key = paths.slice().sort().join('\u0000');
-              if (key !== pendingLoaded) { pendingLoaded = key; handleOpenPaths(paths, getSetting('files', 'recursive')); }
+              if (key !== pendingLoaded) { pendingLoaded = key; window.__API__.handleOpenPaths(paths, getSetting('files', 'recursive')); }
             }
           }).catch(() => { /* 非致命 */ });
         };

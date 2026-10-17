@@ -5,18 +5,18 @@
 
   async function handleOpenPaths(paths, recursive) {
     if (!paths || !paths.length) return;
-    if (paths.length === 1 && isArchiveFile(paths[0])) {
+    if (paths.length === 1 && window.__API__.isArchiveFile(paths[0])) {
       return window.__API__.desktop.openArchive(paths[0]);
     }
     return window.__API__.desktop.loadPaths(paths, recursive);
   }
 
   function buildItems(fileList, recursive) {
-    let files = Array.from(fileList).filter((f) => isImageFile(f.name));
+    let files = Array.from(fileList).filter((f) => window.__API__.isImageFile(f.name));
     if (!files.length) { window.__API__.toast('未找到图片文件'); return; }
     files.sort((a, b) => {
       const pa = (a.webkitRelativePath || a.name), pb = (b.webkitRelativePath || b.name);
-      return naturalCompare(pa, pb);
+      return window.__API__.naturalCompare(pa, pb);
     });
     window.__API__.state.items.forEach((it) => { if (it.url) URL.revokeObjectURL(it.url); if (it.displayUrl && it.displayUrl.indexOf('blob:') >= 0) URL.revokeObjectURL(it.displayUrl); });
     window.__API__.state.items = files.map((f) => ({
@@ -42,9 +42,9 @@
         return dataUrl;
       }).catch((e) => { throw new Error('压缩包图片加载失败: ' + e); });
     }
-    if (!isHeicItem(item)) return Promise.resolve(item.url);
+    if (!window.__API__.isHeicItem(item)) return Promise.resolve(item.url);
     if (item.displayUrl) return Promise.resolve(item.displayUrl);
-    return decodeHeicToUrl(item).then((u) => { item.displayUrl = u; return u; });
+    return window.__API__.decodeHeicToUrl(item).then((u) => { item.displayUrl = u; return u; });
   }
 
   function loadImage(item) {
