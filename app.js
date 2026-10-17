@@ -641,7 +641,15 @@
     updateChrome();
   }
 
-  function openFiles() { els.fileInput.click(); }
+  function openFiles() {
+    // Android 上 fileInput.click() 只能扫 App 内部存储，用 SAF Picker 走系统文件管理器
+    // window.__AndroidBridge 由 MainActivity.onWebViewCreate 注册（WebView.addJavascriptInterface）
+    if (navigator.userAgent.includes('Android') && window.__AndroidBridge) {
+      window.__AndroidBridge.pickSafFile(true);
+    } else {
+      els.fileInput.click();
+    }
+  }
   function openDir() { els.dirInput.click(); }
 
   // 拖放（含目录递归）
