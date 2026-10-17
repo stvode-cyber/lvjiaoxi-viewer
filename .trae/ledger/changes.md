@@ -6,18 +6,24 @@
 
 ---
 
-## 2026-10-17 · app.js 模块化拆分（Chg-029）
+## 2026-10-17 · app.js 模块化拆分（Chg-029 + Chg-P8）
 
-**commit**: `7842128` | **涉及**: 30 files | **regression**: 467/0 全绿
+**commit**: `7842128` + `待填`（P-004）| **涉及**: 32 files | **regression**: 467/0 全绿
 
+**Chg-029（第一轮 · 4 子文件）**：
 - 新增 `js/exif.js`（273 行）— renderInfo + EXIF 全部 + parsePngTextChunks
 - 新增 `js/archive.js`（70 行）— handleOpenPaths + buildItems + resolveItemSrc + loadImage
 - 新增 `js/render.js`（~450 行）— showImage + computeFit/缩放/旋转/翻页/缩略图
 - 新增 `js/init.js`（~180 行）— naturalCompare + settings + theme + comic + cacheDom + init
-- 架构：子文件 IIFE 自执行注册到 `window.__API__`，函数内部用 `window.__API__.xxx()` 互调
-- app.js 主文件加 Object.assign 注入层；裸调用 readExif/renderInfo 等 → `window.__API__.xxx()`
-- regression.cjs 先 eval 4 个子文件再 eval app.js；appJs 合并所有 js/*.js + app.js
-- sw.js CACHE v72→v73；sync-dist 8 文件同步；LF/CRLF 警告已处理
+- 架构：子文件 IIFE 自执行注册到 `window.__API__`
+
+**Chg-P8（第二轮 · 2 子文件 · 渐进式落地）**：
+- 新增 `js/edit.js`（2299 行）— 美图管线：滤镜/色调/撤销/变形/AI 超分/抠图/修图/文字/马赛克/消除笔/预览导出
+- 新增 `js/batch.js`（1194 行）— 海报/水印/emoji/证件照/DPI 嵌入/批量操作/批量转换缩放
+- index.html script 顺序调整：gif → exif → archive → render → init → **edit → batch** → app.js
+- regression.cjs appJs 拼接加 edit.js/batch.js
+- **渐进式方案**：子文件 IIFE 注册 `__API__.xxx` 公共接口，app.js 暂时保留原函数体（裸调用不破坏），后续可逐步替换裸调用 + 删冗余
+- sw.js CACHE v74→v75；sync-dist 8 文件同步
 
 **踩坑**:
 - jsdom eval 泄露 `const API` 到全局作用域 → 去掉 `const API` 直接 `window.__API__`
