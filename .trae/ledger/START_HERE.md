@@ -4,24 +4,28 @@
 桌面图片浏览器 + 内嵌底部栏美图编辑器。零框架原生 JS 单文件 app.js（252KB）+ Rust Tauri v2 + WebView2 离线运行时。核心卖点：合并位移场变形（导出 = 预览同公式）、AI 超分 ONNX 推理失败自动降级 Lanczos、抠图高斯似然比 + 双边羽化、压缩包直看（ZIP/CBZ 懒加载）。
 
 ## 当前版本
-`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v64**）
-- **2026-10-16 最新 build**：Chg-030 Android 完整构建管线闭环（`tauri android build --apk -t aarch64 armv7`，Universal APK 35.38MB，JNI 20 符号齐全，真机 PID 25696 存活零崩溃）
+`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v68**）
+- **2026-10-17 最新提交**：Chg-031~035 + commit 3f1b36f
+- **桌面 build**：Setup.exe 223MB（Chg-034 rayon + Chg-035 IPC 懒加载，冷启动 5.7s→0.8s）
+- **Android APK**：Universal 35.38MB（Chg-030，双架构 arm64+armv7 release 签名）
 
-## 完成度（2026-10-16 上午）
+## 完成度（2026-10-17 下午）
 
 | 模块 | 状态 | 备注 |
 |------|------|------|
-| 图片浏览核心 | ✅ 100% | 打开/缩放/翻页/最近访问/穿透文件夹 |
-| GIF 解码兜底 | ✅ 100% | 正常 GIF 原生播动画；压缩包内 GIF Rust 端 image crate → JPEG 第一帧（Iss-005 Chg-022 彻底修复） |
-| 美图编辑器 | ✅ 100% | 内嵌底部栏，edit-panel 紧贴 bottom-nav 上方展开；slim/deform 合并位移场 |
+| 图片浏览核心 | ✅ 100% | 打开/缩放/翻页/最近访问/穿透文件夹；**虚拟滚动窗口 ±3**（Chg-031） |
+| GIF 解码兜底 | ✅ 100% | 正常 GIF 原生播动画；坏 GIF decode_fallback；压缩包内/缩略图 Rust 端 image crate → JPEG（Iss-005 7 次踩坑全闭环） |
+| 美图编辑器 | ✅ 100% | 内嵌底部栏（border-top），edit-panel 紧贴 bottom-nav 上方；slim/deform 合并位移场 |
 | AI 超分 | ✅ 100% | ONNX + ort.wasm，失败降级 Lanczos |
 | 抠图 | ✅ 100% | 高斯似然比 + 双边羽化 ≤512px；消除笔 Patch-Match |
 | 压缩包直看 | ✅ 100% | ZIP/CBZ/RAR/7Z 懒加载 |
 | 批量加水印 | ✅ 100% | drawWatermarkOnCanvas 纯函数 + 9 宫格 + tile -30° |
 | 海报边框+emoji | ✅ 100% | BORDER_PRESETS + emojiBar + 一键生成 |
 | 打包交付 | ✅ 100% | NSIS 全中文 SimpChinese；installer.nsh PreInstall 仅留 taskkill |
-| 回归测试 | ✅ 100% | regression.cjs **412** 项全绿 |
-| **Android 主线** | **🔄 55%** | **完整构建管线闭环**（Chg-030）：`tauri android build --apk -t aarch64 armv7` 一次跑通；Universal APK 35.38MB 双架构 release 签名；JNI 20 符号齐全；真机 PID 25696 存活；Resolver priority ✅ intent onNewIntent ✅ content:// SAF ✅ release keystore ✅；待 intent 真机测试（Gallery/Files 点图打开）+ SAF Picker |
+| 回归测试 | ✅ 100% | regression.cjs **414** 项全绿 |
+| **启动性能** | **✅ 100%** | **rayon 并行 + IPC 懒加载**（Chg-034/035）：load_paths 53 张 1500ms→37ms；冷启动 setup→showImage 5730ms→809ms（7x 提升） |
+| **缩略图渲染** | **✅ 100%** | **虚拟滚动窗口 ±3**（Chg-031）：最多 7 张 DOM 同时存活，thumbUrl 永久缓存复用 |
+| **Android 主线** | **🔄 55%** | **完整构建管线 + Bug-A/B 已修**（Chg-032）：pendingIntent 暂存 + allowContentAccess + Manifest 合并；通用 APK 35.38MB 双架构 release 签名；待 intent 真机测试（手机连好后 Gallery/Files 点图）+ SAF Picker 完整授权 |
 | 鸿蒙/iOS 线 | ⏸ 暂缓 | 已移除，后续再回归 |
 | 后端服务 | ⬜ 待接入 | |
 

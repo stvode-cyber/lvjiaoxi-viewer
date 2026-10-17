@@ -1,9 +1,9 @@
 # context.md · 当前状态快照
 
 > 这个文件记录项目的稳定状态。完成度变了、硬规则变了、关键配置变了 → 改这里。
-> 最近更新：2026-10-12（Chg-023 代码审核安全修复 + Chg-024 installer.nsh 简化 + 鸿蒙/iOS 线暂缓）
+> 最近更新：2026-10-17（Chg-031~035 缩略图窗口 + rayon 并行 + IPC 懒加载 + Android Bug-A/B 三件套 + WebP）
 
-## 完成度快照（2026-10-10）
+## 完成度快照（2026-10-17）
 
 | 模块 | 百分比 | 状态 | 备注 |
 |------|--------|------|------|
@@ -16,7 +16,9 @@
 | 批量加水印 | 100% | ✅ | drawWatermarkOnCanvas 纯函数 + 9 宫格 + tile -30° |
 | 海报边框+emoji | 100% | ✅ | BORDER_PRESETS + emojiBar + 一键生成 |
 | 打包交付 | 100% | ✅ | NSIS SimpChinese；内嵌 WebView2；installer.nsh 三段 hook |
-| 回归测试 | 100% | ✅ | regression.cjs **412** 项全绿 |
+| 回归测试 | 100% | ✅ | regression.cjs **414** 项全绿（Chg-022/029 各 +2） |
+| **启动性能** | **100%** | ✅ | **rayon 并行 + IPC 懒加载**（Chg-034/035）：load_paths 53 张 1500ms→37ms；冷启动 setup→showImage 5730ms→809ms（7x 提升） |
+| **缩略图渲染** | **100%** | ✅ | **虚拟滚动窗口 ±3**（Chg-031）：只渲染当前选中前后各 3 张最多 7 张 DOM，thumbUrl 永久缓存复用 |
 | 鸿蒙主线 | — | ⏸ 暂缓 | 已移除 harmony/ + iOS 图标，后续再回归 |
 | **Android 主线** | **55%** | 🔄 | **完整构建管线闭环**（2026-10-16 Chg-030）：tauri android build --apk -t aarch64 armv7 一次跑通；Universal APK 35.38MB 双架构（arm64+armv7）release 签名；JNI 20 符号齐全；真机 PID 25696 存活零崩溃；Resolver priority ✅ intent onNewIntent ✅ content:// SAF ✅ release keystore ✅ styles.css 移动端适配 ✅；待 Android intent 真机测试（从 Gallery/Files 点图打开 content://）+ SAF Picker 完整授权 |
 | 后端服务 | 0% | ⬜ | server/mock-server.js 占位 |
@@ -28,9 +30,9 @@
 | Tauri bundle.version | 0.1.0 | src-tauri/tauri.conf.json |
 | Cargo package.version | 0.1.0 | src-tauri/Cargo.toml |
 | manifest webmanifest version | 0.1.0 | manifest.webmanifest |
-| **sw.js CACHE** | **lvjiaoxi-viewer-v64** | sw.js ← **改 app.js/styles.css 必须再 +1** |
+| **sw.js CACHE** | **lvjiaoxi-viewer-v68** | sw.js ← **改 app.js/styles.css 必须再 +1** |
 | 显示版本 (app.js about) | v0.1.0 | app.js |
-| 最近 build | 2026-10-16 | Chg-030 Android 完整构建管线闭环（tauri android build --apk -t aarch64 armv7，35.38MB，PID 25696 存活） |
+| 最近 build | 2026-10-17 | Chg-034 rayon 并行 + Chg-035 IPC 懒加载（冷启动 5.7s→0.8s）；Chg-032 Android Bug-A/B + Manifest 合并；桌面 Setup.exe 223MB |
 
 ## UI 布局快照（2026-10-09 Dc-011 定稿）
 
@@ -113,3 +115,4 @@
 | list_archive_entries | 112 | ZIP/CBZ 压缩包内图片条目列表（懒加载） |
 | read_archive_entry | 141 | 按需读取压缩包内单张图片 → data URL |
 | decode_fallback | 490 | 前端解码兜底（GIF 等原生透传失败 → image crate → JPEG 第一帧） |
+| get_image_data | ~410 | IPC 懒加载单张拉（Chg-035：load_paths 只传元信息，前端按需调此命令拿 data URL） |
