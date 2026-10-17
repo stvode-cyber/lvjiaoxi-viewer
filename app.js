@@ -88,6 +88,8 @@
       }));
       state.items.forEach((it) => { if (it.url && it.url.indexOf('blob:') === 0) URL.revokeObjectURL(it.url); if (it.displayUrl && it.displayUrl.indexOf('blob:') >= 0) URL.revokeObjectURL(it.displayUrl); });
       state.items = items; state.index = -1;
+      state.archivePath = null;  // 非压缩包模式清空（📖 漫画按钮自动隐藏）
+      applyComicMode(false);     // 切回单页模式
       els.emptyHint.hidden = true; // 与 Web loadFiles 一致：加载后隐藏空态提示，避免覆盖主视区
       if (items.length) {
         renderThumbWindow(0);
@@ -130,6 +132,8 @@
       els.emptyHint.hidden = true;
       renderThumbWindow(0);
       toast('📦 ' + items.length + ' 张图片（压缩包直看）');
+      // 📖 压缩包打开时显示漫画模式按钮 + 读取偏好
+      applyComicMode(localStorage.getItem('qjviewer_comic_v1') === '1');
       showImage(0);
       updateChrome();
       return true;
@@ -267,7 +271,57 @@
     try { localStorage.setItem(THEME_KEY, next); } catch {}
     applyTheme(next);
   }
-  // 注意：applyTheme() 立即调用要等 els 初始化后，见 cacheDom 之后
+  // 注意：applyTheme() / applyComicMode() 立即调用要等 els 初始化后，见 init() cacheDom() 之后
+
+  // ============ 双页漫画模式（2026-10-17 · A2 对标 HoneyView） ============
+  const COMIC_KEY = 'qjviewer_comic_v1';
+  function applyComicMode(on) {
+    state.comicMode = !!on;
+    const show = !!state.archivePath && !!on;   // 只在压缩包模式下生效
+    if (els.dualStage) els.dualStage.hidden = !show;
+    if (els.imgWrap) els.imgWrap.hidden = show;
+    if (els.btnComicMode) {
+      els.btnComicMode.hidden = !state.archivePath;    // 压缩包模式才显示按钮
+      els.btnComicMode.classList.toggle('active', !!on);
+    }
+  }
+  function toggleComicMode() {
+    if (!state.archivePath) { toast('📖 双页模式仅在压缩包浏览时可用'); return; }
+    const next = !state.comicMode;
+    try { localStorage.setItem(COMIC_KEY, next ? '1' : '0'); } catch {}
+    applyComicMode(next);
+    // 切到双页时对齐偶数索引（左页）
+    if (next && state.index % 2 !== 0) { state.index = state.index - 1; }
+    showImage(state.index);
+  }
+
+  // 📖 双页漫画渲染：同时加载 index 和 index+1 两张
+  function renderDualPage(index) {
+    els.loading.hidden = false;
+    // 左页 = index，右页 = index + 1（如果存在）
+    const leftItem = state.items[index];
+    const rightItem = state.items[index + 1] || null;
+
+    // 渲染单张图（dualStage 下）
+    const loadOne = (item, imgEl, wrapEl) => {
+      if (!item) { imgEl.hidden = true; imgEl.removeAttribute('src'); return; }
+      resolveItemSrc(item).then((url) => {
+        imgEl.hidden = false;
+        imgEl.src = url;
+      }).catch((e) => {
+        imgEl.hidden = true;
+      });
+    };
+
+    loadOne(leftItem, els.imageLeft, els.imgWrapLeft);
+    if (rightItem) loadOne(rightItem, els.imageRight, els.imgWrapRight);
+    else { els.imageRight.hidden = true; els.imageRight.removeAttribute('src'); }
+
+    els.loading.hidden = true;
+    updateChrome();
+    highlightThumb(index);
+    if (state.slide.active) { state.slide.pendingNext = false; startSlideshow(); }
+  }
 
 
   // ============ 快捷键（可自定义，PRD 5.1「快捷键自定义」的 Web 可行实现）============
@@ -467,6 +521,7 @@
   const state = {
     items: [],            // {file,name,url,size,lastModified,type,img,thumbUrl,natW,natH,exif}
     index: -1,
+    comicMode: false,     // 📖 双页漫画模式（A2 2026-10-17）
     scale: 1, fitScale: 1,
     offsetX: 0, offsetY: 0,
     rotation: 0, flipH: false, flipV: false,
@@ -502,9 +557,9 @@
     [
       'btnOpenFiles', 'btnOpenDir', 'fileInput', 'dirInput',
       'btnZoomOut', 'btnZoomFit', 'btnZoomIn', 'btnRotL', 'btnRotR', 'btnFlipH', 'btnFlipV',
-      'btnCopy', 'btnEdit', 'btnBeauty', 'btnInfo', 'btnTheme', 'btnSlide', 'btnBatch', 'btnSettings', 'btnFull',
+      'btnCopy', 'btnEdit', 'btnBeauty', 'btnInfo', 'btnTheme', 'btnSlide', 'btnBatch', 'btnComicMode', 'btnSettings', 'btnFull',
       'btnSnap', 'btnUndo', 'btnRedo',
-      'viewer', 'stage', 'image', 'imgWrap', 'emptyHint', 'loading',
+      'viewer', 'stage', 'image', 'imgWrap', 'dualStage', 'imageLeft', 'imgWrapLeft', 'imageRight', 'imgWrapRight', 'emptyHint', 'loading',
       'navPrev', 'navNext', 'edgeLeft', 'edgeRight', 'counter', 'jumpInput',
       'thumbBar', 'thumbs', 'thumbSearch', 'thumbCount',
       'beautyBar', 'bottomNav',
@@ -781,6 +836,9 @@
     state.index = index;
     const item = state.items[index];
 
+    // 📖 双页漫画模式：同时渲染当前页和下一页
+    if (state.comicMode) { return renderDualPage(index); }
+
     if (!getSetting('view', 'rememberRotation')) {
       state.rotation = 0; state.flipH = false; state.flipV = false;
     }
@@ -991,8 +1049,8 @@
   }
 
   // ============ 翻页与导航 ============
-  function next() { showImage(state.index + 1); }
-  function prev() { showImage(state.index - 1); }
+  function next() { state.comicMode ? showImage(state.index + 2) : showImage(state.index + 1); }
+  function prev() { state.comicMode ? showImage(state.index - 2) : showImage(state.index - 1); }
 
   function updateChrome() {
     const has = state.items.length > 0;
@@ -5399,6 +5457,7 @@
     if (els.btnBeauty) els.btnBeauty.addEventListener('click', openEdit);
     els.btnInfo.addEventListener('click', toggleInfo);
     els.btnTheme.addEventListener('click', toggleTheme);
+    els.btnComicMode.addEventListener('click', toggleComicMode);
     els.btnSlide.addEventListener('click', startSlideshow);
     els.btnBatch.addEventListener('click', openBatch);
     els.btnSettings.addEventListener('click', openSettings);
@@ -6636,7 +6695,7 @@
       window.__qj = {
       get state() { return state; },
       makeCanvasOfCurrent, bakeFullCanvas, exportCanvasOfCurrent, setPngDpi, setJpegDpi, setWebpDpi, buildExifTiff, embedDpi, crc32,
-      renderEditPreview, resetCrop, normToPx, detectLongImage, toggleTheme, parsePngTextChunks,
+      renderEditPreview, resetCrop, normToPx, detectLongImage, toggleTheme, parsePngTextChunks, toggleComicMode,
       // 照片处理 测试钩子
       sharpenCanvas, autoEnhance, resetOps, applyPixelOpsAsync, filterCss, syncFilterUI,
       upscaleInterp, aiUpscale,

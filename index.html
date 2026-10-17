@@ -58,6 +58,10 @@
     <!-- 主画布区 -->
     <main class="viewer" id="viewer">
       <div class="stage" id="stage">
+        <div class="dual-stage" id="dualStage" hidden>
+          <div class="img-wrap" id="imgWrapLeft"><img id="imageLeft" alt="" draggable="false" hidden></div>
+          <div class="img-wrap" id="imgWrapRight"><img id="imageRight" alt="" draggable="false" hidden></div>
+        </div>
         <div class="img-wrap" id="imgWrap"><img id="image" alt="" draggable="false" hidden></div>
         <div class="empty-hint" id="emptyHint">
           <div class="empty-icon">🖼️</div>
@@ -574,6 +578,7 @@
     <button class="btn nav-btn" id="btnCopy" title="复制到剪贴板">⧉<span class="nav-label">复制</span></button>
     <button class="btn nav-btn" id="btnSlide" title="幻灯片播放">▶<span class="nav-label">幻灯</span></button>
     <button class="btn nav-btn" id="btnBatch" title="批量处理">⚙<span class="nav-label">批量</span></button>
+    <button class="btn nav-btn" id="btnComicMode" title="双页漫画模式（压缩包）" hidden>📖<span class="nav-label">漫画</span></button>
     <button class="btn nav-btn" id="btnRecent" title="最近打开">🕘<span class="nav-label">最近</span></button>
     <button class="btn nav-btn" id="btnSettings" title="设置">⚒<span class="nav-label">设置</span></button>
     <button class="btn nav-btn" id="btnBeauty" title="美图：美颜/滤镜/特效/高级/导出">🎨<span class="nav-label">美图</span></button>

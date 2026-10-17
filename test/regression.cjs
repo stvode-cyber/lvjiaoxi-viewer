@@ -979,6 +979,39 @@ test('SD Prompt: parsePngTextChunks 函数存在 + PNG signature 检测 + tEXt/i
   assert(appSrc.includes('负向提示词'), 'renderInfo 有负向提示词行');
 });
 
+// ---- CBR/CBZ 双页漫画视图（2026-10-17 · A2 对标 HoneyView）----
+test('双页漫画: toggleComicMode 函数 + renderDualPage + dual-stage CSS grid + next/prev 步进 + openArchive 显示按钮', async () => {
+  const qj = window.__qj;
+  const fs = require('fs');
+  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const cssSrc = fs.readFileSync('styles.css', 'utf-8');
+  // 函数暴露
+  assert(typeof qj.toggleComicMode === 'function', 'toggleComicMode 暴露到 __qj');
+  // renderDualPage 函数
+  assert(appSrc.includes('function renderDualPage'), 'renderDualPage 函数存在');
+  assert(appSrc.includes('resolveItemSrc(item)'), 'renderDualPage 用 resolveItemSrc 懒加载');
+  assert(appSrc.includes('state.items[index + 1]'), '右页 = index + 1');
+  // showImage comicMode 分支
+  assert(appSrc.includes('state.comicMode) { return renderDualPage'), 'showImage comicMode 分支 return renderDualPage');
+  // applyComicMode 函数
+  assert(appSrc.includes('function applyComicMode'), 'applyComicMode 函数存在');
+  assert(appSrc.includes('state.archivePath'), 'applyComicMode 只在 archivePath 下生效');
+  // next/prev 步进改
+  assert(appSrc.includes('state.comicMode ? showImage(state.index + 2) : showImage(state.index + 1)'), 'comicMode 下 next 步进 +2');
+  assert(appSrc.includes('state.comicMode ? showImage(state.index - 2) : showImage(state.index - 1)'), 'comicMode 下 prev 步进 -2');
+  // 状态 comicMode
+  assert(appSrc.includes('comicMode: false'), 'state 初始化 comicMode: false');
+  // localStorage COMIC_KEY
+  assert(appSrc.includes('qjviewer_comic_v1'), 'COMIC_KEY 持久化');
+  // openArchive 显示按钮
+  assert(appSrc.includes('applyComicMode(localStorage.getItem'), 'openArchive 读取 comic 偏好');
+  // 普通文件清空 archivePath
+  assert(appSrc.includes('state.archivePath = null'), '普通文件打开清空 archivePath');
+  // CSS dual-stage
+  assert(cssSrc.includes('.dual-stage'), 'styles.css 有 .dual-stage');
+  assert(cssSrc.includes('grid-template-columns: 1fr 1fr'), 'dual-stage grid 2 列');
+});
+
 // ---- 穿透文件夹递归扫描（对标 XnView MP）----
 test('穿透文件夹：设置开关 files.recursive 存在 + recursive 参数语义（默认 false 穿透=关）', async () => {
   const qj = window.__qj;
