@@ -17,6 +17,7 @@
 - 深色主题（toolbar 右侧 🌞/🌙 切换按钮 + localStorage 持久化 + 启动立即应用）
 - EXIF GPS（读取 GPS IFD 方向 N/S/E/W + 十进制度显示 + 📌 高德地图可点击链接）
 - SD Prompt 查看（PNG tEXt/iTXt chunk 解析 + parameters 串正则提取 正向/负向/步数/CFG/采样器/Seed/模型 + 🎨 SD 参数组）
+- CBR/CBZ 双页漫画视图（仅压缩包模式 · 📖 按钮切换 · 左右两页并排 grid · next/prev 步进 ±2 · 非 archive 模式自动隐藏）
 - 双击图片文件关联启动（Setup.exe ProgId 注册）
 - 最近访问历史
 
@@ -121,6 +122,14 @@
    - 改动：app.js L1257-1350 新增 parsePngTextChunks + renderInfo L1198-1212 加 🎨 SD 参数组 7 行
    - 依赖：零新依赖（DataView 原生）
    - 风险：低（PNG chunk 格式完全规范）
+
+5. **CBR/CBZ 双页漫画视图** ✅ **已实现（2026-10-17 · commit d7119f3）**
+   - 对标：HoneyView / BandiView 压缩包漫画双页并排（左奇数页 / 右偶数页）
+   - 实现：纯前端 JS + CSS Grid —— `.dual-stage` 2 列并排 + renderDualPage 同时加载 left=index / right=index+1 + next/prev 步进 ±2 + btnComicMode 📖 按钮（仅 archive 模式显示）
+   - 改动：index.html 加 dual-stage DOM + styles.css grid + app.js applyComicMode/toggleComicMode/renderDualPage 三函数 + showImage comicMode 分支
+   - 依赖：零新 Rust（复用现有 openArchive / resolveItemSrc / readArchiveEntry 懒加载）
+   - 风险：中（UI 布局改动，已验证非 archive 模式自动隐藏）
+   - 踩坑：L274 applyTheme(loadTheme()) 立即调用在 els 初始化前 crash —— 删掉（init() cacheDom 后已有）
 
 5. **压缩包内 CBR/CBZ 双页视图**
    - 对标：HoneyView 核心功能 + Skill honeyview-archive-browse（现成方案）

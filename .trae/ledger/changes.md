@@ -93,6 +93,9 @@ rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信�
 #### Chg-P6（2026-10-17 · SD Prompt A1 · commit 240dec9）
 对标 BandiView v7.23+/v8.03 SD prompt 查看。纯前端 JS parsePngTextChunks：PNG signature 8 字节检测 + chunk 循环 + tEXt/iTXt 类型处理（keyword\0text 拆分 + iTXt 压缩标记跳过）+ SD keyword 搜索（parameters/prompt/negative_prompt/Steps/CFG scale/Sampler/Seed/Model）+ parameters 串正则二次解析。renderInfo 🎨 SD 参数组 7 行（模型/采样器/步数/CFG/Seed/正向/负向），copyInfoText 复制时也带 SD 参数。readExif slice 从 256KB 扩到 512KB 以防参数 chunk 大。零新依赖（DataView 原生）。regression +24 条断言。CACHE v70→v71。
 
+#### Chg-P7（2026-10-17 · CBR/CBZ 双页视图 A2 · commit d7119f3）
+对标 HoneyView / BandiView 压缩包漫画双页并排。纯前端 JS + CSS Grid，零 Rust 改动。index.html stage 内加 `.dual-stage` wrapper（双 img-wrap + btnComicMode）；styles.css `.dual-stage grid-template-columns: 1fr 1fr`；app.js 加 state.comicMode + applyComicMode/toggleComicMode/renderDualPage 三函数 + showImage comicMode 分支 return renderDualPage + next/prev 步进 ±2 + openArchive 读取 localStorage 偏好 + 普通文件打开自动切回单页。踩坑：L274 applyTheme(loadTheme()) 立即调用在 els 初始化前 crash —— 删掉（init() cacheDom 后已有）。regression +19 条断言。CACHE v71→v72。
+
 ---
 
 ## 桌面偶发 bug 修复
