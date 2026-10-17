@@ -92,7 +92,7 @@ showImage 入口全量重置 filters/slim/deform/crop/ops/matting/texts/mosaic/e
 - ↔Iss-007 / Iss-008 / Iss-009 / Iss-010
 - ↔Chg-025 / Chg-026 / Chg-027 / Chg-029 / Chg-030 / Chg-031 / Chg-032
 
-#### Chg-A2（2026-10-17 · Android SAF Picker + 权限加固 · commit 待填）
+#### Chg-A2（2026-10-17 · Android SAF Picker + 权限加固 · commit a811d70）
 **P-20261017-003 动作1+2 代码管线**：
 - SAF Picker（App 内"打开"按钮走系统文件管理器）：WebView.addJavascriptInterface 暴露 `window.__AndroidBridge.pickSafFile(multiple)` → 现代 `registerForActivityResult` launcher → ACTION_OPEN_DOCUMENT 选完 → evaluateJavascript 调已有 `__androidOpenFile` 管线（复用 content:// fetch blob 显示）
 - content:// 权限 flag 加固：handleIntent 里加 `FLAG_GRANT_READ_URI_PERMISSION`；SAF 选完后 `takePersistableUriPermission` 持久化权限（App 重启仍有效）
