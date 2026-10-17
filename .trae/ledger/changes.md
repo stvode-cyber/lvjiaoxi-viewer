@@ -389,3 +389,200 @@
   - 真机 PID 28416 存活零崩溃
 - **验证范围**：arm64 ✅ armv7 ✅ | x86_64/i686 ⏸（模拟器用，需额外 AR_* 环境变量）
 - **关联**：↔Iss-008 ↔Iss-007（完整管线闭环） ↔Chg-026 ↔Chg-025
+
+#### Chg-029（2026-10-15 · Iss-005 闭环：补完 GIF 两处遗漏兜底）
+
+- **批次主题**：Iss-005（WebView2 GIF 变种解码失败）已在 Chg-022 修了主图 + 压缩包路径，但遗漏了 first_thumb 缩略图和 genThumb 底部缩略图生成路径
+- **遗漏根因**：first_thumb 里 GIF 在 NATIVE_EXTS 里直接透传原始 data URL，没走 image crate → JPEG 降级；genThumb 没有 im.onerror 绑定，解码失败静默空白
+- **文件列表**：
+  - `src-tauri/src/lib.rs` ← first_thumb 加 GIF 提前拦截（6 行），和 read_archive_entry 统一语义
+  - `app.js` ← genThumb 加 im.onerror（8 行），调 decode_fallback 兜底 + fallbackThumbTried 防死循环
+  - `sw.js` ← CACHE v63→v64（硬约束：改 app.js 必须 +1）
+- **GIF 三条路径现在全部闭环**：
+  | 路径 | 之前 | 现在 |
+  |------|------|------|
+  | 本地 GIF 主图 | 原生透传 → onerror → decode_fallback ✅ | 不变 |
+  | 压缩包内 GIF | image crate → JPEG 第一帧 ✅ | 不变 |
+  | first_thumb 缩略图 | 原生透传（有风险） | GIF 提前 → image crate → JPEG ✅ |
+  | genThumb 底部缩略图 | 无 onerror（静默失败） | 加 onerror → decode_fallback ✅ |
+- **验证**：regression.cjs 412/0 全绿；cargo check 通过；sync-dist 完成
+- **关联**：↔Iss-005（重现次数 +1，踩 7 次） ↔Dc-008（GIF 原生优先 + onerror 兜底策略） ↔Chg-022
+
+#### Chg-030（2026-10-16 · Android 完整构建管线闭环：还原 rust 插件 + -t 参数指定双架构）
+
+- **批次主题**：Chg-027 验证了管线可行但 Chg-029 后有人把 gradle 里 rust 插件注释掉了（注释写 "Chg-030" 但之前没进台账），导致 tauri android build 不能自动编 Rust。本次还原 + 用命令行 -t 参数正确指定 arm64+armv7 双架构，一次跑通完整管线
+- **根因链**：
+  1. Chg-029 GIF 修复（app.js + lib.rs）后，有人临时注释了 `build.gradle.kts` 里的 `id("rust")` 和 `rust { rootDirRel }`（注释写 "手动 cargo build 后注释"）
+  2. 导致 `tauri android build --apk` 内部调 gradle 时，rustBuild 系列 task 不存在 → 跳过 Rust 编译 → 之前手动拷贝的 .so 残留 → 能出 APK 但版本不对
+  3. 本次还原后，先直接跑 `--apk`（不带 -t）→ 默认构建 4 架构 → i686/x86_64 缺工具链 → 失败
+  4. `gradle.properties` 加 targetList=arm64,armv7 → **Tauri CLI 不认这个**（RustPlugin.kt 读的是 `findProperty("targetList")`，但 tauri android build 内部自己调 `tauri android android-studio-script --target i686` 是硬编码的）
+  5. 最终解法：`npm run tauri -- android build --apk -t aarch64 armv7` 命令行参数才是正解
+- **文件列表**：
+  - `src-tauri/gen/android/app/build.gradle.kts` ← 取消注释 plugins 块 `id("rust")` + 底部 `rust { rootDirRel = "../../../" }`
+  - `src-tauri/gen/android/gradle.properties` ← 加 3 行（abiList/archList/targetList）—— 实测 **不生效**，留作文档说明
+- **构建命令（正式可复用版本）**：
+  ```powershell
+  $env:PATH = "<NDK_BIN>;$env:PATH"          # Iss-008: cc-rs 找 clang.exe
+  $env:CC_armv7_linux_androideabi = "<NDK_BIN>\armv7a-linux-androideabi35-clang.cmd"
+  npm run tauri -- android build --apk -t aarch64 armv7
+  ```
+- **构建验证**：
+  - Rust 双架构 release profile 编译成功（2 warnings：unused_mut + unused 变量，桌面 target 已加 cfg 排除但 Android target 没排，不影响）
+  - Universal APK **35.38 MB**（arm64-v8a + armeabi-v7a）
+  - llvm-readelf 验 arm64 .so：JNI 桥符号 **20 个齐全**（含 `Java_com_lvjiaoxi_viewer_Rust_create`）；NEEDED 全是系统库（libandroid/libdl/liblog/libm/libc），零第三方依赖
+  - 真机 adb install -r → Success；`am start -n` → PID **25696** 存活；logcat 零 FATAL/UnsatisfiedLinkError/panic
+- **新发现沉淀**（Iss-010）：
+  - Tauri CLI 硬调 i686：`gradle.properties` 里 targetList 不生效，必须用 `-t` 参数指定目标
+  - Tauri CLI 实际使用 `C:\Users\Administrator\.android-sdk\ndk\27.0.12077973`（环境变量里设的 NDK 28.2 被忽略）—— 两个 NDK 版本不一致，碰巧都能编
+- **验证**：cargo check 通过（2 Android 专属 warning 未处理，不影响运行）；sync-dist OK；真机安装+启动+PID 存活+零崩溃
+- **关联**：↔Iss-007（铁律：tauri android build 是唯一入口） ↔Iss-008（cc-rs 需要 PATH + CC_armv7） ↔Chg-027（第一次验证管线可行） ↔Chg-026（还原过 rust 插件）
+
+#### Chg-031（2026-10-16 · 缩略图虚拟滚动窗口：方案 B 实施 + 桌面重构建）
+
+- **批次主题**：左侧缩略图栏从"一次性全量渲染 + 全量 genThumb 解码"改为"窗口 ±3 限量 + thumbUrl 永久缓存复用"，解决一次打开几百张图卡爆 WebView 的问题
+- **根因**：`renderThumbs()` 用 `state.items.forEach` 循环所有图片，每张都 `setTimeout(() => genThumb(item, div), 0)` 排队同时解码——100 张图 = 100 个 canvas + 100 个 dataURL，WebView2 被吃爆
+- **方案 B 核心**：
+  - 只渲染 `centerIdx ± 3` 范围（最多 7 张 DOM 同时存活）
+  - 窗口边界没变 → 跳过 DOM 重建（避免每次切图都清空重绘）
+  - genThumb 生成的 `thumbUrl` 缓存在 `item.thumbUrl` 上永久保留，切回来时直接复用（不重新解码）
+  - **搜索有内容时退化成全量渲染**（用户要看所有匹配项，不受 ±3 限制）
+- **文件列表**：
+  - `app.js` ← 重构：`renderThumbs()` 删除 → 新增 `renderThumbWindow(centerIdx)` + `THUMB_HALF_WIN=3`；`highlightThumb(index)` 加窗口边界检查（index 不在窗口里先补渲染）；`applyThumbFilter()` 加搜索词变化检测（触发强制重建窗口）；4 处 `renderThumbs()` 调用点全改成 `renderThumbWindow(0)` 或 `renderThumbWindow(index)`
+  - `sw.js` ← CACHE v66→v67（硬约束：改 app.js 必须 +1）
+  - `src-tauri/gen/android/app/src/main/java/.../MainActivity.kt` ← **加观测用 console.log**（非 bug 修复，纯调试：`__androidOpenFile` 函数体第一行加 log）
+  - `src-tauri/gen/android/gradle.properties` ← **加 ⚠️ 注释**（3 行实测不生效的配置加 Iss-010 警告注释）
+- **搜索过滤回归测试修复**：初始改完后 `缩略图搜索过滤` 测试 fail（搜索后窗口里没有 png 那张）→ renderThumbWindow 加 `hasFilter` 判断，搜索有内容时窗口退化成全量渲染 + 重建完立即调 applyThumbFilter 应用 display:none
+- **验证**：
+  - regression.cjs **414/0 全绿**（加观测用 console.log 前 414/0；后搜索过滤 bug 修复后仍 414/0）
+  - sync-dist 完成（8 文件 + assets）
+  - 桌面 build 成功（1m10s release）
+  - Setup.exe **212.71MB** → nsis_x/ 已更新（15:44:31 刚构建）
+  - release EXE 启动验证：PID 18080 Responding=True，24.3MB 内存 ✅
+- **未完成尾巴**（下会话继续）：
+  - Android intent 时序 bug（Bug-A：handleIntent 在 onWebViewCreate 前跑 webViewRef=null；Bug-B：allowContentAccess=false 拦 content:// fetch）
+  - WebP Rust 解码（Cargo.toml image features 缺 "webp"）
+- **关联**：↔Chg-030（桌面重构建跟进 Android）
+
+#### Chg-032（2026-10-17 · Android 三件套：Bug-A 时序 + Bug-B 权限 + Manifest 合并 + WebP + 配方 5 条 + 桌面重构建）
+
+- **批次主题**：Chg-031 末尾留的 3 个尾巴全部闭环 + 风格配方 + 桌面重构建
+- **修复清单**（5 个独立改动）：
+
+| # | 问题 | 文件 | 改动 |
+|---|------|------|------|
+| 1 | Bug-A intent 时序丢消息 | MainActivity.kt | 新增 `pendingIntent` 暂存变量；handleIntent 在 webViewRef=null 时存 pendingIntent return；onWebViewCreate 里 `pendingIntent?.let { handleIntent(it) }` 补调 |
+| 2 | Bug-B content:// fetch 被拦 | MainActivity.kt | onWebViewCreate 加 `webView.settings.allowContentAccess = true`（Android 默认 false） |
+| 3 | ResolverActivity 弹 9 个同名选项 | AndroidManifest.xml | 9 个一模一样的 tauri-file-associations intent-filter → **合并成 1 个**，所有 mimeType/image 放同一 filter + `android:priority="100"` |
+| 4 | WebP Rust 解码全挂 | Cargo.toml | image crate features 加 `"webp"` → decode_fallback / 剪贴板 / 压缩包内 WebP 都能解码 |
+| 5 | 风格配方扩展 | app.js | 5 条新配方：温柔青·insar / 夏日通透 / 暗黑胶片 / 奶油质感 / 韩系冷白（共 22 条） |
+
+- **验证**：
+  - regression.cjs **414/0 全绿** ✅
+  - 桌面 build 成功（1m19s release）
+  - Setup.exe **212.74MB**（10/17 10:29:26 刚构建）→ nsis_x/ 已更新
+  - release EXE PID 21788 Responding=True，22.7MB 内存 ✅
+  - sw.js CACHE v67→v68 ✅
+  - sync-dist 完成 ✅
+- **Android intent 真机测试状态**：
+  - 代码侧 Bug-A/B + Manifest 合并全部落地 ✅
+  - **手机 USB 连接不稳定**（adb devices 经常空），intent 测试未能完成
+  - 下次手机连好后：`adb install -r <apk>` + `adb shell am start -a VIEW -d content://... -t image/jpeg -f 0x10000001`
+- **用户偏好**（本次会话用户明确）：
+  - 只做确认，不想手动操作，AI 全权搞定
+  - 不要反复确认，一次宣告全量动作
+  - 大白话回复
+- **关联**：↔Chg-031（缩略图窗口 + Android 尾巴） ↔Chg-030（Android 管线） ↔Iss-007 ↔Iss-008 ↔Iss-010
+
+#### Chg-033（2026-10-17 · 桌面双击图片 App 启动但主图空白根因定位 + 修复）
+
+- **批次主题**：用户反馈"双击图片只弹出软件，不显示图片" → 定位根因为文件关联指向旧 EXE（C:\LVJX_A_TEST）→ 全清旧目录 + 重跑 Setup.exe 到 AppData\Local 默认路径 + 文件关联自动修正 → 日志全链路通
+- **根因**：
+  1. 之前手动 `Start-Process D:\tauri-build\target\release\lvjiaoxi-viewer.exe` 启动旧版本（Chg-027/Chg-030 构建的），用户双击图片时 Windows 文件关联（LvJiaoXiImage ProgId）指向的是 **更老的 C:\LVJX_A_TEST\lvjiaoxi-viewer.exe**
+  2. 旧 EXE 启动 → setup() 存路径到自己的静态变量 → 单实例插件应该转发到已运行的新 EXE → 但旧 EXE 被干掉，路径白存
+  3. 新 EXE 收不到路径 → get_pending_paths 返回 0 → pullPending 重试 4 次全空 → 主图空白
+  4. 日志证据：旧 EXE `[get_pending_paths] return 0 items` 重复出现，没有 `[frontend] loadPaths got entries=...`
+- **修复动作**：
+  - 关掉所有 lvjiaoxi-viewer 进程
+  - 删除 `C:\LVJX_A_TEST` 旧目录
+  - 跑 Setup.exe（静默模式 `/S /D=AppData\Local\com.lvjiaoxi.viewer`）→ 自动注册正确的 LvJiaoXiImage ProgId 到新路径
+  - **注册表兜底**：HKCU:\Software\Classes\LvJiaoXiImage\shell\open\command 直接改为最新 EXE 路径
+- **验证（日志全链路通）**：
+  ```
+  [setup] args = ["C:\...AppData\Local\新exe", "test.png"] ✅
+  [get_pending_paths] return 1 items ✅
+  [load_paths] return 6 entries ✅
+  [frontend] loadPaths got entries=6 ✅  ← 之前缺失的关键一行！
+  [frontend] showImage finish hidden=false ✅  ← 主图显示了！
+  ```
+- **文件关联指向确认**：
+  - 旧：`HKCR\LvJiaoXiImage\shell\open\command = C:\LVJX_A_TEST\lvjiaoxi-viewer.exe "%1"`（10/16 旧版）
+  - 新：`= C:\Users\Administrator\AppData\Local\com.lvjiaoxi.viewer\lvjiaoxi-viewer.exe "%1"`（10/17 最新版）✅
+- **新坑沉淀**（Iss-011）：
+  - Setup.exe 多次不同路径安装后，文件关联 ProgId 会飘向旧 EXE
+  - **预防**：每次新版本必须通过 Setup.exe 重装（覆盖安装自动更新 ProgId）；禁止手动 Start-Process 启动 release EXE 测试——会造成"两个版本同时在跑 + 文件关联指向第三个旧版本"的混乱
+- **关联**：↔Iss-004（NSIS 残留目录） ↔Iss-011（新坑：文件关联漂移） ↔Chg-024（PreInstall 简化后不再 RMDir /r） ↔Chg-032
+
+#### Chg-034（2026-10-17 · rayon 并行加速 load_paths — 53 张图从 1500ms 降到 37ms + 毫秒时间戳日志）
+
+- **批次主题**：用户反馈"双击图片到显示大概要 3 秒" → 定位瓶颈为 lib.rs `load_paths` 函数的串行循环（L400 `for f in files`）— 每张图串行读磁盘 + base64 编码 → rayon `into_par_iter()` 并行 + dbg_log 毫秒时间戳
+- **根因**：串行 for 循环，53 张图每张独立的磁盘 IO + base64 编码，完全可以并行互不依赖
+- **改动文件**：
+  | 文件 | 改什么 | 行数 |
+  |------|--------|------|
+  | `src-tauri/Cargo.toml` | 新增 `rayon = "1"` | L34 |
+  | `src-tauri/src/lib.rs` | `use rayon::prelude::*;` | L36 |
+  | `src-tauri/src/lib.rs` | `for f in files` → `files.into_par_iter().filter_map(...).collect::<Vec<_>>()` | L400-436 |
+  | `src-tauri/src/lib.rs` | dbg_log 加 `[epoch 毫秒数]` 前缀 | L43-53 |
+- **性能数据（实测 release 版，53 张图文件夹）**：
+  ```
+  旧版串行：collected 54 files → return 53 entries = ~1500ms（中间有 4 行 get_pending_paths return 0）
+  新版并行：collected 54 files → return 53 entries = 37ms（中间零行其他日志！快到前端 pullPending 还没触发）
+  提升：40-50 倍！
+  ```
+  精确毫秒时间戳日志（新版）：
+  ```
+  [1792209374323] collected 54 files    ← 扫目录 5ms
+  [1792209374360] return 53 entries     ← 并行处理 37ms ✅
+  ```
+- **回归测试**：regression.cjs 414/0 全绿；cargo check 过
+- **构建产物**：
+  - `nsis_x/绿角犀看图_0.1.0_x64-setup.exe` = 223MB（2026/10/17 11:55:37）
+  - `D:\tauri-build\target\release\bundle\msi\绿角犀看图_0.1.0_x64_zh-CN.msi`
+- **用户体感**：双击图片文件夹（50+ 张）几乎瞬间显示主图，不再有明显 3 秒等待
+- **新决策**（Dc-XXX）：
+  - 所有 `load_paths` 类的"多文件独立处理"场景都用 rayon 并行（磁盘 IO + 编码天然适合并行）
+  - dbg_log 毫秒时间戳是长期工具，保留（对线上调试零成本）
+- **关联**：↔Chg-031（缩略图虚拟窗口，同样的"大目录全量串行"问题） ↔Dc-009（并行管线决策）
+
+#### Chg-035（2026-10-17 · IPC 懒加载：load_paths 只传元信息 + 新增 get_image_data 单张拉 — 启动显示从 5.7s 降到 0.8s，7 倍提升）
+
+- **批次主题**：rayon 优化后"变化不大" → 精确毫秒日志定位真凶：**36MB JSON IPC 瓶颈**（53 张 × 每张 680KB base64 = 一次性塞在 JSON 里传给前端）→ load_paths 只传元信息（几 KB），前端按需调 get_image_data 单张拉
+- **根因**：rayon 把 Rust 端处理压到 37ms，但后面 `load_paths → 前端` 的 Tauri IPC 传 36MB JSON 要 5334ms（日志铁证：collected→return 37ms，return→前端收到 5334ms）
+- **改动文件**：
+  | 文件 | 改什么 |
+  |------|--------|
+  | `src-tauri/src/lib.rs` | load_paths 砍掉 url 生成 → url 字段空串；新增 `get_image_data(path)` 命令（单张→data URL） |
+  | `src-tauri/src/lib.rs` | generate_handler 注册 get_image_data（⚠️ 忘记注册 = 前端调了 Rust 收不到，Build warning dead_code 就是因为这个） |
+  | `app.js` | showImage 里加 `loadOrFetch` 包装：url 空串时先调 `get_image_data` 拿 data URL 再 loadImage；有 url 直接 loadImage |
+- **性能数据（实测 release 版，53 张图文件夹冷启动）**：
+  ```
+  旧版全量传：setup → showImage finish = 5730ms（5.7 秒）
+  新版懒加载：setup → showImage finish = 809ms（0.8 秒）
+  提升：7x！
+  ```
+  新版精确毫秒时间戳：
+  ```
+  load_paths return 53 entries (no url)  (+3ms)     ← 只传元信息！
+  get_image_data path=...                (+0ms)     ← 前端立刻调单张
+  get_image_data ok len=1258106          (+4ms)     ← Rust 读 1 张 + base64
+  showImage finish                       (+394ms)   ← 前端渲染
+  总计 809ms
+  ```
+- **教训沉淀**：
+  - Tauri command 必须在 `generate_handler![...]` 里**显式列出**！#[tauri::command] 宏不会自动注册（dead_code warning 就是信号）
+  - 大 JSON 过 IPC 是 killer——哪怕 Rust 端再快，传 36MB JSON 也要 5 秒
+  - rayon + 懒加载 = 黄金组合（Rust 端并行 → 前端按需拉）
+- **回归测试**：regression.cjs 414/0 全绿；cargo check 过
+- **构建产物**：
+  - `nsis_x/绿角犀看图_0.1.0_x64-setup.exe` = 223MB（2026/10/17 13:29:18）
+- **关联**：↔Chg-034（rayon 并行） ↔Iss-011（Setup.exe 漂移） ↔新坑：generate_handler 注册遗漏

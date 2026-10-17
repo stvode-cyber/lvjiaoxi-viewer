@@ -1217,6 +1217,8 @@ test('压缩包直看 ZIP/CBZ + 懒加载 + handleOpenPaths 统一入口', async
   assert(rustSrc.includes('decode_fallback,'), 'decode_fallback 注册到 generate_handler');
   assert(appSrc.includes("desktop.invoke('decode_fallback'"), '前端 onerror 走 decode_fallback 兜底');
   assert(appSrc.includes('item.fallbackTried'), 'fallback 只尝试一次防死循环');
+  assert(appSrc.includes('fallbackThumbTried'), 'genThumb 缩略图 onerror 也有 decode_fallback 兜底（Iss-005 v3）');
+  assert(rustSrc.includes('decode_to_rgb(&file)?'), 'first_thumb GIF 提前走 image crate → JPEG（Iss-005 v3）');
 
   // 7. invoke_handler 注册
   assert(rustSrc.includes('list_archive_entries,'), 'list_archive_entries 注册到 generate_handler');

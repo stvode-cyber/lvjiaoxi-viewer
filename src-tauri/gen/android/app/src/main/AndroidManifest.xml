@@ -17,206 +17,24 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- tauri-file-associations. AUTO-GENERATED. DO NOT REMOVE. -->
-            <intent-filter>
+            <!-- tauri-file-associations. AUTO-GENERATED. DO NOT REMOVE. → 已手工合并为 1 个 intent-filter + priority=100，根治 ResolverActivity 弹多个同名选项 -->
+            <intent-filter android:priority="100">
                 <action android:name="android.intent.action.SEND" />
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="image/gif" />
-                <data android:pathPattern=".*\\.jpg" />
-                <data android:pathPattern=".*\\.jpeg" />
-                <data android:pathPattern=".*\\.png" />
-                <data android:pathPattern=".*\\.gif" />
-                <data android:pathPattern=".*\\.webp" />
-                <data android:pathPattern=".*\\.avif" />
-                <data android:pathPattern=".*\\.bmp" />
-                <data android:pathPattern=".*\\.ico" />
-                <data android:pathPattern=".*\\.svg" />
-                <data android:pathPattern=".*\\.heic" />
-                <data android:pathPattern=".*\\.heif" />
-                <data android:pathPattern=".*\\.tif" />
-                <data android:pathPattern=".*\\.tiff" />
-                <data android:pathPattern=".*\\.apng" />
-                <data android:pathPattern=".*\\.tga" />
-                <data android:pathPattern=".*\\.psd" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- 所有图片 mime 合并到一个 filter，避免 ResolverActivity 看到 N 个 match 弹 N 个选项 -->
                 <data android:mimeType="image/jpeg" />
-                <data android:pathPattern=".*\\.jpg" />
-                <data android:pathPattern=".*\\.jpeg" />
-                <data android:pathPattern=".*\\.png" />
-                <data android:pathPattern=".*\\.gif" />
-                <data android:pathPattern=".*\\.webp" />
-                <data android:pathPattern=".*\\.avif" />
-                <data android:pathPattern=".*\\.bmp" />
-                <data android:pathPattern=".*\\.ico" />
-                <data android:pathPattern=".*\\.svg" />
-                <data android:pathPattern=".*\\.heic" />
-                <data android:pathPattern=".*\\.heif" />
-                <data android:pathPattern=".*\\.tif" />
-                <data android:pathPattern=".*\\.tiff" />
-                <data android:pathPattern=".*\\.apng" />
-                <data android:pathPattern=".*\\.tga" />
-                <data android:pathPattern=".*\\.psd" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:mimeType="image/png" />
-                <data android:pathPattern=".*\\.jpg" />
-                <data android:pathPattern=".*\\.jpeg" />
-                <data android:pathPattern=".*\\.png" />
-                <data android:pathPattern=".*\\.gif" />
-                <data android:pathPattern=".*\\.webp" />
-                <data android:pathPattern=".*\\.avif" />
-                <data android:pathPattern=".*\\.bmp" />
-                <data android:pathPattern=".*\\.ico" />
-                <data android:pathPattern=".*\\.svg" />
-                <data android:pathPattern=".*\\.heic" />
-                <data android:pathPattern=".*\\.heif" />
-                <data android:pathPattern=".*\\.tif" />
-                <data android:pathPattern=".*\\.tiff" />
-                <data android:pathPattern=".*\\.apng" />
-                <data android:pathPattern=".*\\.tga" />
-                <data android:pathPattern=".*\\.psd" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="image/gif" />
                 <data android:mimeType="image/webp" />
-                <data android:pathPattern=".*\\.jpg" />
-                <data android:pathPattern=".*\\.jpeg" />
-                <data android:pathPattern=".*\\.png" />
-                <data android:pathPattern=".*\\.gif" />
-                <data android:pathPattern=".*\\.webp" />
-                <data android:pathPattern=".*\\.avif" />
-                <data android:pathPattern=".*\\.bmp" />
-                <data android:pathPattern=".*\\.ico" />
-                <data android:pathPattern=".*\\.svg" />
-                <data android:pathPattern=".*\\.heic" />
-                <data android:pathPattern=".*\\.heif" />
-                <data android:pathPattern=".*\\.tif" />
-                <data android:pathPattern=".*\\.tiff" />
-                <data android:pathPattern=".*\\.apng" />
-                <data android:pathPattern=".*\\.tga" />
-                <data android:pathPattern=".*\\.psd" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="image/heic" />
-                <data android:pathPattern=".*\\.jpg" />
-                <data android:pathPattern=".*\\.jpeg" />
-                <data android:pathPattern=".*\\.png" />
-                <data android:pathPattern=".*\\.gif" />
-                <data android:pathPattern=".*\\.webp" />
-                <data android:pathPattern=".*\\.avif" />
-                <data android:pathPattern=".*\\.bmp" />
-                <data android:pathPattern=".*\\.ico" />
-                <data android:pathPattern=".*\\.svg" />
-                <data android:pathPattern=".*\\.heic" />
-                <data android:pathPattern=".*\\.heif" />
-                <data android:pathPattern=".*\\.tif" />
-                <data android:pathPattern=".*\\.tiff" />
-                <data android:pathPattern=".*\\.apng" />
-                <data android:pathPattern=".*\\.tga" />
-                <data android:pathPattern=".*\\.psd" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="image/tiff" />
-                <data android:pathPattern=".*\\.jpg" />
-                <data android:pathPattern=".*\\.jpeg" />
-                <data android:pathPattern=".*\\.png" />
-                <data android:pathPattern=".*\\.gif" />
-                <data android:pathPattern=".*\\.webp" />
-                <data android:pathPattern=".*\\.avif" />
-                <data android:pathPattern=".*\\.bmp" />
-                <data android:pathPattern=".*\\.ico" />
-                <data android:pathPattern=".*\\.svg" />
-                <data android:pathPattern=".*\\.heic" />
-                <data android:pathPattern=".*\\.heif" />
-                <data android:pathPattern=".*\\.tif" />
-                <data android:pathPattern=".*\\.tiff" />
-                <data android:pathPattern=".*\\.apng" />
-                <data android:pathPattern=".*\\.tga" />
-                <data android:pathPattern=".*\\.psd" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:mimeType="image/bmp" />
-                <data android:pathPattern=".*\\.jpg" />
-                <data android:pathPattern=".*\\.jpeg" />
-                <data android:pathPattern=".*\\.png" />
-                <data android:pathPattern=".*\\.gif" />
-                <data android:pathPattern=".*\\.webp" />
-                <data android:pathPattern=".*\\.avif" />
-                <data android:pathPattern=".*\\.bmp" />
-                <data android:pathPattern=".*\\.ico" />
-                <data android:pathPattern=".*\\.svg" />
-                <data android:pathPattern=".*\\.heic" />
-                <data android:pathPattern=".*\\.heif" />
-                <data android:pathPattern=".*\\.tif" />
-                <data android:pathPattern=".*\\.tiff" />
-                <data android:pathPattern=".*\\.apng" />
-                <data android:pathPattern=".*\\.tga" />
-                <data android:pathPattern=".*\\.psd" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="image/x-icon" />
-                <data android:pathPattern=".*\\.jpg" />
-                <data android:pathPattern=".*\\.jpeg" />
-                <data android:pathPattern=".*\\.png" />
-                <data android:pathPattern=".*\\.gif" />
-                <data android:pathPattern=".*\\.webp" />
-                <data android:pathPattern=".*\\.avif" />
-                <data android:pathPattern=".*\\.bmp" />
-                <data android:pathPattern=".*\\.ico" />
-                <data android:pathPattern=".*\\.svg" />
-                <data android:pathPattern=".*\\.heic" />
-                <data android:pathPattern=".*\\.heif" />
-                <data android:pathPattern=".*\\.tif" />
-                <data android:pathPattern=".*\\.tiff" />
-                <data android:pathPattern=".*\\.apng" />
-                <data android:pathPattern=".*\\.tga" />
-                <data android:pathPattern=".*\\.psd" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.SEND_MULTIPLE" />
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="image/heic" />
                 <data android:mimeType="image/svg+xml" />
+                <data android:mimeType="image/x-icon" />
+                <data android:mimeType="image/tiff" />
+                <!-- pathPattern 保留（文件管理器用 file:/// 路径匹配）-->
                 <data android:pathPattern=".*\\.jpg" />
                 <data android:pathPattern=".*\\.jpeg" />
                 <data android:pathPattern=".*\\.png" />
@@ -234,8 +52,7 @@
                 <data android:pathPattern=".*\\.tga" />
                 <data android:pathPattern=".*\\.psd" />
             </intent-filter>
-            
-            <!-- tauri-file-associations. AUTO-GENERATED. DO NOT REMOVE. -->
+            <!-- tauri-file-associations. END. -->
         </activity>
 
         <provider

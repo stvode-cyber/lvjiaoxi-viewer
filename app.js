@@ -90,7 +90,7 @@
       state.items = items; state.index = -1;
       els.emptyHint.hidden = true; // 与 Web loadFiles 一致：加载后隐藏空态提示，避免覆盖主视区
       if (items.length) {
-        renderThumbs();
+        renderThumbWindow(0);
         // 打开单张图片时会一并加载同文件夹相邻图，需定位到所打开的那张；
         // 打开文件夹/多文件则保持从第 0 张开始。
         let idx = 0;
@@ -128,7 +128,7 @@
       state.items = items; state.index = -1;
       state.archivePath = path;  // 标记当前处于压缩包浏览模式
       els.emptyHint.hidden = true;
-      renderThumbs();
+      renderThumbWindow(0);
       toast('📦 ' + items.length + ' 张图片（压缩包直看）');
       showImage(0);
       updateChrome();
@@ -549,7 +549,7 @@
     els.emptyHint.hidden = true;
     els.viewer.querySelector('.empty-hint') && (els.emptyHint.hidden = true);
     showImage(0);
-    renderThumbs();
+    renderThumbWindow(0);
     updateChrome();
   }
 
@@ -819,10 +819,24 @@
     const cached = state.cache.get(index);
     if (cached && cached.complete && cached.naturalWidth) { finish(cached); }
     else {
-      loadImage(item).then((img) => { state.cache.set(index, img); if (state.index === index) finish(img); })
-        .catch(() => {
-          // 桌面端解码兜底（Dc-008 方案 B）：原生透传的 GIF 等在 WebView2 解码失败时，
-          // 请 Rust 用 image crate 解码转 JPEG 第一帧；仍失败才判「无法解码」
+      // 懒加载包装：有 url 直接 load，没 url 先调 get_image_data 拿 data URL
+      const loadOrFetch = () => {
+        if (!item.url && item.path && desktop.available()) {
+          desktop.invoke('get_image_data', { path: item.path }).then((url) => {
+            if (!url) { els.image.hidden = true; showLoadingError(item.name); toast('无法加载：' + item.name); return; }
+            item.url = url;
+            doLoadImage();
+          }).catch(() => { els.image.hidden = true; showLoadingError(item.name); toast('无法加载：' + item.name); });
+        } else {
+          doLoadImage();
+        }
+      };
+      const doLoadImage = () => {
+        loadImage(item).then((img) => {
+          state.cache.set(index, img);
+          if (state.index === index) finish(img);
+        }).catch(() => {
+          // GIF 等 WebView2 解码失败兜底 → Rust image crate → JPEG 第一帧
           const fail = () => { els.image.hidden = true; desktop.flog('showImage CATCH broken path=' + String(item.path) + ' urlHead=' + String(item.url).slice(0, 22)); item.broken = true; showLoadingError(item.name); toast('无法解码：' + item.name); };
           if (!desktop.available() || !item.path || item.fallbackTried) { fail(); return; }
           item.fallbackTried = true;
@@ -830,10 +844,12 @@
             if (!url) { fail(); return; }
             item.url = url;
             state.cache.delete(index);
-            renderThumbs();
+            renderThumbWindow(index);
             return loadImage(item).then((img) => { state.cache.set(index, img); if (state.index === index) finish(img); });
           }).catch(fail);
         });
+      };
+      loadOrFetch();
     }
   }
 
@@ -1008,6 +1024,25 @@
   }
   function applyThumbFilter() {
     const q = (els.thumbSearch.value || '').trim().toLowerCase();
+    // 搜索词变化 → 强制重建窗口（有搜索词时退化成全量渲染）
+    if (state.thumbFilter !== q) {
+      state.thumbFilter = q;
+      state.thumbWindow = null; // 强制 renderThumbWindow 跳过"窗口没变"的短路
+      const targetIdx = state.index >= 0 ? state.index : 0;
+      renderThumbWindow(q ? 0 : targetIdx);
+      if (q) { // 有搜索 → 重建完窗口后立即应用过滤
+        let shown = 0;
+        $$('.thumb').forEach((t) => {
+          const it = state.items[+t.dataset.index];
+          const hit = !it || !q || it.name.toLowerCase().includes(q);
+          t.style.display = hit ? '' : 'none';
+          if (hit) shown++;
+        });
+        els.thumbCount.textContent = shown + ' / ' + state.items.length;
+      }
+      return;
+    }
+    // 窗口已经是正确状态 → 只做 display:none 过滤（轻量）
     let shown = 0;
     $$('.thumb').forEach((t) => {
       const it = state.items[+t.dataset.index];
@@ -1018,25 +1053,45 @@
     els.thumbCount.textContent = q ? (shown + ' / ' + state.items.length) : '';
   }
 
-  function renderThumbs() {
+  // 缩略图虚拟滚动窗口（方案 B）：
+  // 只渲染 centerIdx ± 3 的范围（最多 7 张 DOM 同时存活），窗口边界不变时跳过重建。
+  // genThumb 生成的 thumbUrl 缓存在 item 上永久复用，窗口外的缩略图不重解码。
+  // ⚠️ 搜索有内容时退化成全量渲染（用户要看所有匹配项），不受 ±3 限制。
+  const THUMB_HALF_WIN = 3;
+  function renderThumbWindow(centerIdx) {
     if (!state.items.length) return;
     els.thumbBar.hidden = false;
+    const total = state.items.length;
+    const center = Math.max(0, Math.min(total - 1, centerIdx));
+    // 有搜索词 → 全量渲染（搜索需要看到所有匹配项）
+    const hasFilter = els.thumbSearch && (els.thumbSearch.value || '').trim();
+    const start = hasFilter ? 0 : Math.max(0, center - THUMB_HALF_WIN);
+    const end = hasFilter ? total - 1 : Math.min(total - 1, center + THUMB_HALF_WIN);
+    // 窗口边界没变 → 跳过重建（避免每次切图都清空重绘）
+    if (state.thumbWindow && state.thumbWindow.start === start && state.thumbWindow.end === end) {
+      highlightThumb(state.index >= 0 ? state.index : center);
+      return;
+    }
+    state.thumbWindow = { start, end };
     const wrap = els.thumbs;
     wrap.innerHTML = '';
-    state.items.forEach((item, i) => {
+    for (let i = start; i <= end; i++) {
+      const item = state.items[i];
       const div = document.createElement('div');
       div.className = 'thumb' + (i === state.index ? ' active' : '');
       div.dataset.index = i;
       div.innerHTML = `<span class="t-index">${i + 1}</span><span class="t-fmt">${extOf(item.name)}</span>`;
       div.addEventListener('click', () => showImage(i));
       wrap.appendChild(div);
-      // 懒生成缩略图
-      if (!item.thumbUrl) {
-        setTimeout(() => genThumb(item, div), 0);
-      } else {
+      // 有缓存 thumbUrl → 直接复用；没有 → 异步生成（genThumb 内部也会缓存到 item 上）
+      if (item.thumbUrl) {
         const im = document.createElement('img'); im.src = item.thumbUrl; div.insertBefore(im, div.firstChild);
+      } else {
+        setTimeout(() => genThumb(item, div), 0);
       }
-    });
+    }
+    // 全量渲染完 → 如果有搜索词，立即应用过滤（display:none 隐藏不匹配的）
+    if (hasFilter && typeof applyThumbFilter === 'function') applyThumbFilter();
   }
   function genThumb(item, div) {
     const im = new Image();
@@ -1053,9 +1108,24 @@
         if (div.isConnected) { const img = document.createElement('img'); img.src = item.thumbUrl; div.insertBefore(img, div.firstChild); }
       } catch (e) {}
     };
+    // 缩略图解码兜底（Iss-005）：变种 GIF / 损坏图片在 WebView2 解码失败时，
+    // 请 Rust 用 image crate 解码转 JPEG 第一帧再生成缩略图
+    im.onerror = () => {
+      if (!desktop.available() || !item.path || item.fallbackThumbTried) return;
+      item.fallbackThumbTried = true;
+      desktop.invoke('decode_fallback', { path: item.path }).then((url) => {
+        if (url) im.src = url;
+      }).catch(() => {});
+    };
     resolveItemSrc(item).then((src) => { im.src = src; }).catch(() => {});
   }
   function highlightThumb(index) {
+    // index 不在当前窗口 → 先把窗口移动过去再高亮
+    const w = state.thumbWindow;
+    if (w && (index < w.start || index > w.end)) {
+      renderThumbWindow(index);
+      return; // renderThumbWindow 内部已经调了 highlightThumb，这里返回避免重复
+    }
     $$('.thumb').forEach((t) => {
       const active = +t.dataset.index === index;
       t.classList.toggle('active', active);
@@ -2574,6 +2644,12 @@
     { id: 'orangenblu',name: '蓝橙胶卷·TC5', f: { brightness: 88, contrast: 125, highlight: -25, shadow: 26, saturate: 96, temp: 14, grain: 18, tintAmt: 55, tintH: '#c8a05a' } },
     { id: 'picnic',    name: '清新野餐',    f: { brightness: 104, contrast: 104, highlight: 12, shadow: 10, saturate: 108 } },
     { id: 'ambient',   name: '氛围胶片·TC5', f: { brightness: 96, contrast: 90, saturate: 110, temp: -6, grain: 8 } },
+    // ---- 2026-10-17 新增：insar 流行风 + 韩系 + 暗黑 ----
+    { id: 'softteal',  name: '温柔青·insar', f: { brightness: 98, contrast: 108, highlight: 18, shadow: -12, saturate: 88, temp: -18, grain: 6 } },
+    { id: 'summer',    name: '夏日通透',   f: { brightness: 106, contrast: 102, highlight: 28, shadow: 8, saturate: 112, temp: 4 } },
+    { id: 'darkfilm',  name: '暗黑胶片',   f: { brightness: 82, contrast: 138, highlight: -35, shadow: -8, saturate: 78, grain: 22, sharp: 18, vignette: 14 } },
+    { id: 'matte',     name: '奶油质感',   f: { brightness: 102, contrast: 94, highlight: -8, shadow: 18, fade: 22, saturate: 92, grain: 8, sharp: -10 } },
+    { id: 'kpop',      name: '韩系冷白',   f: { brightness: 108, contrast: 104, saturate: 82, temp: -32, highlight: 6, grain: 4, sharp: 12 } },
   ];
   function applyStylePreset(preset) {
     pushUndo();
@@ -6012,6 +6088,7 @@
         // Android intent 处理：Kotlin MainActivity 通过 evaluateJavascript 推 __androidOpenFile(paths)
         // paths 可能是 content:// Uri、file:// 路径或普通本地路径
         window.__androidOpenFile = function(paths) {
+          console.log('[Android] __androidOpenFile called:', JSON.stringify(paths));
           if (!Array.isArray(paths) || !paths.length) return;
           // content:// 走 WebView fetch 读 blob → 显示
           // 其他路径交给 handleOpenPaths（Rust load_paths）
@@ -6411,6 +6488,8 @@
     if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
     // Tauri 桌面版：资源已嵌入本地 exe，禁用 SW——避免 cache-first 旧缓存阻塞新版本生效
     if (window.__TAURI__) return;
+    // Tauri Android：tauri.localhost 是 WebView 内部协议，SW fetch 会失败导致白屏，禁用
+    if (navigator.userAgent.includes('Android')) return;
     navigator.serviceWorker.register('sw.js').catch(() => { /* 注册失败不影响主功能 */ });
   }
 

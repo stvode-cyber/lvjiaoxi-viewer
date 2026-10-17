@@ -1,5 +1,5 @@
 // 绿角犀看图桌面版 · Tauri 后端（Rust）
-//
+// force-rebuild-20261015
 // 职责（对应 PRD 5.1 系统集成层 + 5.2 后端解码）：
 //  - load_paths：接收文件/文件夹路径，递归收集图片，WebView 原生格式直接以 data URL 传递，
 //    TIFF/TGA 用 image crate 解码为 JPEG，HEIC/RAW/PSD 为扩展点（见文件末尾说明）。
@@ -33,6 +33,7 @@ use std::sync::Mutex;
 #[cfg(not(target_os = "android"))]
 use tauri::{Emitter, Manager};
 use image::codecs::jpeg::JpegEncoder;
+use rayon::prelude::*;
 use zip::ZipArchive;
 
 // 启动参数缓存：setup 阶段 emit 的 open-file 事件会因 WebView 未加载完成而丢失，
@@ -41,8 +42,13 @@ static PENDING_PATHS: Mutex<Vec<String>> = Mutex::new(Vec::new());
 
 fn dbg_log(msg: &str) {
     use std::io::Write;
+    // 毫秒时间戳方便测时序（load_paths 瓶颈定位专用）
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
     if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(std::env::temp_dir().join("lvjx-debug.log")) {
-        let _ = writeln!(f, "{}", msg);
+        let _ = writeln!(f, "[{}] {}", now, msg);
     }
 }
 
@@ -396,68 +402,56 @@ async fn load_paths(paths: Vec<String>, recursive: Option<bool>) -> Result<Vec<I
         natural_cmp(na, nb)
     });
 
-    let mut entries = Vec::with_capacity(files.len());
-    for f in files {
-        let meta = match std::fs::metadata(&f) {
-            Ok(m) => m,
-            Err(_) => continue,
-        };
-        let size = meta.len();
-        let last_modified = meta
-            .modified()
-            .ok()
-            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        let name = f
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("image")
-            .to_string();
-        let ext = f
-            .extension()
-            .and_then(|s| s.to_str())
-            .map(|s| s.to_lowercase())
-            .unwrap_or_default();
-        let mime = mime_of(&ext).to_string();
-
-        // WebView 原生格式：直接以原始字节透传
-        let is_native = NATIVE_EXTS.contains(&ext.as_str());
-        let url = if is_native {
-            match std::fs::read(&f) {
-                Ok(bytes) => format!("data:{};base64,{}", mime, B64.encode(&bytes)),
-                Err(_) => continue,
-            }
-        } else if ext == "tif" || ext == "tiff" || ext == "tga" {
-            // 需要 Rust 解码的格式（gif 已恢复原生透传，解码失败由前端调 decode_fallback 兜底）
-            match decode_to_rgb(&f).and_then(rgb_to_jpeg_data_url) {
-                Ok(u) => u,
-                Err(_) => continue,
-            }
-        } else if ext == "heic" || ext == "heif" {
-            // HEIC/HEIF：透传原始字节 data URL，由前端 heic2any 转码（需联网）。
-            // 解码失败或离线的分支走前端容错，不在此阻塞整批加载。
-            match std::fs::read(&f) {
-                Ok(bytes) => format!("data:image/heic;base64,{}", B64.encode(&bytes)),
-                Err(_) => continue,
-            }
-        } else {
-            // RAW / PSD：扩展点，当前跳过该文件而不是让整批加载失败，
-            // 保证被打开的图片始终能显示（即使同文件夹含有未支持格式的相邻图）。
-            continue;
-        };
-
-        entries.push(ImageEntry {
-            name,
-            size,
-            last_modified,
-            mime,
-            url,
-            path: f.to_string_lossy().to_string(),
-        });
-    }
-    dbg_log(&format!("[load_paths] return {} entries", entries.len()));
+    // 只收集元信息，不生成 data URL（36MB IPC 是瓶颈），url 由前端按需调 get_image_data 单张拉
+    let entries: Vec<ImageEntry> = files
+        .into_par_iter()
+        .filter_map(|f| {
+            let meta = std::fs::metadata(&f).ok()?;
+            let size = meta.len();
+            let last_modified = meta
+                .modified()
+                .ok()
+                .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let name = f.file_name()?.to_str()?.to_string();
+            let ext = f.extension()?.to_str()?.to_lowercase();
+            let mime = mime_of(&ext).to_string();
+            // 必须支持的格式才进入列表（其他格式不进 entries）
+            let is_native = NATIVE_EXTS.contains(&ext.as_str());
+            let is_decodeable = matches!(ext.as_str(), "tif" | "tiff" | "tga" | "heic" | "heif");
+            if !is_native && !is_decodeable { return None; }
+            Some(ImageEntry {
+                name, size, last_modified, mime,
+                url: String::new(), // 空串！等前端按需调 get_image_data
+                path: f.to_string_lossy().to_string(),
+            })
+        })
+        .collect();
+    dbg_log(&format!("[load_paths] return {} entries (no url, lazy)", entries.len()));
     Ok(entries)
+}
+
+// 按需懒加载：单张图片路径 → data URL。load_paths 只传元信息，前端 showImage 时调这个拿真正的图数据
+#[tauri::command]
+fn get_image_data(path: String) -> Result<String, String> {
+    let f = PathBuf::from(&path);
+    let ext = f.extension().and_then(|s| s.to_str()).map(|s| s.to_lowercase()).unwrap_or_default();
+    let mime = mime_of(&ext).to_string();
+    dbg_log(&format!("[get_image_data] path={:?} ext={}", path, ext));
+    let url = if NATIVE_EXTS.contains(&ext.as_str()) {
+        let bytes = std::fs::read(&f).map_err(|e| format!("read fail: {}", e))?;
+        format!("data:{};base64,{}", mime, B64.encode(&bytes))
+    } else if matches!(ext.as_str(), "tif" | "tiff" | "tga") {
+        decode_to_rgb(&f).and_then(rgb_to_jpeg_data_url).map_err(|e| format!("decode fail: {}", e))?
+    } else if matches!(ext.as_str(), "heic" | "heif") {
+        let bytes = std::fs::read(&f).map_err(|e| format!("read heic fail: {}", e))?;
+        format!("data:image/heic;base64,{}", B64.encode(&bytes))
+    } else {
+        return Err(format!("unsupported ext: {}", ext));
+    };
+    dbg_log(&format!("[get_image_data] ok len={}", url.len()));
+    Ok(url)
 }
 
 // 最近打开缩略图：文件返回自身，文件夹返回自然排序后的第一张图片（仅取一张，避免大目录全量解码）
@@ -485,6 +479,12 @@ fn first_thumb(path: String) -> Result<Option<String>, String> {
         .map(|s| s.to_lowercase())
         .unwrap_or_default();
     let mime = mime_of(&ext);
+    // GIF：提前走 image crate → JPEG 第一帧（和 read_archive_entry 保持一致；
+    // 避免 WebView2 对变种 GIF 原生解码失败导致缩略图空白，Iss-005）
+    if ext == "gif" {
+        let rgb = decode_to_rgb(&file)?;
+        return Ok(Some(rgb_to_jpeg_data_url(rgb)?));
+    }
     if NATIVE_EXTS.contains(&ext.as_str()) {
         let bytes = std::fs::read(&file).map_err(|e| e.to_string())?;
         Ok(Some(format!("data:{};base64,{}", mime, B64.encode(&bytes))))
@@ -727,6 +727,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             load_paths,
+            get_image_data,
             first_thumb,
             set_wallpaper,
             reveal_in_explorer,

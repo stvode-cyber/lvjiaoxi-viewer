@@ -16,10 +16,18 @@ import androidx.activity.enableEdgeToEdge
 class MainActivity : TauriActivity() {
 
   private var webViewRef: WebView? = null
+  // ⚠️ Bug-A 修复：WebView 还没 ready 时暂存 intent，等 onWebViewCreate 补调
+  private var pendingIntent: Intent? = null
 
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
     webViewRef = webView
+    // 强制开启 WebView 远程调试（开发期用，方便 Chrome DevTools 连手机看运行时 CSS）
+    WebView.setWebContentsDebuggingEnabled(true)
+    // ⚠️ Bug-B 修复：允许 WebView 访问 content:// 资源（Android 默认 false，会拦 fetch）
+    webView.settings.allowContentAccess = true
+    // ⚠️ Bug-A 补调：WebView ready 后处理之前暂存的 intent
+    pendingIntent?.let { handleIntent(it); pendingIntent = null }
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +60,12 @@ class MainActivity : TauriActivity() {
     }
 
     if (uris.isEmpty()) return
+
+    // ⚠️ Bug-A 修复：webViewRef 还没赋值 → 暂存 intent 等 onWebViewCreate 补调
+    if (webViewRef == null) {
+      pendingIntent = intent
+      return
+    }
 
     val paths = uris.map { it.toString() }
     val json = paths.joinToString(",") { "\"${it.replace("\"", "\\\"")}\"" }

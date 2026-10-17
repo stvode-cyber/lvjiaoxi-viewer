@@ -44,16 +44,18 @@
 - **重现次数**：3（2026-09-30 / 2026-10-01 / 2026-10-12 Chg-023+024）
 - **归档原因**：根因锁定 + Workaround 确立 + 代码已简化
 
-#### Iss-005（活跃 · 踩 6 次）WebView2 对某些 GIF 变种原生解码失败
+#### Iss-005（活跃 · 踩 7 次）WebView2 对某些 GIF 变种原生解码失败
 
 - **问题**：GIF 文件在 Rust 侧正确透传 data URL（data:image/gif;base64,...），但前端 <img src> 触发 onerror → "无法解码：xxx.gif"
 - **根因**：WebView2（Chromium）对某些 GIF 格式变种/损坏文件（IE 缓存中的 .gif、超大 GIF、非标准 color table）原生解码失败
 - **解决**：Dc-008 方案 B（Chg-011）—— 本地文件 gif 原生透传播动画，坏 GIF 前端 onerror → decode_fallback → JPEG 第一帧；顺修 is_image 漏 gif 导致文件夹扫描整个跳过 GIF
 - **踩坑 v2 根因（Chg-022）**：read_archive_entry 里 GIF 也被当作 NATIVE_EXTS 原生透传（L166 直接 return raw base64），但前端 onerror 兜底拿不到 zip 内子文件路径（item.path 是 zip 文件路径）→ 压缩包内坏 GIF 永远显示"无法解码"；且旧 L171-187 有个"GIF 走 image crate"的 matches 分支是**死代码**（永远走不到）
 - **最终修复（Chg-022）**：read_archive_entry 里 GIF 单独 `if ext == "gif"` 提前处理 → image crate → JPEG 第一帧（压缩包内静态，符合设计意图）；同时加固 decode_to_rgb 用 with_guessed_format 基于文件头探测
-- **预防规则**：新增"WebView2 原生支持格式"时要加真实文件验证；read_archive_entry 里 GIF 不能进 NATIVE_EXTS，必须 image crate 转 JPEG 第一帧
-- **关联路径**：`src-tauri/src/lib.rs` / load_paths / read_archive_entry / decode_to_rgb
-- **重现次数**：6（2026-10-10 发现压缩包内 GIF 死代码 + 前端兜底路径 bug）
+- **踩坑 v3 遗漏（Chg-029 · 2026-10-15）**：主图 + 压缩包路径修完后，first_thumb（最近访问缩略图）和 genThumb（底部缩略图生成）两个路径遗漏 —— first_thumb 里 GIF 在 NATIVE_EXTS 直接透传原始 data URL；genThumb 无 im.onerror 绑定，解码失败静默空白
+- **闭环修复（Chg-029）**：first_thumb 加 GIF 提前拦截（和 read_archive_entry 统一）；genThumb 加 onerror → decode_fallback 兜底；GIF 四路径现在全部闭环
+- **预防规则**：新增"WebView2 原生支持格式"时要加真实文件验证；read_archive_entry + first_thumb 两处 GIF 不能进 NATIVE_EXTS，必须 image crate 转 JPEG 第一帧；所有 img 元素必须绑 onerror
+- **关联路径**：`src-tauri/src/lib.rs` / load_paths / read_archive_entry / first_thumb / decode_to_rgb；`app.js` / genThumb
+- **重现次数**：7（2026-10-10 v2 压缩包内 GIF + 2026-10-15 v3 first_thumb/genThumb 遗漏）
 
 #### Iss-006（活跃 · 踩 1 次）decor pane 空 div + section 裸在 edit-body 外
 
@@ -90,7 +92,7 @@
   - 真机 PID 28416 存活零崩溃
 - **验证状态**：arm64 ✅ armv7 ✅ | x86_64/i686 ⏸（模拟器用，暂跳过；未来需配 AR_*）
 - **关联路径**：`src-tauri/gen/android/buildSrc/.../RustPlugin.kt`（4 架构默认配置）
-- **重现次数**：1（2026-10-14 tauri android build 全管线验证时发现）
+- **重现次数**：2（2026-10-14 全管线验证 + 2026-10-16 Chg-030 第二次踩，忘设环境变量直接报）
 
 #### Iss-009（活跃 · 踩 1 次 · 2026-10-14 Android 12+）force-stop 后 App 进入 stopped=true 状态
 
@@ -99,6 +101,20 @@
 - **解决**：force-stop 后让用户手动点击 App 图标启动一次，之后 adb 自动化测试才能正常工作
 - **预防规则**：adb 自动化测试前先检查 `dumpsys package | grep stopped=`，如 stopped=true 先让用户手动启动
 - **重现次数**：1（2026-10-14 intent 测试时 force-stop 踩坑）
+
+#### Iss-010（活跃 · 踩 1 次 · 2026-10-16 Chg-030）Tauri CLI android build 的 target 限制 + NDK 版本不一致
+
+- **问题**：
+  1. `tauri android build --apk` 默认硬调 i686 + x86_64 + arm64 + armv7 四个架构，不看 `gradle.properties` 里的 `targetList`（RustPlugin.kt 读 `findProperty("targetList")` 但 Tauri CLI 内部调 `android-studio-script --target i686` 是硬编码）
+  2. 环境变量 `$env:ANDROID_NDK_HOME` 设成 NDK 28.2，但 Tauri CLI 实际使用 `C:\Users\Administrator\.android-sdk\ndk\27.0.12077973`（ANDROID_HOME 指向的另一份）—— 两份 NDK 版本不一致
+- **根因**：Tauri CLI v2.11.4 的 target 选择机制分两层：CLI 层（硬调 android-studio-script）+ gradle 层（RustPlugin.kt）。gradle.properties 里的属性只影响 gradle 层，但 CLI 层先硬调了
+- **解决（正式 · 2026-10-16 验证通过）**：
+  1. 指定目标架构用 **CLI -t 参数**：`npm run tauri -- android build --apk -t aarch64 armv7`
+  2. 不依赖 gradle.properties 里的 targetList/archList/abiList（留作文档说明即可）
+  3. 环境变量 ANDROID_NDK_HOME 设成 ANDROID_HOME 下面那份（`C:\Users\Administrator\.android-sdk\ndk\27.0.12077973`），让 Tauri CLI 和 cc-rs 用同一份 NDK
+- **预防规则**：Android 构建命令必须包含 `-t aarch64 armv7`；NDK 路径在 ANDROID_HOME 下统一指向一份，别同时装多版本
+- **关联路径**：`src-tauri/gen/android/buildSrc/src/.../RustPlugin.kt`、`src-tauri/gen/android/gradle.properties`
+- **重现次数**：1（2026-10-16 Chg-030 构建时发现）
 
 ---
 

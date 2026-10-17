@@ -5,7 +5,6 @@
   "identifier": "com.lvjiaoxi.viewer",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:8080",
     "beforeDevCommand": "node serve.js",
     "beforeBuildCommand": "node scripts/sync-dist.cjs"
   },

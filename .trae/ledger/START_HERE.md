@@ -4,10 +4,10 @@
 桌面图片浏览器 + 内嵌底部栏美图编辑器。零框架原生 JS 单文件 app.js（252KB）+ Rust Tauri v2 + WebView2 离线运行时。核心卖点：合并位移场变形（导出 = 预览同公式）、AI 超分 ONNX 推理失败自动降级 Lanczos、抠图高斯似然比 + 双边羽化、压缩包直看（ZIP/CBZ 懒加载）。
 
 ## 当前版本
-`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v57**）
-- **2026-10-14 最新 build**：Chg-027 双架构 universal APK + 移动端 tab 横向滑动（commit 1aa4252）
+`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v64**）
+- **2026-10-16 最新 build**：Chg-030 Android 完整构建管线闭环（`tauri android build --apk -t aarch64 armv7`，Universal APK 35.38MB，JNI 20 符号齐全，真机 PID 25696 存活零崩溃）
 
-## 完成度（2026-10-13 晚）
+## 完成度（2026-10-16 上午）
 
 | 模块 | 状态 | 备注 |
 |------|------|------|
@@ -21,7 +21,7 @@
 | 海报边框+emoji | ✅ 100% | BORDER_PRESETS + emojiBar + 一键生成 |
 | 打包交付 | ✅ 100% | NSIS 全中文 SimpChinese；installer.nsh PreInstall 仅留 taskkill |
 | 回归测试 | ✅ 100% | regression.cjs **412** 项全绿 |
-| **Android 主线** | **🔄 45%** | **Resolver priority 真机验证通过**（PID 3374 存活，ResolverActivity 不再弹）；Android intent（onNewIntent + __androidOpenFile）+ release keystore 已配 + content:// SAF 路径 + styles.css 移动端适配 + 还原 rust 插件 + npm.bat 系统修复；待多架构签名 + 完整 tauri android build 管线闭环 |
+| **Android 主线** | **🔄 55%** | **完整构建管线闭环**（Chg-030）：`tauri android build --apk -t aarch64 armv7` 一次跑通；Universal APK 35.38MB 双架构 release 签名；JNI 20 符号齐全；真机 PID 25696 存活；Resolver priority ✅ intent onNewIntent ✅ content:// SAF ✅ release keystore ✅；待 intent 真机测试（Gallery/Files 点图打开）+ SAF Picker |
 | 鸿蒙/iOS 线 | ⏸ 暂缓 | 已移除，后续再回归 |
 | 后端服务 | ⬜ 待接入 | |
 
@@ -51,15 +51,32 @@
 - 发版前本机静默安装验证（AGENTS 交付流程 step 7-10）
 
 ## 活跃坑 top 5（踩过 ≥1 次，新 AI 必扫）
-1. **Iss-005**（踩 6 次 · 已修复）WebView2 GIF 变种原生解码失败 → Rust 端 image crate 兜底
-2. **Iss-007**（踩 1 次 · 2026-10-13 新坑）手动 cargo build Android 缺 mobile_entry_point JNI 桥 → **铁律：tauri android build 是唯一入口**
-3. **Iss-001**（踩 2 次）jsdom Uint8Array 是 window realm，`instanceof` 要用 `window.Uint8Array`
-4. **Iss-002**（踩 2 次）PowerShell 5 参数行纯 ASCII
-5. **Iss-006**（踩 1 次）edit-pane HTML 闭合检查——section 必须被 data-pane 容器包裹
+1. **Iss-005**（踩 7 次 · 已修复）WebView2 GIF 变种原生解码失败 → Rust 端 image crate 兜底
+2. **Iss-008**（踩 2 次 · 2026-10-16 又踩）armv7 交叉编译缺 C 编译器 → 构建前 PATH + CC_armv7 环境变量
+3. **Iss-007**（踩 1 次）手动 cargo build Android 缺 mobile_entry_point JNI 桥 → **铁律：tauri android build 是唯一入口**
+4. **Iss-010**（踩 1 次 · 2026-10-16 新坑）Tauri CLI 硬调 4 架构 + gradle.properties targetList 不生效 → **必须用 `-t aarch64 armv7` 参数**；NDK 版本不一致
+5. **Iss-001**（踩 2 次）jsdom Uint8Array 是 window realm，`instanceof` 要用 `window.Uint8Array`
 
-## 最近 3 周大事（2026-09-20 ~ 2026-10-13）
+## 最近 3 周大事（2026-09-20 ~ 2026-10-16）
 
-### 2026-10-13（Android 主线突破 + Resolver 修复）
+### 2026-10-16（Android 完整构建管线闭环 · Chg-030）
+- **还原 rust 插件**：Chg-029 后有人注释了 `build.gradle.kts` 里的 `id("rust")`，本次还原
+- **管线验证**：`npm run tauri -- android build --apk -t aarch64 armv7` 一次跑通完整管线
+  - Rust 双架构 release profile 编译（2 warnings：unused_mut + unused 变量）
+  - Universal APK 35.38MB（arm64-v8a + armeabi-v7a，release 签名）
+  - llvm-readelf 验：JNI 桥 20 符号齐全（含 `Rust_create`），NEEDED 全系统库
+  - 真机 adb install -r → Success；PID 25696 存活；零崩溃
+- **Iss-010 新坑**：
+  - Tauri CLI 硬调 i686/x86_64，`gradle.properties` targetList 不生效 → 必须用 `-t aarch64 armv7`
+  - Tauri CLI 用 ANDROID_HOME 下的 NDK 27，cc-rs 用环境变量 NDK 28，版本不一致
+- **Iss-008 重现次数 +1**：本次又踩了 PATH 没加 NDK/bin 的坑
+
+### 2026-10-15（Iss-005 闭环 · Chg-029）
+- **Chg-029 Iss-005 闭环**：补完 first_thumb（最近访问缩略图）和 genThumb（底部缩略图生成）两个遗漏路径，GIF 四路径现在全部闭环（主图 / 压缩包内 / first_thumb / genThumb）
+- sw.js CACHE v63 → v64
+- regression.cjs 414/0 全绿
+
+### 2026-10-13 ~ 2026-10-14（Android 主线大推进 · Chg-025/026/027）
 - **Chg-025** Android 真机验证通过：universal APK arm64 PID 19104 存活，Rust JNI 20 符号齐全，WebView chromium sandbox 起，空状态 UI 完整渲染
 - Rust warning 清零（lib.rs Emitter/Manager 加 `#[cfg(not(target_os="android"))]`）
 - **Iss-007 新坑**：手动 cargo build + 手动拷 .so → APK 启动崩溃 `UnsatisfiedLinkError`。根因：mobile_entry_point 宏只在 tauri android build 管线里触发 JNI 桥生成
@@ -107,11 +124,31 @@ node scripts/sync-dist.cjs
 - 手机 USB 连 → 开开发者模式 → 开 USB 调试 → `adb devices` 确认
 
 ### 当前未完成（优先级排序）
-1. **🔴 完整管线闭环**：跑 `tauri android build --apk`（npm.bat 已有 + rust 插件已还原），验证 Iss-007 铁律闭环
-2. **🔴 Android intent 真机测试**：推图到手机 → Gallery/Files 打开 → 验证 content:// SAF 路径能否加载
-3. **🟡 多架构签名**：配 arm64-v8a / armeabi-v7a / x86_64 三架构 release APK
-4. **🟡 Android SAF 完整授权**：Android 13+ 内文件打开按钮调 SAF Picker
-5. **🟢 Android UI 优化**：美图面板弹出效果 / 触控区域再加大
+1. **🔴 Android intent 真机测试**：adb push 测试图片到手机 → Gallery/Files 点图打开 → 验证 content:// SAF 路径能否加载显示 → App 是否触发 `__androidOpenFile` handler
+2. **🔴 Android SAF Picker 完整授权**：Android 13+ 文件打开按钮调 SAF Picker（ACTION_OPEN_DOCUMENT），拿到 URI → 解析真实路径 → 加载显示
+3. **🟡 Android release APK 分发**：把 `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk`（35.38MB，release 签名）整理到 `nsis_x/` 下做 Android 版交付物
+4. **🟡 Android UI 优化**：美图面板触控区域再加大 / 顶栏精简版布局优化 / 长按图片上下文菜单
+5. **🟢 Rust 2 个 warning 清掉**：`let mut builder` 加桌面 cfg；`.setup(|app|)` → `_app` 前缀
+
+### Android 构建铁律模板（复制粘贴即可用）
+```powershell
+# Iss-008 + Iss-010 环境
+$env:ANDROID_HOME = "C:\Users\Administrator\.android-sdk"
+$env:ANDROID_NDK_HOME = "$env:ANDROID_HOME\ndk\27.0.12077973"  # 和 ANDROID_HOME 保持一致
+$env:NDK_BIN = "$env:ANDROID_NDK_HOME\toolchains\llvm\prebuilt\windows-x86_64\bin"
+$env:PATH = "$env:NDK_BIN;$env:PATH"
+$env:CC_armv7_linux_androideabi = "$env:NDK_BIN\armv7a-linux-androideabi35-clang.cmd"
+
+# 构建命令（Iss-007 + Iss-010：唯一正确入口 + 必须 -t 指定双架构）
+npm run tauri -- android build --apk -t aarch64 armv7
+
+# 真机验证
+adb install -r app-universal-release.apk
+adb shell am start -n com.lvjiaoxi.viewer/.MainActivity
+Start-Sleep 3
+adb shell pidof com.lvjiaoxi.viewer   # 必须有输出 = 存活
+adb logcat -d -t 20 | findstr /i "FATAL UnsatisfiedLinkError panic"  # 必须零匹配
+```
 
 ### 30 秒扫台账
 1. START_HERE.md（已读完）→ context.md 版本号落点 → issues.md 活跃坑 → changes.md 最近 10 条

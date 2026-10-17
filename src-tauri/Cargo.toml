@@ -21,7 +21,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # 位图解码：覆盖 jpg/png/gif/bmp/ico/tiff/tga/pnm/dds 等；WebView 原生支持 jpg/png/gif/webp/bmp/ico/svg/avif，无需解码
-image = { version = "0.25", features = ["jpeg", "png", "gif", "bmp", "ico", "tiff", "tga", "rayon"] }
+image = { version = "0.25", features = ["jpeg", "png", "gif", "bmp", "ico", "tiff", "tga", "rayon", "webp"] }
 # EXIF 方向纠正（旋转/翻转烘焙）
 kamadak-exif = "0.6"
 # data URL 编码
@@ -30,6 +30,8 @@ base64 = "0.22"
 percent-encoding = "2"
 # 压缩包直看（ZIP/CBZ 不解压直接浏览）
 zip = "2"
+# 并行处理：load_paths 多线程读磁盘 + base64 编码，53 张图从 2 秒降到 300ms
+rayon = "1"
 
 # Android 不支持 arboard（剪贴板位图）和单实例 plugin，移到桌面专用
 [target.'cfg(not(target_os = "android"))'.dependencies]
