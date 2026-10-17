@@ -5,6 +5,29 @@
 
 ---
 
+## 2026-10-17 · app.js 模块化拆分（Chg-029）
+
+**commit**: `7842128` | **涉及**: 30 files | **regression**: 467/0 全绿
+
+- 新增 `js/exif.js`（273 行）— renderInfo + EXIF 全部 + parsePngTextChunks
+- 新增 `js/archive.js`（70 行）— handleOpenPaths + buildItems + resolveItemSrc + loadImage
+- 新增 `js/render.js`（~450 行）— showImage + computeFit/缩放/旋转/翻页/缩略图
+- 新增 `js/init.js`（~180 行）— naturalCompare + settings + theme + comic + cacheDom + init
+- 架构：子文件 IIFE 自执行注册到 `window.__API__`，函数内部用 `window.__API__.xxx()` 互调
+- app.js 主文件加 Object.assign 注入层；裸调用 readExif/renderInfo 等 → `window.__API__.xxx()`
+- regression.cjs 先 eval 4 个子文件再 eval app.js；appJs 合并所有 js/*.js + app.js
+- sw.js CACHE v72→v73；sync-dist 8 文件同步；LF/CRLF 警告已处理
+
+**踩坑**:
+- jsdom eval 泄露 `const API` 到全局作用域 → 去掉 `const API` 直接 `window.__API__`
+- PowerShell 正则替换破坏函数定义（`function window.__API__.resolveItemSrc`）→ 批量修复
+- 主文件旧 showImage 裸调用已搬迁的 renderInfo/readExif → window.__API__.xxx()
+- TDZ editUndo 先引用后 let → 分开注入
+
+**暂缓**: edit.js（美图 ~3000 行）+ batch.js + 零散函数 ↔ 下轮 Chg-030
+
+---
+
 ## 初始化 & 台账骨架
 
 #### Chg-001（2026-09-30 · 台帐系统初始化）
