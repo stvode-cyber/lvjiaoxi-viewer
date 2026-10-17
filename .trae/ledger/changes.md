@@ -1,3 +1,4 @@
+> 📂 角色索引：▶ 必读：溯源某改动的来龙去脉；跳过：新会话开头
 # changes.md · 文件变化批次（聚合版）
 
 > 按主题聚合 Chg 条目，减少上下文压力。每条摘要 2-3 行，详细记录留 .session.md 或 weekly/。
@@ -137,3 +138,12 @@ rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信�
 
 #### Chg-M2（2026-10-17 · 版本号自检脚本）
 新建 `scripts/check-versions.cjs` 自动验 5 落点（tauri.conf.json / Cargo.toml / manifest / app.js about / sw.js CACHE），跑一遍秒出结果，下次发版前必跑。
+
+#### Chg-M3（2026-10-17 · 台账瘦身 + 进程追踪铁律 + 索引标签化）
+**commit**: `aadc822`（P-001）+ 本次（P-002）| **regression**: 467/0 全绿
+- 根目录 7 个过期 md → `.trae/ledger/_archive/`（Git rename 追历史）；删 5 张临时截图
+- AGENTS.md 补 §10 进程追踪铁律（P-YYYYMMDD-NNN 编号 + 动作清单 + 消结规则）；§6.1 台账目录补 4 个扩展文件 + _archive 说明；§6.5 补 TOP 标签硬规则 + 活跃坑硬限自动归档示例
+- START_HERE.md 顶部加 30 秒接手倒计时清单（6 步按序执行）
+- ledger 10 个 md 全部补 `📂 角色索引：` 首行标签（谁必读 + 跳过条件）
+- issues.md 活跃坑 TOP 标签：Iss-005 🔴 TOP1（踩 7 次）+ Iss-001/002 🟠 TOP2（各踩 2 次）
+- 活跃坑硬限 ≤10：当前 9 个，下次新坑自动挤踩最少的归档

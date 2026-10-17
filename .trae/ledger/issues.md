@@ -1,3 +1,4 @@
+> 📂 角色索引：▶ 必读：改文件前扫活跃坑；跳过：不碰源码时
 # issues.md · 踩过的坑
 
 > 活跃区：正在威胁当前开发的坑，改相关文件前必扫
@@ -7,7 +8,7 @@
 
 ## 活跃坑（当前 ≤10 个，硬限）
 
-#### Iss-001（活跃 · 踩 2 次）jsdom Uint8Array 跨 realm 检测失败
+#### Iss-001 🟠 TOP2（活跃 · 踩 2 次）jsdom Uint8Array 跨 realm 检测失败
 
 - **问题**：jsdom `<canvas>` 创建的 Uint8Array 是 window realm 的，`instanceof Uint8Array` 在 Node realm 里返回 false
 - **根因**：jsdom 有自己的全局对象，Uint8Array 构造函数与 Node 原生不同
@@ -15,7 +16,7 @@
 - **预防规则**：写 `// TODO: [jsdom-Uint8Array] 预防：jsdom 环境下 instanceof Uint8Array 要用 window.Uint8Array` 到 regression.cjs 头部
 - **关联路径**：`test/regression.cjs`、所有用 canvas getImageData 的测试
 
-#### Iss-002（活跃 · 踩 2 次）PowerShell 5 中文注释被 GBK 误读
+#### Iss-002 🟠 TOP2（活跃 · 踩 2 次）PowerShell 5 中文注释被 GBK 误读
 
 - **问题**：PowerShell 5 读取含中文注释的脚本参数行时，按 GBK 解码导致参数错乱
 - **根因**：Windows PowerShell 5 默认系统编码（中文系统为 GBK），参数行含 UTF-8 BOM 或中文会触发
@@ -44,7 +45,7 @@
 - **重现次数**：3（2026-09-30 / 2026-10-01 / 2026-10-12 Chg-023+024）
 - **归档原因**：根因锁定 + Workaround 确立 + 代码已简化
 
-#### Iss-005（活跃 · 踩 7 次）WebView2 对某些 GIF 变种原生解码失败
+#### Iss-005 🔴 TOP1（活跃 · 踩 7 次）WebView2 对某些 GIF 变种原生解码失败
 
 - **问题**：GIF 文件在 Rust 侧正确透传 data URL（data:image/gif;base64,...），但前端 <img src> 触发 onerror → "无法解码：xxx.gif"
 - **根因**：WebView2（Chromium）对某些 GIF 格式变种/损坏文件（IE 缓存中的 .gif、超大 GIF、非标准 color table）原生解码失败
