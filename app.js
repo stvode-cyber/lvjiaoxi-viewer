@@ -23,10 +23,10 @@
     return m ? m[1].toLowerCase() : '';
   }
   function isImageFile(name) {
-    return IMG_EXT.includes(extOf(name));
+    return IMG_EXT.includes(window.__API__.extOf(name));
   }
   function isArchiveFile(name) {
-    return ARCHIVE_EXT.includes(extOf(name));
+    return ARCHIVE_EXT.includes(window.__API__.extOf(name));
   }
   function formatBytes(n) {
     if (!n && n !== 0) return '—';
@@ -93,7 +93,7 @@
       state.items.forEach((it) => { if (it.url && it.url.indexOf('blob:') === 0) URL.revokeObjectURL(it.url); if (it.displayUrl && it.displayUrl.indexOf('blob:') >= 0) URL.revokeObjectURL(it.displayUrl); });
       state.items = items; state.index = -1;
       state.archivePath = null;  // 非压缩包模式清空（📖 漫画按钮自动隐藏）
-      applyComicMode(false);     // 切回单页模式
+      window.__API__.applyComicMode(false);     // 切回单页模式
       els.emptyHint.hidden = true; // 与 Web loadFiles 一致：加载后隐藏空态提示，避免覆盖主视区
       if (items.length) {
         window.__API__.renderThumbWindow(0);
@@ -118,7 +118,7 @@
       this.flog('openArchive ' + path);
       const entries = await this.invoke('list_archive_entries', { path });
       if (!Array.isArray(entries) || !entries.length) {
-        toast('压缩包内未找到图片');
+        window.__API__.toast('压缩包内未找到图片');
         return false;
       }
       // 统一 items 格式：url 留空（懒加载），path 存压缩包路径
@@ -135,9 +135,9 @@
       state.archivePath = path;  // 标记当前处于压缩包浏览模式
       els.emptyHint.hidden = true;
       window.__API__.renderThumbWindow(0);
-      toast('📦 ' + items.length + ' 张图片（压缩包直看）');
+      window.__API__.toast('📦 ' + items.length + ' 张图片（压缩包直看）');
       // 📖 压缩包打开时显示漫画模式按钮 + 读取偏好
-      applyComicMode(localStorage.getItem('qjviewer_comic_v1') === '1');
+      window.__API__.applyComicMode(localStorage.getItem('qjviewer_comic_v1') === '1');
       window.__API__.showImage(0);
       window.__API__.updateChrome();
       return true;
@@ -241,7 +241,7 @@
   ];
   const GROUP_LABELS = { general: '通用', view: '看图', slideshow: '幻灯片', files: '文件关联', advanced: '高级', shortcuts: '快捷键', manual: '使用说明', about: '关于' };
 
-  let settings = loadSettings();
+  let settings = window.__API__.loadSettings();
   function loadSettings() {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
@@ -271,11 +271,11 @@
     try { return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'; } catch { return 'light'; }
   }
   function toggleTheme() {
-    const next = loadTheme() === 'dark' ? 'light' : 'dark';
+    const next = window.__API__.loadTheme() === 'dark' ? 'light' : 'dark';
     try { localStorage.setItem(THEME_KEY, next); } catch {}
-    applyTheme(next);
+    window.__API__.applyTheme(next);
   }
-  // 注意：applyTheme() / applyComicMode() 立即调用要等 els 初始化后，见 init() cacheDom() 之后
+  // 注意：window.__API__.applyTheme() / window.__API__.applyComicMode() 立即调用要等 els 初始化后，见 window.__API__.init() window.__API__.cacheDom() 之后
 
   // ============ 双页漫画模式（2026-10-17 · A2 对标 HoneyView） ============
   const COMIC_KEY = 'qjviewer_comic_v1';
@@ -290,10 +290,10 @@
     }
   }
   function toggleComicMode() {
-    if (!state.archivePath) { toast('📖 双页模式仅在压缩包浏览时可用'); return; }
+    if (!state.archivePath) { window.__API__.toast('📖 双页模式仅在压缩包浏览时可用'); return; }
     const next = !state.comicMode;
     try { localStorage.setItem(COMIC_KEY, next ? '1' : '0'); } catch {}
-    applyComicMode(next);
+    window.__API__.applyComicMode(next);
     // 切到双页时对齐偶数索引（左页）
     if (next && state.index % 2 !== 0) { state.index = state.index - 1; }
     window.__API__.showImage(state.index);
@@ -456,12 +456,12 @@
 
     // 2. 录制模式（capturingAction 不为空时监听按键）
     if (capturingAction) {
-      if (combo === 'escape') { capturingAction = null; toast('录制已取消'); return; }
+      if (combo === 'escape') { capturingAction = null; window.__API__.toast('录制已取消'); return; }
       // 冲突检测
       for (const a in keymap) {
         if (keymap[a] && keymap[a].includes(combo)) {
           const label = KEYMAP_SCHEMA.find(s => s.action === a)?.label || a;
-          toast('❌ 键「' + prettyCombo(combo) + '」已被「' + label + '」占用');
+          window.__API__.toast('❌ 键「' + prettyCombo(combo) + '」已被「' + label + '」占用');
           return;
         }
       }
@@ -469,7 +469,7 @@
       keymap[capturingAction] = [combo];
       saveKeymap(); buildComboLookup();
       const label = KEYMAP_SCHEMA.find(s => s.action === capturingAction)?.label || capturingAction;
-      toast('✅ 「' + label + '」已改为 ' + prettyCombo(combo));
+      window.__API__.toast('✅ 「' + label + '」已改为 ' + prettyCombo(combo));
       capturingAction = null;
       return;
     }
@@ -495,7 +495,7 @@
     e.stopPropagation();
     // disabled 门禁
     const needImage = ['prev', 'next', 'home', 'end', 'zoomIn', 'zoomOut', 'rotateL', 'rotateR', 'flipH', 'flipV', 'info', 'slideshow', 'fullscreen', 'copy', 'edit'].includes(action);
-    if (needImage && state.items.length === 0) { toast('请先打开图片'); return; }
+    if (needImage && state.items.length === 0) { window.__API__.toast('请先打开图片'); return; }
     runAction(action);
   });
   function runAction(a) {
@@ -699,17 +699,17 @@
   // ============ 文件加载层 ============
   function buildItems(fileList, recursive) {
     let files = Array.from(fileList).filter((f) => isImageFile(f.name));
-    if (!files.length) { toast('未找到图片文件'); return; }
+    if (!files.length) { window.__API__.toast('未找到图片文件'); return; }
     // 排序：目录路径 + 文件名 自然排序
     files.sort((a, b) => {
       const pa = (a.webkitRelativePath || a.name), pb = (b.webkitRelativePath || b.name);
-      return naturalCompare(pa, pb);
+      return window.__API__.naturalCompare(pa, pb);
     });
     // 释放旧 URL
     state.items.forEach((it) => { if (it.url) URL.revokeObjectURL(it.url); if (it.displayUrl && it.displayUrl.indexOf('blob:') >= 0) URL.revokeObjectURL(it.displayUrl); });
     state.items = files.map((f) => ({
       file: f, name: f.name, size: f.size, lastModified: f.lastModified,
-      type: f.type || ('image/' + extOf(f.name)),
+      type: f.type || ('image/' + window.__API__.extOf(f.name)),
       url: URL.createObjectURL(f), img: null, thumbUrl: null, natW: 0, natH: 0, exif: null,
     }));
     state.cache.clear();
@@ -762,9 +762,9 @@
     }
     if (entries.length) {
       for (const en of entries) await traverseEntry(en, out);
-      window.__API__.buildItems(out, getSetting('view', 'recursive'));
+      window.__API__.buildItems(out, window.__API__.getSetting('view', 'recursive'));
     } else if (dt.files && dt.files.length) {
-      window.__API__.buildItems(dt.files, getSetting('view', 'recursive'));
+      window.__API__.buildItems(dt.files, window.__API__.getSetting('view', 'recursive'));
     }
   });
 
@@ -820,7 +820,7 @@
 
   function isHeicItem(item) {
     if (!item) return false;
-    const ext = extOf(item.name || '');
+    const ext = window.__API__.extOf(item.name || '');
     if (ext === 'heic' || ext === 'heif') return true;
     if (item.url && item.url.indexOf('data:image/heic') === 0) return true;
     if (item.type && String(item.type).indexOf('heic') >= 0) return true;
@@ -932,7 +932,7 @@
   function showImage(index, opts) {
     opts = opts || {};
     if (!state.items.length) return;
-    const loop = getSetting('view', 'loop');
+    const loop = window.__API__.getSetting('view', 'loop');
     if (loop) { index = (index + state.items.length) % state.items.length; }
     else { index = Math.max(0, Math.min(state.items.length - 1, index)); }
     state.index = index;
@@ -941,7 +941,7 @@
     // 📖 双页漫画模式：同时渲染当前页和下一页
     if (state.comicMode) { return renderDualPage(index); }
 
-    if (!getSetting('view', 'rememberRotation')) {
+    if (!window.__API__.getSetting('view', 'rememberRotation')) {
       state.rotation = 0; state.flipH = false; state.flipV = false;
     }
     // 美工状态随图切换重置：每张图独立编辑，切图回到初始态
@@ -962,10 +962,10 @@
     if (typeof updateSlimUI === 'function') updateSlimUI();
     if (typeof updateDeformUI === 'function') updateDeformUI();
     if (typeof updateOpsUI === 'function') updateOpsUI();
-    state.mode = getSetting('view', 'defaultZoom') === 'actual' ? 'actual' : 'fit';
+    state.mode = window.__API__.getSetting('view', 'defaultZoom') === 'actual' ? 'actual' : 'fit';
 
     els.loading.hidden = false;
-    resetLoading();
+    window.__API__.resetLoading();
 
     const finish = (img) => {
       els.loading.hidden = true;
@@ -1002,10 +1002,10 @@
       const loadOrFetch = () => {
         if (!item.url && item.path && desktop.available()) {
           desktop.invoke('get_image_data', { path: item.path }).then((url) => {
-            if (!url) { els.image.hidden = true; showLoadingError(item.name); toast('无法加载：' + item.name); return; }
+            if (!url) { els.image.hidden = true; window.__API__.showLoadingError(item.name); window.__API__.toast('无法加载：' + item.name); return; }
             item.url = url;
             doLoadImage();
-          }).catch(() => { els.image.hidden = true; showLoadingError(item.name); toast('无法加载：' + item.name); });
+          }).catch(() => { els.image.hidden = true; window.__API__.showLoadingError(item.name); window.__API__.toast('无法加载：' + item.name); });
         } else {
           doLoadImage();
         }
@@ -1016,7 +1016,7 @@
           if (state.index === index) finish(img);
         }).catch(() => {
           // GIF 等 WebView2 解码失败兜底 → Rust image crate → JPEG 第一帧
-          const fail = () => { els.image.hidden = true; desktop.flog('showImage CATCH broken path=' + String(item.path) + ' urlHead=' + String(item.url).slice(0, 22)); item.broken = true; showLoadingError(item.name); toast('无法解码：' + item.name); };
+          const fail = () => { els.image.hidden = true; desktop.flog('showImage CATCH broken path=' + String(item.path) + ' urlHead=' + String(item.url).slice(0, 22)); item.broken = true; window.__API__.showLoadingError(item.name); window.__API__.toast('无法解码：' + item.name); };
           if (!desktop.available() || !item.path || item.fallbackTried) { fail(); return; }
           item.fallbackTried = true;
           desktop.invoke('decode_fallback', { path: item.path }).then((url) => {
@@ -1259,7 +1259,7 @@
       const div = document.createElement('div');
       div.className = 'thumb' + (i === state.index ? ' active' : '');
       div.dataset.index = i;
-      div.innerHTML = `<span class="t-index">${i + 1}</span><span class="t-fmt">${extOf(item.name)}</span>`;
+      div.innerHTML = `<span class="t-index">${i + 1}</span><span class="t-fmt">${window.__API__.extOf(item.name)}</span>`;
       div.addEventListener('click', () => window.__API__.showImage(i));
       wrap.appendChild(div);
       // 有缓存 thumbUrl → 直接复用；没有 → 异步生成（genThumb 内部也会缓存到 item 上）
@@ -1314,7 +1314,7 @@
 
   // 预加载（LRU，前后各2张）
   function preloadAround(index) {
-    const cap = getSetting('advanced', 'preloadSize') || 20;
+    const cap = window.__API__.getSetting('advanced', 'preloadSize') || 20;
     const idxs = [index - 2, index - 1, index + 1, index + 2];
     idxs.forEach((i) => {
       if (i < 0 || i >= state.items.length) return;
@@ -1368,19 +1368,19 @@
   async function copyCurrentImage() {
     const item = state.items[state.index];
     if (!item) return;
-    try { await window.__API__.loadImage(item); } catch (e) { toast('无法加载图片'); return; }
+    try { await window.__API__.loadImage(item); } catch (e) { window.__API__.toast('无法加载图片'); return; }
     const canvas = makeCanvasOfCurrent(1);
     if (!canvas) return;
     canvas.toBlob(async (blob) => {
       try {
-        if (await desktop.copyImage(blob).catch(() => false)) { toast('已复制到剪贴板'); return; }
+        if (await desktop.copyImage(blob).catch(() => false)) { window.__API__.toast('已复制到剪贴板'); return; }
         if (navigator.clipboard && window.ClipboardItem) {
           await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-          toast('已复制到剪贴板');
+          window.__API__.toast('已复制到剪贴板');
         } else throw new Error('no clipboard');
       } catch (e) {
-        download(blob, stripExt(item.name) + '_copy.png');
-        toast('剪贴板不可用，已下载 PNG');
+        window.__API__.download(blob, stripExt(item.name) + '_copy.png');
+        window.__API__.toast('剪贴板不可用，已下载 PNG');
       }
     }, 'image/png');
   }
@@ -1409,22 +1409,22 @@
   async function setWallpaper() {
     const item = state.items[state.index];
     if (!item) return;
-    if (await desktop.setWallpaper(item).catch(() => false)) { toast('已设置为桌面壁纸'); return; }
-    try { await window.__API__.loadImage(item); } catch (e) { toast('无法加载图片'); return; }
+    if (await desktop.setWallpaper(item).catch(() => false)) { window.__API__.toast('已设置为桌面壁纸'); return; }
+    try { await window.__API__.loadImage(item); } catch (e) { window.__API__.toast('无法加载图片'); return; }
     const src = makeCanvasOfCurrent(1);
-    if (!src) { toast('无法生成壁纸'); return; }
-    const mode = getSetting('view', 'wallpaperMode') || 'fit';
+    if (!src) { window.__API__.toast('无法生成壁纸'); return; }
+    const mode = window.__API__.getSetting('view', 'wallpaperMode') || 'fit';
     const canvas = composeWallpaper(src, mode);
     const label = { fit: '适应', fill: '拉伸', center: '居中', tile: '平铺' }[mode] || '适应';
-    canvas.toBlob((blob) => { download(blob, stripExt(item.name) + '_wallpaper_' + mode + '.png'); toast('壁纸图片（' + label + '）已下载（Web 原型无法直接设置系统壁纸）'); }, 'image/png');
+    canvas.toBlob((blob) => { window.__API__.download(blob, stripExt(item.name) + '_wallpaper_' + mode + '.png'); window.__API__.toast('壁纸图片（' + label + '）已下载（Web 原型无法直接设置系统壁纸）'); }, 'image/png');
   }
   async function revealInExplorer() {
     const item = state.items[state.index];
     if (!item) return;
-    if (await desktop.reveal(item).catch(() => false)) { toast('已在资源管理器中定位'); return; }
+    if (await desktop.reveal(item).catch(() => false)) { window.__API__.toast('已在资源管理器中定位'); return; }
     // Web 无法获取真实本地路径
-    copyText(item.name);
-    toast('已复制文件名（Web 原型无法获取完整本地路径）');
+    window.__API__.copyText(item.name);
+    window.__API__.toast('已复制文件名（Web 原型无法获取完整本地路径）');
   }
   function stripExt(name) { return name.replace(/\.[^.]+$/, ''); }
   function copyText(text) {
@@ -1484,14 +1484,14 @@
     editRedo.length = 0; updateEditUndoButtons(); if (els.editTimeline) renderEditTimeline();
   }
   function undoEdit() {
-    if (!editUndo.length) { toast('没有可撤销的编辑'); return; }
+    if (!editUndo.length) { window.__API__.toast('没有可撤销的编辑'); return; }
     editRedo.push(editSnap()); const prev = editUndo.pop();
-    restoreEdit(prev); updateEditUndoButtons(); toast('已撤销'); if (els.editTimeline) renderEditTimeline();
+    restoreEdit(prev); updateEditUndoButtons(); window.__API__.toast('已撤销'); if (els.editTimeline) renderEditTimeline();
   }
   function redoEdit() {
-    if (!editRedo.length) { toast('没有可重做的编辑'); return; }
+    if (!editRedo.length) { window.__API__.toast('没有可重做的编辑'); return; }
     editUndo.push(editSnap()); const next = editRedo.pop();
-    restoreEdit(next); updateEditUndoButtons(); toast('已重做'); if (els.editTimeline) renderEditTimeline();
+    restoreEdit(next); updateEditUndoButtons(); window.__API__.toast('已重做'); if (els.editTimeline) renderEditTimeline();
   }
   function clearEditHistory() { editUndo = []; editRedo = []; updateEditUndoButtons(); if (els.editTimeline) renderEditTimeline(); }
 
@@ -1565,14 +1565,14 @@
     list.unshift({ name, snap });
     saveMyStylesList(list);
     renderMyStyles();
-    toast('已保存「' + name + '」到我的风格');
+    window.__API__.toast('已保存「' + name + '」到我的风格');
   }
   function applyMyStyle(i) {
     const list = loadMyStyles();
     if (!list[i]) return;
     pushUndo();
     restoreEdit(list[i].snap);
-    toast('已应用「' + list[i].name + '」');
+    window.__API__.toast('已应用「' + list[i].name + '」');
   }
   function deleteMyStyle(i) {
     const list = loadMyStyles();
@@ -1581,15 +1581,15 @@
     list.splice(i, 1);
     saveMyStylesList(list);
     renderMyStyles();
-    toast('已删除「' + name + '」');
+    window.__API__.toast('已删除「' + name + '」');
   }
   function clearAllMyStyles() {
     const list = loadMyStyles();
-    if (!list.length) { toast('没有可清空的风格'); return; }
+    if (!list.length) { window.__API__.toast('没有可清空的风格'); return; }
     if (!confirm('确定清空全部 ' + list.length + ' 个自定义风格？此操作不可撤销。')) return;
     localStorage.removeItem(MY_STYLE_KEY);
     renderMyStyles();
-    toast('已清空全部自定义风格');
+    window.__API__.toast('已清空全部自定义风格');
   }
 
   // ============ 编辑历史时间线 UI ============
@@ -1655,14 +1655,14 @@
       restoreEdit(targetSnap);
       updateEditUndoButtons();
       renderEditTimeline();
-      toast('已跳转到目标步骤');
+      window.__API__.toast('已跳转到目标步骤');
       return;
     }
     // 最后一次 restore 并更新状态
     restoreEdit(editUndo[editUndo.length - 1] || editSnap());
     updateEditUndoButtons();
     renderEditTimeline();
-    toast('已跳转到目标步骤');
+    window.__API__.toast('已跳转到目标步骤');
   }
   function toggleEditHistory() {
     if (!els.editHistoryPanel) return;
@@ -1828,7 +1828,7 @@
     // toggle：已打开 → 关闭（底部导航/顶栏点同一个按钮就能开关）
     if (!els.editMask.hidden) { els.editMask.hidden = true; return; }
     const item = state.items[state.index];
-    if (!item) { toast('请先打开图片'); return; }
+    if (!item) { window.__API__.toast('请先打开图片'); return; }
     els.editName.textContent = item.name;
     syncFilterUI();
     renderStyleGrid();
@@ -1872,7 +1872,7 @@
   function resetFilters() {
     state.filters = { brightness: 100, contrast: 100, saturate: 100, gray: 0, temp: 0, blur: 0, sharp: 0, highlight: 0, shadow: 0, fade: 0, grain: 0, vignette: 0, tintH: null, tintS: null, tintAmt: 0, hslH: 0, hslS: 100, hslL: 0 };
     syncFilterUI(); applyFilters();
-    toast('滤镜已重置');
+    window.__API__.toast('滤镜已重置');
   }
   function mimeExt(mime) {
     return ({ 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/bmp': '.bmp' })[mime] || '.img';
@@ -2270,13 +2270,13 @@
   }
   // 清除所有变形
   function clearAllDeform() {
-    if (!state.deform || !state.deform.length) { toast('没有可清除的变形'); return; }
+    if (!state.deform || !state.deform.length) { window.__API__.toast('没有可清除的变形'); return; }
     state.deform = [];
     state.deformMode = null;
     pushUndo();
     updateDeformUI();
     renderEditPreview();
-    toast('已清除所有美型变形');
+    window.__API__.toast('已清除所有美型变形');
   }
   // 重置某一类变形
   function resetDeformKind(kind) {
@@ -2319,11 +2319,11 @@
   // ===== 照片处理：自动增强（直方图分析 → 自动调滑块，非破坏性）=====
   function autoEnhance() {
     const item = state.items[state.index];
-    if (!item || !item.img) { toast('请先打开图片'); return; }
+    if (!item || !item.img) { window.__API__.toast('请先打开图片'); return; }
     const full = makeCanvasOfCurrent(1);  // 不含滤镜的底图，统计更准
-    if (!full) { toast('无法生成画布'); return; }
+    if (!full) { window.__API__.toast('无法生成画布'); return; }
     const ctx = full.getContext && full.getContext('2d');
-    if (!ctx || !ctx.getImageData || !ctx.drawImage) { toast('当前环境无法分析像素'); return; }
+    if (!ctx || !ctx.getImageData || !ctx.drawImage) { window.__API__.toast('当前环境无法分析像素'); return; }
     try {
       // 下采样到 ≤64px，统计亮度直方图与平均饱和度
       const sw = Math.max(1, Math.min(64, full.width));
@@ -2331,7 +2331,7 @@
       const small = document.createElement('canvas');
       small.width = sw; small.height = sh;
       const sctx = small.getContext('2d');
-      if (!sctx || !sctx.drawImage || !sctx.getImageData) { toast('当前环境无法分析像素'); return; }
+      if (!sctx || !sctx.drawImage || !sctx.getImageData) { window.__API__.toast('当前环境无法分析像素'); return; }
       sctx.drawImage(full, 0, 0, sw, sh);
       const data = sctx.getImageData(0, 0, sw, sh).data;
       const hist = new Array(256).fill(0);
@@ -2353,8 +2353,8 @@
       state.filters.contrast = contrast;
       state.filters.saturate = saturate;
       syncFilterUI(); applyFilters();
-      toast('自动增强：亮度 ' + brightness + '% / 对比度 ' + contrast + '% / 饱和度 ' + saturate + '%');
-    } catch (e) { toast('无法读取像素：' + (e.message || e)); }
+      window.__API__.toast('自动增强：亮度 ' + brightness + '% / 对比度 ' + contrast + '% / 饱和度 ' + saturate + '%');
+    } catch (e) { window.__API__.toast('无法读取像素：' + (e.message || e)); }
   }
 
   // ===== 高级处理队列（OpenCV / AI，导出时依序应用）=====
@@ -2398,7 +2398,7 @@
   function loadOpenCV() {
     if (window.cv && window.cv.Mat) return Promise.resolve(window.cv);
     if (cvLoading) return cvLoading;
-    const url = (getSetting('advanced', 'cvUrl') || '').trim() || CV_DEFAULT_URL;
+    const url = (window.__API__.getSetting('advanced', 'cvUrl') || '').trim() || CV_DEFAULT_URL;
     cvLoading = loadScript(url, () => (window.cv && window.cv.Mat ? window.cv : null));
     return cvLoading;
   }
@@ -2448,10 +2448,10 @@
 
   // 加载 onnx session：优先用户自定义；否则内置离线模型
   async function loadAiSession(scale) {
-    const url = (getSetting('advanced', 'aiModelUrl') || '').trim();
+    const url = (window.__API__.getSetting('advanced', 'aiModelUrl') || '').trim();
     const modelUrl = url || DEFAULT_AI_MODEL;
     if (!aiSession || aiSessionUrl !== modelUrl) {
-      toast(url ? 'AI 模型加载中…（首次可能较慢）' : '离线 AI 超分模型加载中…（首次稍慢）');
+      window.__API__.toast(url ? 'AI 模型加载中…（首次可能较慢）' : '离线 AI 超分模型加载中…（首次稍慢）');
       const ort = await loadOrt();
       aiSession = await ort.InferenceSession.create(modelUrl, { executionProviders: ['wasm'] });
       aiSessionUrl = modelUrl;
@@ -2575,13 +2575,13 @@
   // AI 超分入口：内置离线模型（默认）走单通道瓦片；自定义 3 通道模型走 NCHW；失败降级插值
   async function aiUpscale(canvas, scale) {
     scale = Math.max(1, Math.min(4, Math.round(scale || 2)));
-    const custom = !!(getSetting('advanced', 'aiModelUrl') || '').trim();
+    const custom = !!(window.__API__.getSetting('advanced', 'aiModelUrl') || '').trim();
     try {
       const session = await loadAiSession(scale);
       const ai = custom ? await upscaleNCHW(session, canvas, scale) : await upscaleSRY(session, canvas);
       return ai.width === canvas.width * scale ? ai : resampleToScale(ai, scale);
     } catch (e) {
-      toast('AI 放大失败（' + (e.message || e) + '），已用插值放大');
+      window.__API__.toast('AI 放大失败（' + (e.message || e) + '），已用插值放大');
       return upscaleInterp(canvas, scale);
     }
   }
@@ -2595,7 +2595,7 @@
       try {
         if (op.type === 'upscale') canvas = await aiUpscale(canvas, op.scale);
         else { await loadOpenCV(); canvas = cvProcess(canvas, op); }
-      } catch (e) { toast('高级处理已跳过一项：' + (e && e.message ? e.message : e)); }
+      } catch (e) { window.__API__.toast('高级处理已跳过一项：' + (e && e.message ? e.message : e)); }
     }
     return canvas;
   }
@@ -2606,27 +2606,27 @@
     pushUndo();
     state.ops = [];
     updateOpsUI();
-    toast('已清空高级处理');
+    window.__API__.toast('已清空高级处理');
   }
   async function onCvBtn(type) {
-    if (!state.items[state.index]) { toast('请先打开图片'); return; }
+    if (!state.items[state.index]) { window.__API__.toast('请先打开图片'); return; }
     const op = type === 'median' ? { type: 'median', k: 5 }
       : type === 'bilateral' ? { type: 'bilateral', d: 5, sigma: 75 }
       : { type: 'unsharp', sigma: 2, amount: 0.6 };
-    toast('正在加载 AI 画笔引擎…（首次约 8MB）');
-    try { await loadOpenCV(); } catch (e) { toast('AI 画笔引擎初始化失败：' + (e.message || e)); return; }
+    window.__API__.toast('正在加载 AI 画笔引擎…（首次约 8MB）');
+    try { await loadOpenCV(); } catch (e) { window.__API__.toast('AI 画笔引擎初始化失败：' + (e.message || e)); return; }
     pushUndo();
     state.ops.push(op);
     updateOpsUI();
-    toast('已加入处理队列（共 ' + state.ops.length + ' 步），导出时应用');
+    window.__API__.toast('已加入处理队列（共 ' + state.ops.length + ' 步），导出时应用');
   }
   function onAiRun() {
-    if (!state.items[state.index]) { toast('请先打开图片'); return; }
+    if (!state.items[state.index]) { window.__API__.toast('请先打开图片'); return; }
     const scale = els.aiScale ? +els.aiScale.value : 2;
     pushUndo();
     state.ops.push({ type: 'upscale', scale: scale });
     updateOpsUI();
-    toast('AI 放大（' + scale + '×）已加入队列，导出时离线推理');
+    window.__API__.toast('AI 放大（' + scale + '×）已加入队列，导出时离线推理');
   }
 
   // ===== 美工（美图秀秀式）：风格预设 / 美颜 / 边框 / 文字 / 马赛克 =====
@@ -2677,39 +2677,39 @@
       const b = document.createElement('button');
       b.className = 'btn style-cell'; b.type = 'button';
       b.textContent = p.name; b.dataset.style = p.id;
-      b.addEventListener('click', () => { applyStylePreset(p); toast('风格：' + p.name); });
+      b.addEventListener('click', () => { applyStylePreset(p); window.__API__.toast('风格：' + p.name); });
       els.styleGrid.appendChild(b);
     });
   }
   // 随机套用一套风格配方（主界面 / 风格配方面板共用）
   function applyRandomStyle() {
-    if (!state.items[state.index]) { toast('请先打开图片'); return; }
+    if (!state.items[state.index]) { window.__API__.toast('请先打开图片'); return; }
     const pool = STYLE_PRESETS.filter((p) => p.id !== 'none');
     const p = pool[Math.floor(Math.random() * pool.length)];
     applyStylePreset(p);
-    toast('随机风格配方：' + p.name);
+    window.__API__.toast('随机风格配方：' + p.name);
   }
 
   // 美颜（OpenCV）：磨皮 = 双边滤波；美白 = 亮度提升 + 轻度磨皮；强度映射滤镜参数
   async function onBeauty(kind, intensity) {
-    if (!state.items[state.index]) { toast('请先打开图片'); return; }
+    if (!state.items[state.index]) { window.__API__.toast('请先打开图片'); return; }
     const v = (intensity != null ? intensity : (els.beautyVal ? +els.beautyVal.value : 50));
-    if (v <= 0) { toast('请先把强度调到大于 0'); return; }
+    if (v <= 0) { window.__API__.toast('请先把强度调到大于 0'); return; }
     const a = v / 100;
     pushUndo();
     if (kind === 'white') {
       state.filters.brightness = Math.round(clamp(state.filters.brightness + 40 * a, 0, 200));
       state.filters.saturate = Math.round(clamp(state.filters.saturate + 5 * a, 0, 200));
       syncFilterUI(); applyFilters();
-      toast('美白完成（强度 ' + v + '%）');
+      window.__API__.toast('美白完成（强度 ' + v + '%）');
     }
     // 磨皮（两种都叠加双边滤波，美白也顺带轻磨）
     try {
       await loadOpenCV();
       state.ops.push({ type: 'bilateral', d: Math.round(3 + 7 * a), sigma: Math.round(40 + 60 * a) });
       updateOpsUI();
-      toast('磨皮已加入处理队列（导出时应用，共 ' + state.ops.length + ' 步）');
-    } catch (e) { toast('AI 画笔引擎初始化失败：' + (e.message || e)); }
+      window.__API__.toast('磨皮已加入处理队列（导出时应用，共 ' + state.ops.length + ' 步）');
+    } catch (e) { window.__API__.toast('AI 画笔引擎初始化失败：' + (e.message || e)); }
   }
 
   // 一键美颜多档：轻度/自然/精致 — 每档联动「提亮 + 磨皮」参数，单次快照
@@ -2719,7 +2719,7 @@
     { id: 'fancy',   name: '精致', white: 55, smooth: 65 },
   ];
   async function oneClickBeauty(presetId) {
-    if (!state.items[state.index]) { toast('请先打开图片'); return; }
+    if (!state.items[state.index]) { window.__API__.toast('请先打开图片'); return; }
     const p = BEAUTY_PRESETS.find((q) => q.id === presetId);
     if (!p) return;
     pushUndo();
@@ -2735,10 +2735,10 @@
         const a = p.smooth / 100;
         state.ops.push({ type: 'bilateral', d: Math.round(3 + 7 * a), sigma: Math.round(40 + 60 * a) });
         updateOpsUI();
-      } catch (e) { toast('AI 画笔引擎初始化失败：' + (e.message || e)); }
+      } catch (e) { window.__API__.toast('AI 画笔引擎初始化失败：' + (e.message || e)); }
     }
     syncBeautyBar();
-    toast('一键美颜「' + p.name + '」已应用');
+    window.__API__.toast('一键美颜「' + p.name + '」已应用');
   }
 
   // 边框（纯 Canvas）：pad = min(w,h)*pct；圆角用归一化半径（相对短边）
@@ -2944,14 +2944,14 @@
     state.texts.push(t);
     state.textSel = t.id;
     renderEditPreview();
-    toast('🖼 图片贴纸已添加（可拖拽调整）');
+    window.__API__.toast('🖼 图片贴纸已添加（可拖拽调整）');
   }
   function clearStickers() {
     pushUndo();
     state.texts = state.texts.filter((t) => t.type !== 'emoji' && t.type !== 'image');
     state.textSel = null;
     renderEditPreview();
-    toast('已清空贴纸');
+    window.__API__.toast('已清空贴纸');
   }
 
   // ============================================================
@@ -3060,7 +3060,7 @@
   function renderIdPhotoPreview() {
     if (!els.idPhotoSize) return;
     const item = state.items[state.index];
-    if (!item) { toast('请先打开一张照片'); return; }
+    if (!item) { window.__API__.toast('请先打开一张照片'); return; }
 
     const sizeKey = els.idPhotoSize.value;
     const canvasKey = els.idPhotoCanvas.value;
@@ -3069,10 +3069,10 @@
 
     // 用全尺寸烘焙图（包含滤镜/裁剪/旋转）
     const full = bakeFullCanvas();
-    if (!full) { toast('无法处理当前图片'); return; }
+    if (!full) { window.__API__.toast('无法处理当前图片'); return; }
 
     const result = buildIdPhotoCanvas(full, sizeKey, canvasKey, padMM, bg);
-    if (!result) { toast('排版失败，画布/尺寸不兼容'); return; }
+    if (!result) { window.__API__.toast('排版失败，画布/尺寸不兼容'); return; }
 
     idPhotoResultCanvas = result.canvas;
     state.idPhotoInfo = { sizeKey, canvasKey, total: result.total };
@@ -3097,23 +3097,23 @@
     const ctx = canvas.getContext('2d');
     if (ctx) ctx.drawImage(result.canvas, 0, 0);
 
-    toast('排版预览：' + ID_PHOTO_SIZES[sizeKey].name + ' × ' + ID_CANVAS_SIZES[canvasKey].name + ' = ' + result.total + ' 张');
+    window.__API__.toast('排版预览：' + ID_PHOTO_SIZES[sizeKey].name + ' × ' + ID_CANVAS_SIZES[canvasKey].name + ' = ' + result.total + ' 张');
   }
 
   // 导出排版结果
   function exportIdPhoto() {
-    if (!idPhotoResultCanvas) { toast('请先生成排版预览'); return; }
+    if (!idPhotoResultCanvas) { window.__API__.toast('请先生成排版预览'); return; }
     const info = state.idPhotoInfo || {};
     const fname = '证件照_' + (ID_PHOTO_SIZES[info.sizeKey]?.name || '') + '_' + (ID_CANVAS_SIZES[info.canvasKey]?.name || '') + '_' + Date.now() + '.jpg';
 
     idPhotoResultCanvas.toBlob((blob) => {
-      if (!blob) { toast('导出失败'); return; }
+      if (!blob) { window.__API__.toast('导出失败'); return; }
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = fname;
       document.body.appendChild(a); a.click();
       setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
-      toast('✅ 已保存 ' + fname);
+      window.__API__.toast('✅ 已保存 ' + fname);
     }, 'image/jpeg', 0.95);
   }
 
@@ -3121,7 +3121,7 @@
     const title = (els.posterTitle.value || '').trim();
     const subtitle = (els.posterSubtitle.value || '').trim();
     const layout = els.posterLayout ? els.posterLayout.value : 'center';
-    if (!title && !subtitle) { toast('请至少填写主标题或副标题'); return; }
+    if (!title && !subtitle) { window.__API__.toast('请至少填写主标题或副标题'); return; }
     pushUndo();
     // 先移除上一个海报生成的文字（type: 'poster'）
     state.texts = state.texts.filter((t) => t.type !== 'poster');
@@ -3155,12 +3155,12 @@
     state.texts.push(...posters);
     if (posters.length) state.textSel = posters[0].id;
     renderEditPreview();
-    toast('海报文字已生成（可拖拽移动）');
+    window.__API__.toast('海报文字已生成（可拖拽移动）');
   }
 
   function addText() {
     const text = (els.txtInput.value || '').trim();
-    if (!text) { toast('请输入文字'); return; }
+    if (!text) { window.__API__.toast('请输入文字'); return; }
     const d = txtDefaults();
     const t = {
       id: 't' + Date.now() + Math.random().toString(36).slice(2, 6),
@@ -3177,7 +3177,7 @@
     state.textSel = t.id;
     els.txtInput.value = '';
     renderEditPreview();
-    toast('已添加文字（可拖拽移动）');
+    window.__API__.toast('已添加文字（可拖拽移动）');
   }
   function selTextAt(nx, ny, canvasW, canvasH) {
     // 命中检测：以文字包围盒（估算宽 = 字数×字号；高 = 字号×1.3）匹配
@@ -3243,11 +3243,11 @@
     }
   }
   function delSelText() {
-    if (!state.textSel) { toast('请先在预览中点选文字'); return; }
+    if (!state.textSel) { window.__API__.toast('请先在预览中点选文字'); return; }
     state.texts = state.texts.filter((t) => t.id !== state.textSel);
     state.textSel = null;
     renderEditPreview();
-    toast('已删除文字');
+    window.__API__.toast('已删除文字');
   }
 
   // 马赛克：笔触存归一化圆；渲染 = 该区域像素化（对 full 先缩小再放大回来）
@@ -3276,12 +3276,12 @@
   function toggleMosaicMode() {
     state.mosaicMode = !state.mosaicMode;
     if (els.mosaicBtn) els.mosaicBtn.textContent = state.mosaicMode ? '✓ 退出马赛克模式' : '🖌 进入马赛克模式';
-    toast(state.mosaicMode ? '马赛克模式：在图上涂抹打码' : '已退出马赛克模式');
+    window.__API__.toast(state.mosaicMode ? '马赛克模式：在图上涂抹打码' : '已退出马赛克模式');
   }
   function clearMosaic() {
     state.mosaic = [];
     renderEditPreview();
-    toast('已清空马赛克');
+    window.__API__.toast('已清空马赛克');
   }
 
   // ===== 消除笔简单版：Patch-Match Inpainting（对标光影看图 / FastStone）=====
@@ -3297,12 +3297,12 @@
       if (els.mosaicBtn) els.mosaicBtn.textContent = '🖌 进入马赛克模式';
     }
     if (els.eraserBtn) els.eraserBtn.textContent = state.eraserMode ? '✓ 退出消除笔' : '🩹 进入消除笔模式';
-    toast(state.eraserMode ? '消除笔：在要消除的物体上涂抹（纹理重复区域效果好）' : '已退出消除笔模式');
+    window.__API__.toast(state.eraserMode ? '消除笔：在要消除的物体上涂抹（纹理重复区域效果好）' : '已退出消除笔模式');
   }
   function clearEraser() {
     state.eraser = [];
     renderEditPreview();
-    toast('已清空消除笔');
+    window.__API__.toast('已清空消除笔');
   }
   function eraserRadiusNorm() {
     const v = els.eraserSize ? Number(els.eraserSize.value) : 20;
@@ -3794,7 +3794,7 @@
   function resetCrop() {
     state.crop = null;
     renderEditPreview();
-    toast('已重置裁剪');
+    window.__API__.toast('已重置裁剪');
   }
   // ===== 一键抠图（离线智能去背） =====
   function setMatBrush(mode) {
@@ -3915,12 +3915,12 @@
     const d = id.data;
     const fgIdx = new Set(), bgIdx = new Set();
     matSamples(s, bw, bh, fgIdx, bgIdx);
-    if (fgIdx.size === 0) { toast('请先用前景笔在主体上涂抹'); updateMattingUI(); return false; }
+    if (fgIdx.size === 0) { window.__API__.toast('请先用前景笔在主体上涂抹'); updateMattingUI(); return false; }
     const fgf = matStats(fgIdx, fgIdx.size, d);
     const fgb = matStats(bgIdx, bgIdx.size, d);
     state.matting.mask = matSegment(d, bw, bh, fgf, fgb, fgIdx, bgIdx);
     state.matting.mW = bw; state.matting.mH = bh;
-    toast('抠图完成 ✅');
+    window.__API__.toast('抠图完成 ✅');
     updateMattingUI();
     renderEditPreview();
     return true;
@@ -3932,13 +3932,13 @@
     state.matting.mode = 'none';
     updateMattingUI();
     renderEditPreview();
-    toast('已清除抠图笔迹');
+    window.__API__.toast('已清除抠图笔迹');
   }
   // 导出透明 PNG：全尺寸重建 + 蒙版双线性放大软边
   async function exportMatting() {
     const item = state.items[state.index];
     if (!item) return;
-    if (!state.matting.mask) { toast('请先执行「一键抠图」'); return; }
+    if (!state.matting.mask) { window.__API__.toast('请先执行「一键抠图」'); return; }
     const full = bakeFullCanvas();
     if (!full || !full.getContext || !full.getContext('2d')) return;
     const W = full.width, H = full.height;
@@ -3969,13 +3969,13 @@
     const blob = await canvasToBlob(oc, 'image/png');
     if (!blob) return;
     const name = stripExt(item.name) + '-透明.png';
-    download(blob, name);
-    toast('已导出透明 PNG：' + name);
+    window.__API__.download(blob, name);
+    window.__API__.toast('已导出透明 PNG：' + name);
   }
   async function exportCurrent() {
     const item = state.items[state.index];
     if (!item) return;
-    try { await window.__API__.loadImage(item); } catch (e) { toast('无法加载图片'); return; }
+    try { await window.__API__.loadImage(item); } catch (e) { window.__API__.toast('无法加载图片'); return; }
     let canvas = await exportCanvasOfCurrent();
     if (!canvas) return;
     // 美工烘焙：消除笔（全尺寸 inpaint）→ 马赛克 → 文字 → 边框（OpenCV/AI 之后、编码之前）
@@ -3998,23 +3998,23 @@
     }
     canvas = applyBorder(canvas);
     if (state.ops.length) {
-      toast('正在应用 ' + state.ops.length + ' 步高级处理…');
+      window.__API__.toast('正在应用 ' + state.ops.length + ' 步高级处理…');
       canvas = await applyPixelOpsAsync(canvas);
       if (!canvas) return;
     }
     const fmt = els.exFormat.value;
     const base = stripExt(item.name) + mimeExt(fmt);
     if (fmt === 'image/bmp') {
-      let data; try { data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height); } catch (e) { toast('导出失败：无法读取像素'); return; }
-      download(new Blob([encodeBMP(data)], { type: 'image/bmp' }), base);
-      toast('已导出 BMP：' + base);
+      let data; try { data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height); } catch (e) { window.__API__.toast('导出失败：无法读取像素'); return; }
+      window.__API__.download(new Blob([encodeBMP(data)], { type: 'image/bmp' }), base);
+      window.__API__.toast('已导出 BMP：' + base);
       return;
     }
     const quality = (+els.exQuality.value) / 100;
     canvas.toBlob((blob) => {
-      if (!blob) { toast('导出失败'); return; }
-      download(blob, base);
-      toast('已导出：' + base);
+      if (!blob) { window.__API__.toast('导出失败'); return; }
+      window.__API__.download(blob, base);
+      window.__API__.toast('已导出：' + base);
     }, fmt, quality);
   }
 
@@ -4022,8 +4022,8 @@
   function startSlideshow() {
     if (!state.items.length) return;
     state.slide.active = true; state.slide.paused = false;
-    state.slide.interval = (getSetting('slideshow', 'interval') || 5) * 1000;
-    state.slide.order = getSetting('slideshow', 'order') || 'forward';
+    state.slide.interval = (window.__API__.getSetting('slideshow', 'interval') || 5) * 1000;
+    state.slide.order = window.__API__.getSetting('slideshow', 'order') || 'forward';
     state.slide.played = [];
     enterFullscreen();
     els.slideBar.hidden = false;
@@ -4070,7 +4070,7 @@
     return state.index - 1;
   }
   function applyTransition() {
-    const t = getSetting('slideshow', 'transition') || 'fade';
+    const t = window.__API__.getSetting('slideshow', 'transition') || 'fade';
     const map = { fade: 'fadeIn 0.3s', left: 'slideL 0.3s', right: 'slideR 0.3s', up: 'slideU 0.3s', down: 'slideD 0.3s', zoom: 'zoomIn 0.3s', none: 'none' };
     els.imgWrap.style.animation = 'none'; void els.imgWrap.offsetWidth; els.imgWrap.style.animation = map[t] || 'fadeIn 0.3s';
   }
@@ -4150,7 +4150,7 @@
     form.appendChild(hint);
     KEYMAP_SCHEMA.forEach(({ action, label }) => {
       const row = document.createElement('div'); row.className = 'setting-row';
-      const left = document.createElement('div'); left.innerHTML = `<div class="label">${escapeHtml(label)}</div>`;
+      const left = document.createElement('div'); left.innerHTML = `<div class="label">${window.__API__.escapeHtml(label)}</div>`;
       const val = document.createElement('div');
       const btn = document.createElement('button'); btn.className = 'btn key-bind'; btn.dataset.action = action;
       const combos = (keymap[action] || []).filter(Boolean);
@@ -4162,35 +4162,35 @@
     });
     const reset = document.createElement('button'); reset.className = 'btn'; reset.textContent = '恢复默认快捷键';
     reset.style.marginTop = '10px';
-    reset.addEventListener('click', () => { keymap = JSON.parse(JSON.stringify(DEFAULT_KEYMAP)); saveKeymap(); buildComboLookup(); updateActionTooltips(); renderKeymapForm(); toast('已恢复默认快捷键'); });
+    reset.addEventListener('click', () => { keymap = JSON.parse(JSON.stringify(DEFAULT_KEYMAP)); saveKeymap(); buildComboLookup(); updateActionTooltips(); renderKeymapForm(); window.__API__.toast('已恢复默认快捷键'); });
     form.appendChild(reset);
   }
   function startCapture(action) { capturingAction = action; renderKeymapForm(); }
   function settingRow(s) {
     const row = document.createElement('div'); row.className = 'setting-row';
     const left = document.createElement('div');
-    left.innerHTML = `<div class="label">${s.label}</div>` + (s.desc ? `<div class="desc">${escapeHtml(s.desc)}</div>` : '');
+    left.innerHTML = `<div class="label">${s.label}</div>` + (s.desc ? `<div class="desc">${window.__API__.escapeHtml(s.desc)}</div>` : '');
     const val = document.createElement('div');
-    const cur = getSetting(s.group, s.key);
+    const cur = window.__API__.getSetting(s.group, s.key);
     if (s.type === 'toggle') {
       const btn = document.createElement('button'); btn.className = 'btn'; btn.textContent = cur ? '开' : '关';
       btn.style.background = cur ? 'var(--accent-soft)' : ''; btn.style.color = cur ? 'var(--accent)' : '';
-      btn.addEventListener('click', () => { settings[s.group][s.key] = !cur; saveSettings(); applySettingLive(s.group, s.key); renderSettingsForm(); });
+      btn.addEventListener('click', () => { settings[s.group][s.key] = !cur; window.__API__.saveSettings(); applySettingLive(s.group, s.key); renderSettingsForm(); });
       val.appendChild(btn);
     } else if (s.type === 'select') {
       const sel = document.createElement('select');
       s.options.forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; if (v === cur) o.selected = true; sel.appendChild(o); });
-      sel.addEventListener('change', () => { settings[s.group][s.key] = sel.value; saveSettings(); applySettingLive(s.group, s.key); });
+      sel.addEventListener('change', () => { settings[s.group][s.key] = sel.value; window.__API__.saveSettings(); applySettingLive(s.group, s.key); });
       val.appendChild(sel);
     } else if (s.type === 'range') {
       const inp = document.createElement('input'); inp.type = 'range'; inp.min = s.min; inp.max = s.max; inp.step = s.step || 1; inp.value = cur;
       const lab = document.createElement('span'); lab.textContent = cur; lab.style.marginLeft = '8px';
       inp.addEventListener('input', () => { lab.textContent = inp.value; });
-      inp.addEventListener('change', () => { settings[s.group][s.key] = +inp.value; saveSettings(); applySettingLive(s.group, s.key); });
+      inp.addEventListener('change', () => { settings[s.group][s.key] = +inp.value; window.__API__.saveSettings(); applySettingLive(s.group, s.key); });
       val.appendChild(inp); val.appendChild(lab);
     } else if (s.type === 'text') {
       const inp = document.createElement('input'); inp.type = 'text'; inp.value = cur || '';
-      inp.addEventListener('change', () => { settings[s.group][s.key] = inp.value; saveSettings(); applySettingLive(s.group, s.key); });
+      inp.addEventListener('change', () => { settings[s.group][s.key] = inp.value; window.__API__.saveSettings(); applySettingLive(s.group, s.key); });
       val.appendChild(inp);
     }
     row.appendChild(left); row.appendChild(val);
@@ -4198,18 +4198,18 @@
   }
   function applySettingLive(group, key) {
     if (group === 'view' && key === 'renderMode') {
-      els.image.classList.toggle('pixelated', getSetting('view', 'renderMode') === 'pixelated');
+      els.image.classList.toggle('pixelated', window.__API__.getSetting('view', 'renderMode') === 'pixelated');
     } else if (group === 'view' && key === 'loop') {
       // 影响翻页逻辑，下次翻页生效
     } else if (group === 'slideshow' && key === 'interval') {
-      state.slide.interval = (getSetting('slideshow', 'interval') || 5) * 1000;
+      state.slide.interval = (window.__API__.getSetting('slideshow', 'interval') || 5) * 1000;
     }
   }
 
   // ============ 批量处理 ============
   let batchTab = 'convert';
   function openBatch() {
-    if (!state.items.length) { toast('请先打开图片'); return; }
+    if (!state.items.length) { window.__API__.toast('请先打开图片'); return; }
     els.batchScope.textContent = '作用范围：全部 ' + state.items.length + ' 张';
     els.batchMask.hidden = false;
     if (els.btPreset && !els.btPreset.options.length) {
@@ -4375,7 +4375,7 @@
   async function batchWatermark(it) {
     const fmt = els.wmFormat ? els.wmFormat.value : 'image/jpeg';
     const text = els.wmText ? els.wmText.value.trim() : '';
-    if (!text) { toast('请先输入水印文字'); return null; }
+    if (!text) { window.__API__.toast('请先输入水印文字'); return null; }
     await window.__API__.loadImage(it);
     if (!it.img) return null;
     const canvas = document.createElement('canvas');
@@ -4518,13 +4518,13 @@
     state.items.slice(0, 50).forEach((it, i) => {
       const newName = applyRenameTemplate(tpl, it.name, i);
       const div = document.createElement('div'); div.className = 'rp-row';
-      div.innerHTML = `<span class="rp-old">${escapeHtml(it.name)}</span><span class="rp-arrow">→</span><span class="rp-new">${escapeHtml(newName)}</span>`;
+      div.innerHTML = `<span class="rp-old">${window.__API__.escapeHtml(it.name)}</span><span class="rp-arrow">→</span><span class="rp-new">${window.__API__.escapeHtml(newName)}</span>`;
       box.appendChild(div);
     });
     if (state.items.length > 50) { const d = document.createElement('div'); d.className = 'rp-row'; d.textContent = '… 共 ' + state.items.length + ' 张'; box.appendChild(d); }
   }
   function applyRenameTemplate(tpl, name, idx) {
-    const ext = extOf(name) ? '.' + extOf(name) : '';
+    const ext = window.__API__.extOf(name) ? '.' + window.__API__.extOf(name) : '';
     const base = stripExt(name);
     const date = new Date();
     const y = date.getFullYear(), mo = pad(date.getMonth() + 1, 2), d = pad(date.getDate(), 2);
@@ -4578,12 +4578,12 @@
       }
       if (entries.length) {
         const zip = makeZip(entries);
-        download(new Blob([zip], { type: 'application/zip' }), 'batch_output.zip');
+        window.__API__.download(new Blob([zip], { type: 'application/zip' }), 'batch_output.zip');
       }
       const summary = '批量' + (batchCancelled ? '已取消' : '完成') + '：成功 ' + entries.length + ' · 失败 ' + fail + ' · 跳过 ' + Math.max(0, n - entries.length - fail) + (entries.length ? '，已下载 ZIP' : '，无文件输出');
       els.batchReport.hidden = false;
       els.batchReport.textContent = summary;
-      toast(summary);
+      window.__API__.toast(summary);
     } finally {
       els.batchRun.disabled = false;
       els.batchCancel.hidden = true;
@@ -4613,7 +4613,7 @@
   // 批量压缩：统一质量控制 + 最长边等比缩放，输出指定/原格式 Blob
   const CP_EXT = { 'image/jpeg': '.jpg', 'image/webp': '.webp', 'image/png': '.png' };
   function mimeFromName(name, fb) {
-    const e = extOf(name).toLowerCase();
+    const e = window.__API__.extOf(name).toLowerCase();
     const m = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', bmp: 'image/bmp' }[e];
     return m || fb;
   }
@@ -4749,10 +4749,10 @@
     els.recentList.innerHTML = list.map((e) => {
       const icon = e.kind === 'folder' ? '📁' : '🖼️';
       const sub = (e.kind === 'folder' ? (e.count + ' 张 · ') : '') + relTime(e.ts) + (e.kind === 'files' ? ' · ' + (e.path || '') : '');
-      return '<li class="recent-item" data-ts="' + e.ts + '" title="' + escapeHtml(e.name) + '">'
+      return '<li class="recent-item" data-ts="' + e.ts + '" title="' + window.__API__.escapeHtml(e.name) + '">'
         + '<span class="r-icon">' + icon + '</span>'
-        + '<span class="r-main"><span class="r-name">' + escapeHtml(e.name) + '</span>'
-        + '<span class="r-sub">' + escapeHtml(sub) + '</span></span>'
+        + '<span class="r-main"><span class="r-name">' + window.__API__.escapeHtml(e.name) + '</span>'
+        + '<span class="r-sub">' + window.__API__.escapeHtml(sub) + '</span></span>'
         + '<span class="r-del" data-del="' + e.ts + '" title="移除">✕</span></li>';
     }).join('');
   }
@@ -4766,8 +4766,8 @@
       const path = e.kind === 'files' ? (e.paths && e.paths[0]) : (e.kind === 'folder' ? e.path : '');
       const ph = e.kind === 'folder' ? '📁' : '🖼️';
       return '<button class="recent-thumb" data-ts="' + ts + '"'
-        + (path ? ' data-path="' + escapeHtml(path) + '"' : '')
-        + ' title="' + escapeHtml(e.name) + '"><span class="t-ph">' + ph + '</span></button>';
+        + (path ? ' data-path="' + window.__API__.escapeHtml(path) + '"' : '')
+        + ' title="' + window.__API__.escapeHtml(e.name) + '"><span class="t-ph">' + ph + '</span></button>';
     }).join('');
     els.recentInline.innerHTML = '<div class="recent-inline-title">最近打开</div><div class="recent-thumbs">' + items + '</div>';
     requestRecentThumbs();
@@ -4800,14 +4800,14 @@
       ? (entry.path ? [entry.path] : [])
       : (entry.paths || []);
     if (desktop.available() && paths.length) {
-      window.__API__.handleOpenPaths(paths, getSetting('files', 'recursive'))
-        .then((ok) => { if (!ok) toast('打开失败：' + entry.name); })
-        .catch(() => toast('打开失败：' + entry.name));
+      window.__API__.handleOpenPaths(paths, window.__API__.getSetting('files', 'recursive'))
+        .then((ok) => { if (!ok) window.__API__.toast('打开失败：' + entry.name); })
+        .catch(() => window.__API__.toast('打开失败：' + entry.name));
       return;
     }
     // Web 降级：无持久路径，引导重新选择
-    if (entry.kind === 'folder') { toast('请重新选择文件夹：' + entry.name); els.dirInput.click(); }
-    else { toast('请重新选择文件'); els.fileInput.click(); }
+    if (entry.kind === 'folder') { window.__API__.toast('请重新选择文件夹：' + entry.name); els.dirInput.click(); }
+    else { window.__API__.toast('请重新选择文件'); els.fileInput.click(); }
   }
 
   function batchConvert(item) {
@@ -5100,7 +5100,7 @@
         <li><kbd>Tab</kbd> 显隐缩略图栏 · <kbd>Ctrl</kbd>+<kbd>C</kbd> 复制图片</li>
       </ul>
       <h3>性能说明</h3>
-      <p>缩放/旋转使用 CSS <code>transform</code> GPU 加速；缩略图、预加载（LRU，最大 ${getSetting('advanced', 'preloadSize')} 张）均在内存完成。HEIC/RAW/TIFF/PSD 等需后端解码的格式，在桌面版由 Rust 解码后传入，本原型下浏览器原生不支持的格式会提示需桌面版。</p>
+      <p>缩放/旋转使用 CSS <code>transform</code> GPU 加速；缩略图、预加载（LRU，最大 ${window.__API__.getSetting('advanced', 'preloadSize')} 张）均在内存完成。HEIC/RAW/TIFF/PSD 等需后端解码的格式，在桌面版由 Rust 解码后传入，本原型下浏览器原生不支持的格式会提示需桌面版。</p>
       <p style="margin-top:14px"><a class="btn" href="使用说明.html" target="_blank" rel="noopener">查看完整使用说明 →</a></p>
     `;
   }
@@ -5221,10 +5221,10 @@
   function snapVisible() {
     const it = currentItem();
     const img = it && it.img;
-    if (!it || !img || !img.naturalWidth) { toast('请先打开图片'); return; }
+    if (!it || !img || !img.naturalWidth) { window.__API__.toast('请先打开图片'); return; }
     const W = img.naturalWidth, H = img.naturalHeight;
     const sw = els.stage.clientWidth, sh = els.stage.clientHeight;
-    if (!sw || !sh) { toast('无法获取当前画面尺寸'); return; }
+    if (!sw || !sh) { window.__API__.toast('无法获取当前画面尺寸'); return; }
     // 复刻画面上 #image 的 transform（位移+旋转+缩放+EXIF定向），得到屏幕像素
     const oc = ORIENT_CSS[currentOrient()] || ORIENT_CSS[1];
     const sx = state.flipH ? -state.scale : state.scale;
@@ -5239,13 +5239,13 @@
     const cv = document.createElement('canvas');
     cv.width = sw; cv.height = sh;
     const ctx = cv.getContext('2d');
-    if (!ctx || !ctx.setTransform) { toast('无法写入画面截图'); return; }
+    if (!ctx || !ctx.setTransform) { window.__API__.toast('无法写入画面截图'); return; }
     ctx.setTransform(a, b, c, d, sw / 2 - Mvx, sh / 2 - Mvy);
     ctx.drawImage(img, 0, 0, W, H);
     cv.toBlob((blob) => {
-      if (!blob) { toast('导出截图失败'); return; }
-      download(blob, '截图_' + stripExt(it.name) + '.png');
-      toast('已截图画面可见区域');
+      if (!blob) { window.__API__.toast('导出截图失败'); return; }
+      window.__API__.download(blob, '截图_' + stripExt(it.name) + '.png');
+      window.__API__.toast('已截图画面可见区域');
     }, 'image/png');
   }
 
@@ -5274,7 +5274,7 @@
           top = first.webkitRelativePath.split('/')[0];
         }
         if (top) addRecentFolder(top, files.length);
-        window.__API__.buildItems(files, getSetting('view', 'recursive'));
+        window.__API__.buildItems(files, window.__API__.getSetting('view', 'recursive'));
       }
       e.target.value = '';
     });
@@ -5377,7 +5377,7 @@
     if (els.miBeautyLight) els.miBeautyLight.addEventListener('click', () => oneClickBeauty('light'));
     if (els.miBeautyNatural) els.miBeautyNatural.addEventListener('click', () => oneClickBeauty('natural'));
     if (els.miBeautyFancy) els.miBeautyFancy.addEventListener('click', () => oneClickBeauty('fancy'));
-    if (els.miEnhance) els.miEnhance.addEventListener('click', () => { if (!state.items[state.index]) { toast('请先打开图片'); return; } autoEnhance(); syncBeautyBar(); });
+    if (els.miEnhance) els.miEnhance.addEventListener('click', () => { if (!state.items[state.index]) { window.__API__.toast('请先打开图片'); return; } autoEnhance(); syncBeautyBar(); });
     if (els.miRecipe) els.miRecipe.addEventListener('click', () => openEdit('recipe'));
     if (els.miRecipeRandom) els.miRecipeRandom.addEventListener('click', applyRandomStyle);
     if (els.recipeRandom) els.recipeRandom.addEventListener('click', applyRandomStyle);
@@ -5430,16 +5430,16 @@
       els.stickerUpload.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) { e.target.value = ''; return; }
-        if (!/^image\//.test(file.type)) { toast('请选 PNG/JPG/SVG 图片文件'); e.target.value = ''; return; }
+        if (!/^image\//.test(file.type)) { window.__API__.toast('请选 PNG/JPG/SVG 图片文件'); e.target.value = ''; return; }
         const reader = new FileReader();
         reader.onload = (ev) => {
           const dataUrl = ev.target.result;
           const img = new Image();
           img.onload = () => { addImageSticker(img, dataUrl, file.name); };
-          img.onerror = () => toast('图片解码失败');
+          img.onerror = () => window.__API__.toast('图片解码失败');
           img.src = dataUrl;
         };
-        reader.onerror = () => toast('读取文件失败');
+        reader.onerror = () => window.__API__.toast('读取文件失败');
         reader.readAsDataURL(file);
         e.target.value = ''; // 重置，允许重复选同一张
       });
@@ -5462,7 +5462,7 @@
       state.idPhotoInfo = null;
       if (els.idPhotoInfo) els.idPhotoInfo.textContent = '';
       renderEditPreview();
-      toast('已还原单张预览');
+      window.__API__.toast('已还原单张预览');
     });
 
     // 证件照一键预设 — 2 个高频场景
@@ -5470,7 +5470,7 @@
       if (els.idPhotoSize) els.idPhotoSize.value = p.size;
       if (els.idPhotoCanvas) els.idPhotoCanvas.value = p.canvas;
       if (els.idPhotoPad) els.idPhotoPad.value = p.pad;
-      toast('✅ 已应用：' + p.label + ' — 点「🖼 生成排版预览」出图');
+      window.__API__.toast('✅ 已应用：' + p.label + ' — 点「🖼 生成排版预览」出图');
     }
     if (els.idPhotoPresetStandard) els.idPhotoPresetStandard.addEventListener('click', () => applyIdPhotoPreset({ label: '标准一寸 A4（49 张）', size: '1inch',   canvas: 'A4',     pad: 2 }));
     if (els.idPhotoPresetPassport) els.idPhotoPresetPassport.addEventListener('click', () => applyIdPhotoPreset({ label: '护照签证 6 寸（4 张）', size: 'passport', canvas: '6inch', pad: 2 }));
@@ -5498,7 +5498,7 @@
       els.logoWmUpload.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) { e.target.value = ''; return; }
-        if (!/^image\//.test(file.type)) { toast('请选 PNG/SVG/WebP 图片'); e.target.value = ''; return; }
+        if (!/^image\//.test(file.type)) { window.__API__.toast('请选 PNG/SVG/WebP 图片'); e.target.value = ''; return; }
         const reader = new FileReader();
         reader.onload = (ev) => {
           const dataUrl = ev.target.result;
@@ -5513,12 +5513,12 @@
             };
             if (els.logoWmStatus) els.logoWmStatus.textContent = '✅ ' + file.name + ' (' + img.naturalWidth + '×' + img.naturalHeight + ')';
             renderEditPreview();
-            toast('🏷 Logo 水印已加载 — 可调整大小/透明度/位置');
+            window.__API__.toast('🏷 Logo 水印已加载 — 可调整大小/透明度/位置');
           };
-          img.onerror = () => toast('Logo 解码失败');
+          img.onerror = () => window.__API__.toast('Logo 解码失败');
           img.src = dataUrl;
         };
-        reader.onerror = () => toast('读取文件失败');
+        reader.onerror = () => window.__API__.toast('读取文件失败');
         reader.readAsDataURL(file);
         e.target.value = '';
       });
@@ -5547,7 +5547,7 @@
         state.logoWm = null;
         if (els.logoWmStatus) els.logoWmStatus.textContent = '未上传';
         renderEditPreview();
-        toast('已移除 Logo 水印');
+        window.__API__.toast('已移除 Logo 水印');
       });
     }
 
@@ -5555,9 +5555,9 @@
     let currentGif = null; // 当前正在编码的 GIF 实例（用于 abort）
     if (els.gifEncode) {
       els.gifEncode.addEventListener('click', async () => {
-        if (typeof GIF === 'undefined') { toast('gif.js 未加载，请检查 assets/gif.js'); return; }
+        if (typeof GIF === 'undefined') { window.__API__.toast('gif.js 未加载，请检查 assets/gif.js'); return; }
         const items = state.items;
-        if (!items || items.length === 0) { toast('请先打开图片文件夹'); return; }
+        if (!items || items.length === 0) { window.__API__.toast('请先打开图片文件夹'); return; }
 
         // 参数读取
         const fps = Math.max(1, Math.min(30, +(els.gifFps?.value || 10)));
@@ -5566,7 +5566,7 @@
         const quality = Math.max(1, Math.min(40, +(els.gifQuality?.value || 15)));
         const quantize = els.gifQuantize?.checked !== false;
 
-        if (items.length > 200) { toast('⚠️ 超过 200 张建议分批，避免内存溢出'); }
+        if (items.length > 200) { window.__API__.toast('⚠️ 超过 200 张建议分批，避免内存溢出'); }
 
         // 先预加载所有帧（缩放到目标宽度）
         if (els.gifStatus) els.gifStatus.textContent = '⏳ 预加载帧 0 / ' + items.length + ' ...';
@@ -5597,11 +5597,11 @@
             lastSrcW = tw; lastSrcH = th;
           }
         } catch (e) {
-          toast('❌ 帧加载失败：' + e.message);
+          window.__API__.toast('❌ 帧加载失败：' + e.message);
           return;
         }
 
-        if (frames.length < 2) { toast('至少需要 2 张图片做帧'); return; }
+        if (frames.length < 2) { window.__API__.toast('至少需要 2 张图片做帧'); return; }
 
         // 预览第一帧
         if (els.gifPreview) {
@@ -5656,7 +5656,7 @@
           document.body.appendChild(a); a.click();
           setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
 
-          toast('✅ GIF 已保存 ' + fname + ' (' + kb + ' KB)');
+          window.__API__.toast('✅ GIF 已保存 ' + fname + ' (' + kb + ' KB)');
         });
 
         gif.on('abort', () => {
@@ -5664,14 +5664,14 @@
           if (els.gifEncode) els.gifEncode.hidden = false;
           if (els.gifCancel) els.gifCancel.hidden = true;
           if (els.gifStatus) els.gifStatus.textContent = '⏹ 已取消';
-          toast('已取消 GIF 编码');
+          window.__API__.toast('已取消 GIF 编码');
         });
 
         gif.on('error', (err) => {
           currentGif = null;
           if (els.gifEncode) els.gifEncode.hidden = false;
           if (els.gifCancel) els.gifCancel.hidden = true;
-          toast('❌ GIF 编码失败：' + err.message);
+          window.__API__.toast('❌ GIF 编码失败：' + err.message);
         });
 
         gif.render();
@@ -5689,7 +5689,7 @@
       if (els.gifLoop) els.gifLoop.value = p.loop;
       if (els.gifWidth) els.gifWidth.value = p.width;
       if (els.gifQuality) els.gifQuality.value = p.quality;
-      toast('✅ 已应用：' + p.label);
+      window.__API__.toast('✅ 已应用：' + p.label);
     }
     if (els.gifPresetWeChat) els.gifPresetWeChat.addEventListener('click', () => applyGifPreset({ label: '微信表情 480px', fps: 10, loop: 0, width: 480, quality: 20 }));
     if (els.gifPresetVideo)  els.gifPresetVideo .addEventListener('click', () => applyGifPreset({ label: '短视频 720p',   fps: 15, loop: 0, width: 720, quality: 15 }));
@@ -5702,19 +5702,19 @@
       if (els.posterSubtitle) els.posterSubtitle.value = '全场 5 折起';
       if (els.posterLayout) els.posterLayout.value = 'price';
       generatePoster();
-      toast('✨ 示例海报已生成 —— 拖拽文字试试位置');
+      window.__API__.toast('✨ 示例海报已生成 —— 拖拽文字试试位置');
     });
     if (els.quickPolaroidBtn) els.quickPolaroidBtn.addEventListener('click', () => {
       if (els.borderMode) els.borderMode.value = 'polaroid';
       applyBorder(state.items[state.index]?.canvas || null);
       renderEditPreview();
-      toast('📷 已加拍立得边框');
+      window.__API__.toast('📷 已加拍立得边框');
     });
     if (els.quickVintageBtn) els.quickVintageBtn.addEventListener('click', () => {
       if (els.borderMode) els.borderMode.value = 'vintage';
       applyBorder(state.items[state.index]?.canvas || null);
       renderEditPreview();
-      toast('🖼️ 已加复古边框');
+      window.__API__.toast('🖼️ 已加复古边框');
     });
     // 瘦身 / 瘦脸（局部液化）：模式 / 锚点 / 强度 / 作用范围 / 重置
     if (els.slimFace) els.slimFace.addEventListener('click', () => { if (state.slim.mode === 'face') return; state.slim.mode = 'face'; state.slim.enabled = true; state.slimMode = false; pushUndo(); updateSlimUI(); renderEditPreview(); });
@@ -5747,7 +5747,7 @@
     if (els.deformModeBtn) els.deformModeBtn.addEventListener('click', () => {
       // 进入锚点模式：如果有当前 kind，切换；否则提示
       const list = state.deform || [];
-      if (!list.length) { toast('先点上面的按钮添加美型项目'); return; }
+      if (!list.length) { window.__API__.toast('先点上面的按钮添加美型项目'); return; }
       if (state.deformMode) { state.deformMode = null; }
       else { state.deformMode = { kind: list[0].kind }; }
       updateDeformUI(); renderEditPreview();
@@ -5802,7 +5802,7 @@
         return;
       }
       // ===== 普通图：既有逻辑 =====
-      const zoomMode = getSetting('view', 'wheelMode') === 'zoom';
+      const zoomMode = window.__API__.getSetting('view', 'wheelMode') === 'zoom';
       if ((zoomMode && !e.ctrlKey) || (!zoomMode && e.ctrlKey)) {
         const rect = els.stage.getBoundingClientRect();
         const mx = e.clientX - rect.left, my = e.clientY - rect.top;
@@ -5992,9 +5992,9 @@
     // 设置弹窗
     els.settingsClose.addEventListener('click', () => els.settingsMask.hidden = true);
     els.settingsReset.addEventListener('click', () => {
-      settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)); saveSettings();
-      els.image.classList.toggle('pixelated', getSetting('view', 'renderMode') === 'pixelated');
-      buildSettingsNav(); renderSettingsForm(); toast('已恢复默认设置');
+      settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)); window.__API__.saveSettings();
+      els.image.classList.toggle('pixelated', window.__API__.getSetting('view', 'renderMode') === 'pixelated');
+      buildSettingsNav(); renderSettingsForm(); window.__API__.toast('已恢复默认设置');
     });
     els.settingsMask.addEventListener('click', (e) => { if (e.target === els.settingsMask) els.settingsMask.hidden = true; });
 
@@ -6043,7 +6043,7 @@
       if (els.wmColor) els.wmColor.value = p.color;
       if (els.wmPos) els.wmPos.value = p.pos;
       updateWmUI(); renderWmPreview();
-      toast('✅ 已应用：' + p.label);
+      window.__API__.toast('✅ 已应用：' + p.label);
     }
     if (els.wmPresetCopyright) els.wmPresetCopyright.addEventListener('click', () => applyWmPreset({ label: '版权水印',      text: '© 2026 All Rights Reserved', size: 5, opacity: 60, color: '#ffffff', pos: 'br' }));
     if (els.wmPresetPhotographer) els.wmPresetPhotographer.addEventListener('click', () => applyWmPreset({ label: '摄影师署名', text: '📷 摄影师署名',             size: 4, opacity: 40, color: '#888888', pos: 'bl' }));
@@ -6093,12 +6093,12 @@
         const ev = window.__TAURI__.event;
         ev.listen('tauri://file-drop', (e) => {
           const paths = (e.payload && e.payload.paths) || [];
-          if (paths.length) window.__API__.handleOpenPaths(paths, getSetting('files', 'recursive'));
+          if (paths.length) window.__API__.handleOpenPaths(paths, window.__API__.getSetting('files', 'recursive'));
         });
         ev.listen('open-file', (e) => {
           const pl = e.payload;
           const paths = Array.isArray(pl) ? pl : (pl && pl.path ? [pl.path] : []);
-          if (paths.length) window.__API__.handleOpenPaths(paths, getSetting('files', 'recursive'));
+          if (paths.length) window.__API__.handleOpenPaths(paths, window.__API__.getSetting('files', 'recursive'));
         });
 
         // Android intent 处理：Kotlin MainActivity 通过 evaluateJavascript 推 __androidOpenFile(paths)
@@ -6142,7 +6142,7 @@
           desktop.invoke('get_pending_paths').then((paths) => {
             if (Array.isArray(paths) && paths.length) {
               const key = paths.slice().sort().join('\u0000');
-              if (key !== pendingLoaded) { pendingLoaded = key; window.__API__.handleOpenPaths(paths, getSetting('files', 'recursive')); }
+              if (key !== pendingLoaded) { pendingLoaded = key; window.__API__.handleOpenPaths(paths, window.__API__.getSetting('files', 'recursive')); }
             }
           }).catch(() => { /* 非致命 */ });
         };
@@ -6158,7 +6158,7 @@
     els.slideExit.addEventListener('click', stopSlideshow);
 
     // 渲染模式初始应用
-    els.image.classList.toggle('pixelated', getSetting('view', 'renderMode') === 'pixelated');
+    els.image.classList.toggle('pixelated', window.__API__.getSetting('view', 'renderMode') === 'pixelated');
 
     // 云端账户 / 收藏 / 历史 按钮与面板
     if (els.accountBtn) els.accountBtn.addEventListener('click', openCloud);
@@ -6172,7 +6172,7 @@
     if (els.authNick) els.authNick.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAuth(); });
     if (els.cloudClose) els.cloudClose.addEventListener('click', closeCloudPanel);
     if (els.cloudMask) els.cloudMask.addEventListener('click', (e) => { if (e.target === els.cloudMask) closeCloudPanel(); const t = e.target.closest('.cloud-tab'); if (t) switchCloudTab(t.getAttribute('data-tab')); });
-    if (els.cloudSyncNow) els.cloudSyncNow.addEventListener('click', () => { if (isLoggedIn()) { pullAll(); toast('已与云端同步'); } });
+    if (els.cloudSyncNow) els.cloudSyncNow.addEventListener('click', () => { if (isLoggedIn()) { pullAll(); window.__API__.toast('已与云端同步'); } });
     if (els.cloudLogout) els.cloudLogout.addEventListener('click', doLogout);
     if (els.profSave) els.profSave.addEventListener('click', saveProfile);
     if (els.pwdSave) els.pwdSave.addEventListener('click', changePwd);
@@ -6195,7 +6195,7 @@
   const HIST_MAX = 50;
 
   function cloudApiBase() {
-    const s = getSetting('advanced', 'cloudApiBase');
+    const s = window.__API__.getSetting('advanced', 'cloudApiBase');
     return (s && String(s).trim()) || 'http://localhost:8787';
   }
 
@@ -6287,15 +6287,15 @@
   }
   async function uploadFavoriteImage(rec, item) {
     if (!isLoggedIn()) return;
-    const bytes = await itemBytes(item); if (!bytes || bytes.length > 20 * 1024 * 1024) { toast('图片过大，未同步图本体'); return; }
+    const bytes = await itemBytes(item); if (!bytes || bytes.length > 20 * 1024 * 1024) { window.__API__.toast('图片过大，未同步图本体'); return; }
     const b64 = (typeof btoa === 'function') ? btoa(String.fromCharCode.apply(null, bytes)) : Buffer.from(bytes).toString('base64');
     const ext = favItemExt(item);
     const r = await apiFetch('/api/favorites/image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: { id: rec.id, ext, data: b64 } });
-    if (r.status === 200) { rec.hasImage = true; rec.imageExt = ext; saveFavorites(); renderFavList(); toast('已同步收藏图本体'); }
-    else toast(r.data.error || '图本体同步失败');
+    if (r.status === 200) { rec.hasImage = true; rec.imageExt = ext; saveFavorites(); renderFavList(); window.__API__.toast('已同步收藏图本体'); }
+    else window.__API__.toast(r.data.error || '图本体同步失败');
   }
   async function downloadFavoriteImage(rec) {
-    if (!isLoggedIn()) { toast('请先登录以下载云端图片'); return; }
+    if (!isLoggedIn()) { window.__API__.toast('请先登录以下载云端图片'); return; }
     const r = await apiFetch('/api/favorites/image/' + encodeURIComponent(rec.id));
     if (r.status === 200 && r.data && r.data.data) {
       const bytes = Uint8Array.from(atob(r.data.data), (c) => c.charCodeAt(0));
@@ -6303,11 +6303,11 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = rec.name || ('favorite.' + (rec.imageExt || 'jpg')); document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 4000);
-    } else if (r.status !== 0) toast(r.data.error || '下载失败');
+    } else if (r.status !== 0) window.__API__.toast(r.data.error || '下载失败');
   }
   function toggleFavorite() {
     const it = currentItem(); if (!it) return;
-    if (isFavorited(it)) { removeFavorite(it); toast('已取消收藏'); } else { addFavorite(it); toast('已收藏'); }
+    if (isFavorited(it)) { removeFavorite(it); window.__API__.toast('已取消收藏'); } else { addFavorite(it); window.__API__.toast('已收藏'); }
   }
 
   // 本地历史
@@ -6331,9 +6331,9 @@
     if (auth && auth.token) headers['Authorization'] = 'Bearer ' + auth.token;
     let res, data = null;
     try { res = await fetch(cloudApiBase() + path, { method: opts.method || 'GET', headers, body: opts.body ? JSON.stringify(opts.body) : undefined }); }
-    catch (e) { toast('无法连接云端（' + cloudApiBase() + '）'); return { status: 0, data: {} }; }
+    catch (e) { window.__API__.toast('无法连接云端（' + cloudApiBase() + '）'); return { status: 0, data: {} }; }
     try { data = await res.json(); } catch (e) {}
-    if (res.status === 401 && auth) { auth = null; await saveAuth(); refreshAccountUI(); toast('登录已过期，请重新登录'); }
+    if (res.status === 401 && auth) { auth = null; await saveAuth(); refreshAccountUI(); window.__API__.toast('登录已过期，请重新登录'); }
     return { status: res.status, data: data || {} };
   }
   // ---- 离线同步队列（持久化 + 指数退避重试） ----
@@ -6374,13 +6374,13 @@
 
   async function doLogin(username, password) {
     const r = await apiFetch('/api/login', { method: 'POST', body: { username, password } });
-    if (r.status !== 200 || !r.data.token) { toast(r.data.error || '登录失败'); return false; }
-    auth = { token: r.data.token, user: r.data.user }; await saveAuth(); await pullAll(); refreshAccountUI(); toast('已登录：' + (auth.user.nickname || auth.user.username)); return true;
+    if (r.status !== 200 || !r.data.token) { window.__API__.toast(r.data.error || '登录失败'); return false; }
+    auth = { token: r.data.token, user: r.data.user }; await saveAuth(); await pullAll(); refreshAccountUI(); window.__API__.toast('已登录：' + (auth.user.nickname || auth.user.username)); return true;
   }
   async function doRegister(username, password, nickname) {
     const r = await apiFetch('/api/register', { method: 'POST', body: { username, password, nickname } });
-    if (r.status !== 200 || !r.data.token) { toast(r.data.error || '注册失败'); return false; }
-    auth = { token: r.data.token, user: r.data.user }; await saveAuth(); await pullAll(); refreshAccountUI(); toast('注册成功并已登录'); return true;
+    if (r.status !== 200 || !r.data.token) { window.__API__.toast(r.data.error || '注册失败'); return false; }
+    auth = { token: r.data.token, user: r.data.user }; await saveAuth(); await pullAll(); refreshAccountUI(); window.__API__.toast('注册成功并已登录'); return true;
   }
   async function doLogout() {
     if (isLoggedIn()) {
@@ -6388,7 +6388,7 @@
       apiFetch('/api/favorites', { method: 'PUT', body: { items: favorites } });
       apiFetch('/api/history', { method: 'PUT', body: { items: history } });
     }
-    auth = null; await saveAuth(); refreshAccountUI(); toast('已退出登录（本地改动已上传）');
+    auth = null; await saveAuth(); refreshAccountUI(); window.__API__.toast('已退出登录（本地改动已上传）');
   }
   async function pullAll() {
     const [s, f, h] = await Promise.all([apiFetch('/api/settings'), apiFetch('/api/favorites'), apiFetch('/api/history')]);
@@ -6428,14 +6428,14 @@
     if (!favorites.length) { els.favList.innerHTML = '<li class="empty">还没有收藏</li>'; return; }
     els.favList.innerHTML = favorites.map((f) => {
       const sync = (f.hasImage) ? '<span class="f-sync" title="图本体已同步云端">☁已同步</span>' : '';
-      const dl = (f.hasImage) ? '<button class="f-dl" data-id="' + escapeHtml(f.id) + '" title="下载云端图片">⤓</button>' : '';
-      return '<li data-name="' + escapeHtml(f.name) + '" data-path="' + escapeHtml(f.path || '') + '"><span class="f-name">' + escapeHtml(f.name) + '</span>' + sync + dl + '<button class="f-del" data-id="' + escapeHtml(f.id) + '" title="取消收藏">✕</button></li>';
+      const dl = (f.hasImage) ? '<button class="f-dl" data-id="' + window.__API__.escapeHtml(f.id) + '" title="下载云端图片">⤓</button>' : '';
+      return '<li data-name="' + window.__API__.escapeHtml(f.name) + '" data-path="' + window.__API__.escapeHtml(f.path || '') + '"><span class="f-name">' + window.__API__.escapeHtml(f.name) + '</span>' + sync + dl + '<button class="f-del" data-id="' + window.__API__.escapeHtml(f.id) + '" title="取消收藏">✕</button></li>';
     }).join('');
   }
   function renderHistList() {
     if (!els.histList) return;
     if (!history.length) { els.histList.innerHTML = '<li class="empty">还没有浏览记录</li>'; return; }
-    els.histList.innerHTML = history.map((h) => '<li data-name="' + escapeHtml(h.name) + '" data-path="' + escapeHtml(h.path || '') + '"><span class="h-name">' + escapeHtml(h.name) + '</span><span class="h-time">' + new Date(h.openedAt).toLocaleString() + '</span></li>').join('');
+    els.histList.innerHTML = history.map((h) => '<li data-name="' + window.__API__.escapeHtml(h.name) + '" data-path="' + window.__API__.escapeHtml(h.path || '') + '"><span class="h-name">' + window.__API__.escapeHtml(h.name) + '</span><span class="h-time">' + new Date(h.openedAt).toLocaleString() + '</span></li>').join('');
   }
   function openCloud() { if (isLoggedIn()) openCloudPanel(); else openAuth(); }
   function openAuth() {
@@ -6480,21 +6480,21 @@
     const nickname = els.profNick ? els.profNick.value.trim() : '';
     const avatar = els.profAvatar ? els.profAvatar.value.trim() : '';
     const r = await apiFetch('/api/me', { method: 'PUT', body: { nickname, avatar } });
-    if (r.status === 200 && r.data.user) { auth.user = r.data.user; saveAuth(); refreshAccountUI(); toast('资料已更新'); }
-    else toast(r.data.error || '更新失败');
+    if (r.status === 200 && r.data.user) { auth.user = r.data.user; saveAuth(); refreshAccountUI(); window.__API__.toast('资料已更新'); }
+    else window.__API__.toast(r.data.error || '更新失败');
   }
   async function changePwd() {
     const oldP = els.pwdOld ? els.pwdOld.value : '';
     const newP = els.pwdNew ? els.pwdNew.value : '';
-    if (newP.length < 6) { toast('新密码至少 6 个字符'); return; }
+    if (newP.length < 6) { window.__API__.toast('新密码至少 6 个字符'); return; }
     const r = await apiFetch('/api/me/password', { method: 'PUT', body: { oldPassword: oldP, newPassword: newP } });
-    if (r.status === 200) { toast('密码已修改'); if (els.pwdOld) els.pwdOld.value = ''; if (els.pwdNew) els.pwdNew.value = ''; }
-    else toast(r.data.error || '修改失败');
+    if (r.status === 200) { window.__API__.toast('密码已修改'); if (els.pwdOld) els.pwdOld.value = ''; if (els.pwdNew) els.pwdNew.value = ''; }
+    else window.__API__.toast(r.data.error || '修改失败');
   }
   function openFromList(li) {
     const name = li.getAttribute('data-name'); const path = li.getAttribute('data-path');
-    if (path && typeof window.__TAURI__ !== 'undefined') { desktop.loadPaths([path], getSetting('files', 'recursive')); closeCloudPanel(); }
-    else toast('本地记录：' + name + (path ? '（' + path + '）' : '') + ' — 桌面版可一键打开');
+    if (path && typeof window.__TAURI__ !== 'undefined') { desktop.loadPaths([path], window.__API__.getSetting('files', 'recursive')); closeCloudPanel(); }
+    else window.__API__.toast('本地记录：' + name + (path ? '（' + path + '）' : '') + ' — 桌面版可一键打开');
   }
 
   // ============ 初始化 ============
@@ -6510,8 +6510,8 @@
   }
 
   function init() {
-    cacheDom();
-    applyTheme(loadTheme());  // S2 深色主题：DOM 就绪后立即应用 localStorage 存的主题
+    window.__API__.cacheDom();
+    window.__API__.applyTheme(window.__API__.loadTheme());  // S2 深色主题：DOM 就绪后立即应用 localStorage 存的主题
     bindEvents();
     renderRecentInline();
     if (!state.items.length) els.emptyHint.hidden = false;
@@ -6545,7 +6545,7 @@
     });
   })(__API);
 
-  // 主 IIFE 内部也需要把 __API__ 上的函数映射到局部变量，供 init() 和其他内部函数调用
+  // 主 IIFE 内部也需要把 __API__ 上的函数映射到局部变量，供 window.__API__.init() 和其他内部函数调用
   // 这里用 Object.assign + eval 批量注入
   (function() {
     const _keys = Object.keys(__API).filter((k) => typeof __API[k] === 'function');
@@ -6557,7 +6557,7 @@
   })();
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  else window.__API__.init();
 
   // 测试/调试钩子（仅暴露内部状态与关键函数，便于自动化回归；不影响生产行为）
   if (typeof window !== 'undefined') {

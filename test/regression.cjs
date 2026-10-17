@@ -1051,7 +1051,7 @@ test('穿透文件夹：设置开关 files.recursive 存在 + recursive 参数�
   // 关键改动确认：所有桌面文件打开入口都已走 handleOpenPaths（压缩包直看 + 普通图片 统一分发）
   const fs = require('fs');
   const appSrc = appJs;
-  const callCount = (appSrc.match(/handleOpenPaths\(paths,\s*getSetting\('files',\s*'recursive'\)\)/g) || []).length;
+  const callCount = (appSrc.match(/(?:window\.__API__\.)?handleOpenPaths\(paths,\s*(?:window\.__API__\.)?getSetting\('files',\s*'recursive'\)\)/g) || []).length;
   assert(callCount >= 4, `handleOpenPaths(paths, getSetting('files','recursive')) 调用点 >= 4（实际 ${callCount}）`);
 
   // handleOpenPaths 内部应该调 desktop.loadPaths + 检测 archive
