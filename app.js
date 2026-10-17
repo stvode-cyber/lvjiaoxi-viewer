@@ -1,9 +1,13 @@
-/* 绿角犀看图 · Web 原型 — 核心逻辑
+﻿/* 绿角犀看图 · Web 原型 — 核心逻辑
  * 覆盖 PRD 5.2~5.6；5.1 系统集成层以 Web 能力替代并在「关于」中标注。
  * 纯前端、零依赖、离线可用（双击 index.html 即可运行）。
  */
 (function () {
   'use strict';
+
+  // ============ 模块化拆分：window.__API__ 公共接口 ============
+  window.__API__ = window.__API__ || {};
+  const __API = window.__API__;
 
   // ============ 工具函数 ============
   const $ = (s) => document.querySelector(s);
@@ -553,6 +557,16 @@
 
   // ============ DOM 引用 ============
   const els = {};
+
+  // ============ 依赖注入：把主文件核心对象暴露给子文件 IIFE ============
+  Object.assign(__API, {
+    state, els, desktop, settings,
+    $, $$,
+    IMG_EXT, NATIVE_EXT, ARCHIVE_EXT,
+    naturalCompare, escapeHtml, toast, download, showLoadingError, resetLoading,
+    extOf, isImageFile, isArchiveFile, formatBytes, formatDate,
+  });
+
   function cacheDom() {
     [
       'btnOpenFiles', 'btnOpenDir', 'fileInput', 'dirInput',
@@ -882,9 +896,9 @@
       updateChrome();
       highlightThumb(index);
       preloadAround(index);
-      if (els.infoPanel.hidden === false) renderInfo();
+      if (els.infoPanel.hidden === false) window.__API__.renderInfo();
       // 自动读取 EXIF（延迟，避免阻塞）
-      if (!item.exif && (item.type === 'image/jpeg' || item.type === 'image/png')) readExif(item);
+      if (!item.exif && (item.type === 'image/jpeg' || item.type === 'image/png')) window.__API__.readExif(item);
       // 记录浏览历史（登录态下自动上传云端）
       recordHistory(item);
       // 长图检测：height/width > 1.7（对应约 16:9 的反面），自动启用滚轮翻页模式
@@ -1039,7 +1053,7 @@
     state.rotation = (state.rotation + dir * 90 + 360) % 360;
     computeFit();
     if (state.mode === 'fit') applyFit(); else { applyTransform(); clampOffset(); }
-    if (els.infoPanel.hidden === false) renderInfo();
+    if (els.infoPanel.hidden === false) window.__API__.renderInfo();
     if (!els.editMask.hidden) renderEditPreview();
   }
   function flip(h) {
@@ -1234,276 +1248,6 @@
   }
 
   // ============ 信息面板 + EXIF ============
-  function renderInfo() {
-    const item = state.items[state.index];
-    if (!item) return;
-    let html = '';
-    html += row('文件名', escapeHtml(item.name));
-    html += row('格式', (extOf(item.name) || '—').toUpperCase());
-    html += row('尺寸', item.natW && item.natH ? `${item.natW} × ${item.natH} px` : '—');
-    html += row('文件大小', formatBytes(item.size));
-    html += row('修改时间', formatDate(item.lastModified));
-    html += row('当前缩放', Math.round(state.scale * 100) + '%');
-    if (item.exif) {
-      const e = item.exif;
-      if (e.camera) { html += '<div class="info-group-title">相机信息 (EXIF)</div>'; html += row('设备', escapeHtml(e.camera)); }
-      if (e.datetime) html += row('拍摄时间', escapeHtml(e.datetime));
-      if (e.params) { html += row('光圈', escapeHtml(e.params.fnumber || '—')); html += row('快门', escapeHtml(e.params.exposure || '—')); html += row('ISO', escapeHtml(e.params.iso || '—')); html += row('焦距', escapeHtml(e.params.focal || '—')); }
-      if (e.gps) {
-        const lat = e.lat, lon = e.lon;
-        if (lat != null && lon != null) {
-          const mapUrl = `https://uri.amap.com/marker?position=${lon.toFixed(6)},${lat.toFixed(6)}&name=${encodeURIComponent(item.name || '图片位置')}`;
-          html += row('📌 GPS', `<a href="${mapUrl}" target="_blank" style="color:var(--accent);text-decoration:underline">${escapeHtml(e.gps)} → 点击高德地图</a>`);
-        } else {
-          html += row('📌 GPS', escapeHtml(e.gps));
-        }
-      }
-      // 🎨 Stable Diffusion 参数（PNG tEXt chunk）—— 对标 BandiView v7.23+/v8.03
-      if (e.sd) {
-        html += '<div class="info-group-title">🎨 SD 参数</div>';
-        if (e.sd.model) html += row('模型', escapeHtml(e.sd.model));
-        if (e.sd.sampler) html += row('采样器', escapeHtml(e.sd.sampler));
-        if (e.sd.steps) html += row('步数', escapeHtml(e.sd.steps));
-        if (e.sd.cfg) html += row('CFG scale', escapeHtml(e.sd.cfg));
-        if (e.sd.seed) html += row('Seed', escapeHtml(e.sd.seed));
-        if (e.sd.prompt) html += row('正向提示词', escapeHtml(e.sd.prompt));
-        if (e.sd.negative) html += row('负向提示词', escapeHtml(e.sd.negative));
-      }
-    } else if (item.type === 'image/jpeg' || item.type === 'image/png') {
-      html += '<div class="info-group-title">相机信息 (EXIF)</div>';
-      html += row('', '读取中…');
-    } else {
-      html += '<div class="info-group-title">相机信息 (EXIF)</div>';
-      html += row('', '该格式无 EXIF');
-    }
-    html += '<div class="info-actions"><button class="btn sm" id="infoCopy">复制信息</button></div>';
-    els.infoBody.innerHTML = html;
-    const cp = $('#infoCopy');
-    if (cp) cp.addEventListener('click', () => copyInfoText(item));
-  }
-  function row(k, v) { return `<div class="info-row"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
-  function copyInfoText(item) {
-    const lines = [
-      '文件名: ' + item.name,
-      '格式: ' + (extOf(item.name) || '—').toUpperCase(),
-      '尺寸: ' + (item.natW && item.natH ? `${item.natW} × ${item.natH} px` : '—'),
-      '大小: ' + formatBytes(item.size),
-      '修改: ' + formatDate(item.lastModified),
-      '缩放: ' + Math.round(state.scale * 100) + '%',
-    ];
-    if (item.exif) {
-      const e = item.exif;
-      if (e.camera) lines.push('设备: ' + e.camera);
-      if (e.datetime) lines.push('拍摄: ' + e.datetime);
-      if (e.params) { lines.push('光圈: ' + (e.params.fnumber || '—')); lines.push('快门: ' + (e.params.exposure || '—')); lines.push('ISO: ' + (e.params.iso || '—')); lines.push('焦距: ' + (e.params.focal || '—')); }
-      if (e.gps) lines.push('GPS: ' + e.gps);
-      if (e.sd) {
-        if (e.sd.model) lines.push('SD模型: ' + e.sd.model);
-        if (e.sd.prompt) lines.push('SD正向: ' + e.sd.prompt);
-        if (e.sd.negative) lines.push('SD负向: ' + e.sd.negative);
-        if (e.sd.steps) lines.push('SD步数: ' + e.sd.steps);
-        if (e.sd.cfg) lines.push('SD CFG: ' + e.sd.cfg);
-        if (e.sd.sampler) lines.push('SD采样器: ' + e.sd.sampler);
-        if (e.sd.seed) lines.push('SD Seed: ' + e.sd.seed);
-      }
-    }
-    copyText(lines.join('\n'));
-    toast('信息已复制');
-  }
-
-  function readExif(item) {
-    try {
-      const slice = item.file.slice(0, 512 * 1024);  // PNG metadata chunk 可能更大，拉到 512KB
-      slice.arrayBuffer().then((buf) => {
-        let exif = parseExif(buf);  // JPEG TIFF EXIF
-        // PNG tEXt / iTXt chunks（含 Stable Diffusion prompt 参数）
-        if (item.type === 'image/png') {
-          const sd = parsePngTextChunks(buf);
-          if (sd) { if (!exif) exif = {}; exif.sd = sd; }
-        }
-        item.exif = exif;
-        if (els.infoPanel.hidden === false && state.index >= 0 && state.items[state.index] === item) renderInfo();
-        // EXIF 方向就绪后，若仍是当前图则重套显示方向（PRD 5.2 自动正向显示）
-        if (state.index >= 0 && state.items[state.index] === item) {
-          computeFit();
-          if (state.mode === 'actual') applyActual(); else applyFit();
-        }
-      }).catch(() => {});
-    } catch (e) {}
-  }
-
-  // PNG tEXt / iTXt chunk 解析（Stable Diffusion prompt 参数）
-  // 对标 BandiView v7.23+ / v8.03 "View prompts of images generated by Stable Diffusion"
-  function parsePngTextChunks(buffer) {
-    try {
-      const dv = new DataView(buffer);
-      // PNG signature: 89 50 4E 47 0D 0A 1A 0A
-      const sig = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-      for (let i = 0; i < 8; i++) if (dv.getUint8(i) !== sig[i]) return null;
-      let off = 8;
-      const allText = {};  // keyword → text 全量
-      while (off + 12 <= dv.byteLength) {
-        const len = dv.getUint32(off);
-        const type = String.fromCharCode(dv.getUint8(off + 4), dv.getUint8(off + 5), dv.getUint8(off + 6), dv.getUint8(off + 7));
-        if (len === 0 || off + 12 + len > dv.byteLength) break;
-        const dataStart = off + 8;
-        if (type === 'tEXt') {
-          // tEXt: keyword\0 + text
-          let kwEnd = dataStart;
-          while (kwEnd < dataStart + len && dv.getUint8(kwEnd) !== 0) kwEnd++;
-          const kw = readAsciiData(dv, dataStart, true, kwEnd - dataStart);
-          const txt = readAsciiData(dv, kwEnd + 1, true, dataStart + len - kwEnd - 1);
-          if (kw && txt) allText[kw] = txt;
-        } else if (type === 'iTXt') {
-          // iTXt: keyword\0 + compFlag(1) + compMethod(1) + langTag\0 + transKW\0 + text
-          let kwEnd = dataStart;
-          while (kwEnd < dataStart + len && dv.getUint8(kwEnd) !== 0) kwEnd++;
-          const kw = readAsciiData(dv, dataStart, true, kwEnd - dataStart);
-          // 跳过 compFlag + compMethod + langTag\0 + transKW\0
-          let p = kwEnd + 1 + 1 + 1;  // compFlag + compMethod
-          while (p < dataStart + len && dv.getUint8(p) !== 0) p++;
-          p++;  // skip langTag \0
-          while (p < dataStart + len && dv.getUint8(p) !== 0) p++;
-          p++;  // skip transKW \0
-          const txt = readAsciiData(dv, p, true, dataStart + len - p);
-          if (kw && txt) allText[kw] = txt;
-        }
-        // 已找到 IEND 或关键 SD 参数就停（省算力）
-        if (type === 'IEND') break;
-        off += 12 + len;
-      }
-      if (!allText['parameters'] && !allText['prompt']) return null;  // 没 SD 参数
-      // 组装 SD 对象
-      const sd = { raw: allText['parameters'] || '', prompt: '', negative: '', steps: '', cfg: '', sampler: '', seed: '', model: '' };
-      sd.prompt = allText['prompt'] || '';
-      sd.negative = allText['negative_prompt'] || allText['Negative prompt'] || '';
-      sd.steps = allText['Steps'] || '';
-      sd.cfg = allText['CFG scale'] || allText['cfg'] || '';
-      sd.sampler = allText['Sampler'] || '';
-      sd.seed = allText['Seed'] || '';
-      sd.model = allText['Model'] || '';
-      // 如果只有 parameters 串，从里面解析
-      if (sd.raw) {
-        if (!sd.negative) { const m = sd.raw.match(/Negative prompt:\s*(.+?)(?:\s*Steps:|$)/s); if (m) sd.negative = m[1].trim(); }
-        if (!sd.prompt) { const m = sd.raw.match(/^(.+?)(?:\s*Negative prompt:|$)/s); if (m) sd.prompt = m[1].trim(); }
-        if (!sd.steps) { const m = sd.raw.match(/Steps:\s*(\d+)/); if (m) sd.steps = m[1]; }
-        if (!sd.cfg) { const m = sd.raw.match(/CFG scale:\s*([\d.]+)/); if (m) sd.cfg = m[1]; }
-        if (!sd.sampler) { const m = sd.raw.match(/Sampler:\s*(.+?)(?:,\s*|$)/); if (m) sd.sampler = m[1].trim(); }
-        if (!sd.seed) { const m = sd.raw.match(/Seed:\s*(\d+)/); if (m) sd.seed = m[1]; }
-        if (!sd.model) { const m = sd.raw.match(/Model:\s*(.+?)(?:,\s*|$)/); if (m) sd.model = m[1].trim(); }
-      }
-      return sd;
-    } catch (e) { return null; }
-  }
-
-  // 轻量 JPEG EXIF 解析
-  function parseExif(buffer) {
-    try {
-      const dv = new DataView(buffer);
-      if (dv.getUint16(0) !== 0xFFD8) return null; // not JPEG
-      let off = 2;
-      while (off < dv.byteLength - 4) {
-        const marker = dv.getUint16(off);
-        if ((marker & 0xFF00) !== 0xFF00) break;
-        if (marker === 0xFFE1) { // APP1
-          const segLen = dv.getUint16(off + 2);
-          const start = off + 4;
-          if (dv.getUint32(start) === 0x45786966) { // "Exif"
-            return parseTiff(new DataView(buffer, start + 6, segLen - 6), buffer);
-          }
-          return null;
-        }
-        if (marker === 0xFFDA) break; // image data start
-        off += 2 + dv.getUint16(off + 2);
-      }
-    } catch (e) {}
-    return null;
-  }
-  function parseTiff(tiff, fullBuf) {
-    const result = { params: {}, camera: '', datetime: '', gps: '' };
-    try {
-      const le = tiff.getUint16(0) === 0x4949; // II
-      const get16 = (o) => tiff.getUint16(o, le);
-      const get32 = (o) => tiff.getUint32(o, le);
-      const ifd0 = get32(4);
-      const tags = readIfd(tiff, ifd0, le, get16, get32);
-      const g = (t) => tags[t];
-      if (g(0x010F)) result.camera = readAscii(tiff, g(0x010F), le, get32);
-      if (g(0x0110) && result.camera) result.camera += ' ' + readAscii(tiff, g(0x0110), le, get32);
-      else if (g(0x0110)) result.camera = readAscii(tiff, g(0x0110), le, get32);
-      result.orientation = g(0x0112) ? get16(g(0x0112) + 8) : 1;
-      if (g(0x0132)) result.datetime = readAscii(tiff, g(0x0132), le, get32);
-      if (g(0x8827)) result.params.iso = String(get16(g(0x8827) + 8));
-      if (g(0x829A)) result.params.exposure = ratStr(tiff, g(0x829A), le, get32);
-      if (g(0x829D)) result.params.fnumber = 'f/' + ratStr(tiff, g(0x829D), le, get32);
-      if (g(0x920A)) result.params.focal = ratStr(tiff, g(0x920A), le, get32) + ' mm';
-      // EXIF sub-IFD for datetime original
-      if (g(0x8769)) {
-        const exifIfd = readIfd(tiff, get32(g(0x8769)), le, get16, get32);
-        if (exifIfd[0x9003]) result.datetime = readAscii(tiff, exifIfd[0x9003], le, get32);
-      }
-      if (g(0x8825)) {
-        const gpsIfd = readIfd(tiff, get32(g(0x8825)), le, get16, get32);
-        const latDeg = gpsCoord(tiff, gpsIfd[0x0002], le, get32);
-        const lonDeg = gpsCoord(tiff, gpsIfd[0x0004], le, get32);
-        const latRef = readAscii(tiff, gpsIfd[0x0001], le, get32).trim() || 'N';
-        const lonRef = readAscii(tiff, gpsIfd[0x0003], le, get32).trim() || 'E';
-        if (latDeg != null && lonDeg != null) {
-          const lat = latRef === 'S' ? -latDeg : latDeg;
-          const lon = lonRef === 'W' ? -lonDeg : lonDeg;
-          result.lat = lat; result.lon = lon;  // 存数值给 renderInfo 做地图链接
-          result.gps = latDeg.toFixed(4) + '°' + latRef + ', ' + lonDeg.toFixed(4) + '°' + lonRef;
-        }
-      }
-    } catch (e) {}
-    return result;
-  }
-  function readIfd(tiff, base, le, get16, get32) {
-    const tags = {};
-    try {
-      const count = get16(base);
-      for (let i = 0; i < count; i++) {
-        const entry = base + 2 + i * 12;
-        const id = get16(entry);
-        const valOff = get32(entry + 8);
-        tags[id] = valOff;
-      }
-    } catch (e) {}
-    return tags;
-  }
-  function readAscii(tiff, valOff) {
-    return readAsciiData(tiff, valOff, true);
-  }
-  function ratStr(tiff, valOff, le, get32) {
-    try {
-      const num = get32(valOff), den = get32(valOff + 4);
-      if (!den) return '—';
-      const v = num / den;
-      return v >= 1 ? v.toFixed(1) : v.toFixed(4).replace(/0+$/, '');
-    } catch (e) { return '—'; }
-  }
-  function gpsCoord(tiff, valOff, le, get32) {
-    try {
-      const d = get32(valOff) / get32(valOff + 4);
-      const m = get32(valOff + 8) / get32(valOff + 12);
-      const s = get32(valOff + 16) / get32(valOff + 20);
-      return d + m / 60 + s / 3600;
-    } catch (e) { return null; }
-  }
-  // 为 readAscii 提供正确实现（覆盖上面占位）
-  function readAsciiData(tiff, valOff, le) {
-    try {
-      let s = '';
-      let i = 0;
-      while (true) {
-        const c = tiff.getUint8(valOff + i);
-        if (c === 0) break;
-        s += String.fromCharCode(c); i++;
-        if (i > 256) break;
-      }
-      return s.trim();
-    } catch (e) { return ''; }
-  }
 
   // ============ 复制到剪贴板 / 导出变换后位图 ============
   function makeCanvasOfCurrent(scale) {
@@ -1625,6 +1369,7 @@
   // ---- 编辑撤销 / 重做：对可编辑参数态（滤镜/文字/马赛克/裁剪/高级队列）快照，恢复后重渲预览 ----
   const UNDO_MAX = 40;
   let editUndo = [], editRedo = [];
+  __API.editUndo = editUndo; __API.editRedo = editRedo;
   function editSnap() {
     return JSON.stringify({
       f: state.filters, t: state.texts || [], m: state.mosaic || [], e: state.eraser || [], c: state.crop || null,
@@ -4275,7 +4020,7 @@
   // ============ 信息面板切换 ============
   function toggleInfo() {
     els.infoPanel.hidden = !els.infoPanel.hidden;
-    if (els.infoPanel.hidden === false) renderInfo();
+    if (els.infoPanel.hidden === false) window.__API__.renderInfo();
   }
 
   // ============ 设置 UI ============
@@ -6687,6 +6432,42 @@
     if (typeof window !== 'undefined') window.addEventListener('online', () => { if (isLoggedIn()) flushQueue(); });
   }
 
+  // ============ 模块化 shim 层：把子文件注册的函数覆盖到主作用域 ============
+  // 这样子文件 IIFE 里的裸调用（showImage, renderInfo, toggleTheme...）就能找到新位置
+  (function(api) {
+    const _shim = [
+      'showImage', 'computeFit', 'applyFit', 'applyActual', 'applyTransform', 'clampOffset',
+      'zoomAt', 'zoomByCenter', 'updateZoomLabel', 'rotate', 'flip', 'next', 'prev',
+      'updateChrome', 'scheduleFsHide', 'applyThumbVisibility',
+      'openJump', 'closeJump', 'goToIndex', 'applyThumbFilter',
+      'renderThumbWindow', 'genThumb', 'highlightThumb', 'preloadAround', 'trimCache',
+      'renderDualPage', 'currentOrient', 'orientSwaps', 'displayDims', 'detectLongImage',
+      'renderInfo', 'readExif', 'parseExif', 'parsePngTextChunks', 'parseTiff', 'readIfd',
+      'buildItems', 'resolveItemSrc', 'loadImage', 'handleOpenPaths',
+      'cacheDom', 'applyTheme', 'toggleTheme', 'applyComicMode', 'toggleComicMode',
+      'loadSettings', 'saveSettings', 'getSetting', 'loadTheme',
+      'naturalCompare', 'escapeHtml', 'download', 'toast', 'showLoadingError', 'resetLoading',
+      'init',
+    ];
+    _shim.forEach((k) => {
+      if (api[k] !== undefined) {
+        // 在 IIFE 内部用 eval 把 api[k] 提升到当前作用域（闭包内可见）
+        try { eval('var ' + k + ' = api["' + k + '"];'); } catch (e) {}
+      }
+    });
+  })(__API);
+
+  // 主 IIFE 内部也需要把 __API__ 上的函数映射到局部变量，供 init() 和其他内部函数调用
+  // 这里用 Object.assign + eval 批量注入
+  (function() {
+    const _keys = Object.keys(__API).filter((k) => typeof __API[k] === 'function');
+    _keys.forEach((k) => {
+      try {
+        new Function('__API', 'var ' + k + ' = __API["' + k + '"]; return ' + k + ';')(__API);
+      } catch (e) {}
+    });
+  })();
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
@@ -6695,7 +6476,7 @@
       window.__qj = {
       get state() { return state; },
       makeCanvasOfCurrent, bakeFullCanvas, exportCanvasOfCurrent, setPngDpi, setJpegDpi, setWebpDpi, buildExifTiff, embedDpi, crc32,
-      renderEditPreview, resetCrop, normToPx, detectLongImage, toggleTheme, parsePngTextChunks, toggleComicMode,
+      renderEditPreview, resetCrop, normToPx, detectLongImage, toggleTheme, parsePngTextChunks: __API__.parsePngTextChunks, toggleComicMode,
       // 照片处理 测试钩子
       sharpenCanvas, autoEnhance, resetOps, applyPixelOpsAsync, filterCss, syncFilterUI,
       upscaleInterp, aiUpscale,

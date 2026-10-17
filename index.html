@@ -1004,6 +1004,11 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="assets/gif.js"></script>
+  <!-- 模块化拆分：exif + archive + render + init 先加载，app.js 汇总 + shim 层 -->
+  <script src="js/exif.js"></script>
+  <script src="js/archive.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/init.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

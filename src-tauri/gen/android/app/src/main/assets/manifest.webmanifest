@@ -1,0 +1,19 @@
+{
+  "name": "绿角犀看图",
+  "short_name": "绿角犀看图",
+  "description": "纯前端图片查看器 Web 原型（可安装到桌面）",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F5F4F7",
+  "theme_color": "#2C9678",
+  "categories": ["photography", "utilities"],
+  "version": "0.1.0",
+  "icons": [
+    { "src": "icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }
+  ]
+}

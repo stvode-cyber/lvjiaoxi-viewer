@@ -1,4 +1,4 @@
-// 绿角犀看图 Web 原型 · 综合回归测试（jsdom 黑盒 + 单元）
+﻿// 绿角犀看图 Web 原型 · 综合回归测试（jsdom 黑盒 + 单元）
 // 运行: NODE_PATH=<workspace node_modules> node test/regression.cjs
 // 覆盖 PRD 5.2/5.3/5.4/5.5/5.6 与桌面桥接降级、PWA 守卫等可验证项。
 const fs = require('fs');
@@ -8,7 +8,14 @@ const { JSDOM } = require('jsdom');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const appJs = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+// 模块化拆分：appJs 合并所有 js/*.js + 主 app.js
+const appJs = [
+  fs.readFileSync(path.join(root, 'js', 'exif.js'), 'utf8'),
+  fs.readFileSync(path.join(root, 'js', 'archive.js'), 'utf8'),
+  fs.readFileSync(path.join(root, 'js', 'render.js'), 'utf8'),
+  fs.readFileSync(path.join(root, 'js', 'init.js'), 'utf8'),
+  fs.readFileSync(path.join(root, 'app.js'), 'utf8'),
+].join('\n');
 
 const dom = new JSDOM(html, { runScripts: 'outside-only', pretendToBeVisual: true, url: 'http://localhost/' });
 const { window } = dom;
@@ -76,6 +83,14 @@ document.exitFullscreen = () => { _fs = null; document.dispatchEvent(new window.
 
 let errors = [];
 window.addEventListener('error', (e) => errors.push(e.message || String(e)));
+
+// 模块化拆分：先按顺序执行所有子文件 IIFE，再执行主 app.js
+try {
+  window.eval(fs.readFileSync(path.join(root, 'js', 'exif.js'), 'utf8'));
+  window.eval(fs.readFileSync(path.join(root, 'js', 'archive.js'), 'utf8'));
+  window.eval(fs.readFileSync(path.join(root, 'js', 'render.js'), 'utf8'));
+  window.eval(fs.readFileSync(path.join(root, 'js', 'init.js'), 'utf8'));
+} catch (e) { errors.push('eval js/*.js: ' + e.message); }
 try { window.eval(appJs); } catch (e) { errors.push('eval: ' + e.message); }
 
 // jsdom 无布局，给 stage 注入固定尺寸，否则 fit scale=0
@@ -926,7 +941,7 @@ test('深色主题：styles.css 有 :root.dark 变量集 + 22 个色值变量覆
 // ---- EXIF GPS + 高德地图链接（2026-10-17 · S3 竞品对标 HoneyView）----
 test('EXIF GPS: parseTiff GPS IFD 读取方向（N/S/E/W）+ lat/lon 数值存储 + 高德地图链接生成', async () => {
   const fs = require('fs');
-  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const appSrc = appJs;
   // parseTiff 里必须读 GPS LatitudeRef / LongitudeRef
   assert(appSrc.includes('0x0001'), 'GPS LatitudeRef tag 0x0001 已在读');
   assert(appSrc.includes('0x0003'), 'GPS LongitudeRef tag 0x0003 已在读');
@@ -944,7 +959,7 @@ test('EXIF GPS: parseTiff GPS IFD 读取方向（N/S/E/W）+ lat/lon 数值存�
 // ---- SD Prompt 查看（2026-10-17 · A1 竞品对标 BandiView v7.23+/v8.03）----
 test('SD Prompt: parsePngTextChunks 函数存在 + PNG signature 检测 + tEXt/iTXt chunk 支持 + parameters 串解析 + renderInfo SD 组', async () => {
   const fs = require('fs');
-  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const appSrc = appJs;
   // 函数存在
   assert(typeof window.__qj.parsePngTextChunks === 'function', 'parsePngTextChunks 暴露到 __qj');
   // PNG signature 常量
@@ -983,7 +998,7 @@ test('SD Prompt: parsePngTextChunks 函数存在 + PNG signature 检测 + tEXt/i
 test('双页漫画: toggleComicMode 函数 + renderDualPage + dual-stage CSS grid + next/prev 步进 + openArchive 显示按钮', async () => {
   const qj = window.__qj;
   const fs = require('fs');
-  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const appSrc = appJs;
   const cssSrc = fs.readFileSync('styles.css', 'utf-8');
   // 函数暴露
   assert(typeof qj.toggleComicMode === 'function', 'toggleComicMode 暴露到 __qj');
@@ -1020,7 +1035,7 @@ test('穿透文件夹：设置开关 files.recursive 存在 + recursive 参数�
   // 设置项 files.recursive 在 app.js 源码里已定义（group: 'files', key: 'recursive', type: 'toggle'）
   // 用源码验证（jsdom 下 getSetting 是闭包内函数，没法直接访问）
   const fs2 = require('fs');
-  const appSrc2 = fs2.readFileSync('app.js', 'utf-8');
+  const appSrc2 = appJs;
   assert(appSrc2.includes("group: 'files', key: 'recursive'"), '设置里已存在 files.recursive toggle 开关');
 
   // files.recursive 这个 key 存在于设置结构里
@@ -1035,7 +1050,7 @@ test('穿透文件夹：设置开关 files.recursive 存在 + recursive 参数�
 
   // 关键改动确认：所有桌面文件打开入口都已走 handleOpenPaths（压缩包直看 + 普通图片 统一分发）
   const fs = require('fs');
-  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const appSrc = appJs;
   const callCount = (appSrc.match(/handleOpenPaths\(paths,\s*getSetting\('files',\s*'recursive'\)\)/g) || []).length;
   assert(callCount >= 4, `handleOpenPaths(paths, getSetting('files','recursive')) 调用点 >= 4（实际 ${callCount}）`);
 
@@ -1065,7 +1080,7 @@ test('HSL 分通道：rgbToHsl/hslToRgb 函数存在 + state.filters.hslH/S/L �
   const qj = window.__qj;
   assert(qj !== undefined, 'window.__qj 存在');
   const fs = require('fs');
-  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const appSrc = appJs;
 
   // 1. 函数存在
   assert(appSrc.includes('function rgbToHsl'), 'rgbToHsl 函数存在');
@@ -1110,7 +1125,7 @@ test('HSL 分通道：rgbToHsl/hslToRgb 函数存在 + state.filters.hslH/S/L �
 // ---- 批量加水印（对标 FastStone/IrfanView）----
 test('批量加水印：drawWatermarkOnCanvas 纯函数 + 10 种位置 + tile 平铺 + batchWatermark + 批量主循环接入', async () => {
   const fs = require('fs');
-  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const appSrc = appJs;
   const htmlSrc = fs.readFileSync('index.html', 'utf-8');
 
   // 1. 核心函数存在
@@ -1160,7 +1175,7 @@ test('批量加水印：drawWatermarkOnCanvas 纯函数 + 10 种位置 + tile �
 // ---- 消除笔简单版：Patch-Match Inpainting（对标光影看图 / FastStone）----
 test('消除笔：patchMatchInpaint 核心算法 + findBestPatch + drawEraser + state.eraser + editSnap 撤销 + UI', async () => {
   const fs = require('fs');
-  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const appSrc = appJs;
   const htmlSrc = fs.readFileSync('index.html', 'utf-8');
 
   // 1. 状态字段
@@ -1223,7 +1238,7 @@ test('消除笔：patchMatchInpaint 核心算法 + findBestPatch + drawEraser + 
 // ---- 海报/边框/贴纸（对标 FastStone/美图秀秀）----
 test('海报边框扩展 + emoji 贴纸 + 海报标题一键生成', async () => {
   const fs = require('fs');
-  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const appSrc = appJs;
   const htmlSrc = fs.readFileSync('index.html', 'utf-8');
 
   // 1. 边框预设（BORDER_PRESETS 6 种新模式）
@@ -1277,7 +1292,7 @@ test('海报边框扩展 + emoji 贴纸 + 海报标题一键生成', async () =>
 // ---- 压缩包直看（对标 HoneyView ZIP/CBZ 不解压浏览）----
 test('压缩包直看 ZIP/CBZ + 懒加载 + handleOpenPaths 统一入口', async () => {
   const fs = require('fs');
-  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  const appSrc = appJs;
   const rustSrc = fs.readFileSync('src-tauri/src/lib.rs', 'utf-8');
   const cargoSrc = fs.readFileSync('src-tauri/Cargo.toml', 'utf-8');
 
@@ -1359,3 +1374,4 @@ test('压缩包直看 ZIP/CBZ + 懒加载 + handleOpenPaths 统一入口', async
   if (errors.length) console.log('运行期错误:\n - ' + errors.join('\n - '));
   process.exitCode = fail === 0 && errors.length === 0 ? 0 : 1;
 })();
+

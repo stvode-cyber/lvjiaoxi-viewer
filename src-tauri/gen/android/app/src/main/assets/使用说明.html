@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>绿角犀看图 · 使用说明</title>
+<style>
+  :root { --brand:#2e7d32; --brand-soft:#e8f5e9; --ink:#1f2328; --muted:#5b6470; --line:#e2e6ea; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; color:var(--ink); background:#fff; line-height:1.75; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px 80px; }
+  header.top { border-bottom: 3px solid var(--brand); padding-bottom: 14px; margin-bottom: 18px; }
+  header.top h1 { margin:0; font-size: 28px; letter-spacing:.5px; }
+  header.top p.sub { margin:6px 0 0; color: var(--muted); font-size: 14px; }
+  nav.toc { background: var(--brand-soft); border:1px solid #c8e6c9; border-radius:10px; padding:14px 18px; margin: 18px 0 28px; }
+  nav.toc h2 { margin:0 0 8px; font-size:15px; color:var(--brand); }
+  nav.toc ol { margin:0; padding-left: 20px; columns: 2; column-gap: 28px; font-size:14px; }
+  nav.toc a { color: var(--brand); text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+  h2 { font-size: 21px; margin: 38px 0 12px; padding-left: 11px; border-left: 5px solid var(--brand); }
+  h3 { font-size: 16px; margin: 22px 0 8px; color:#263238; }
+  p { margin: 8px 0; }
+  table { border-collapse: collapse; width:100%; margin: 12px 0; font-size: 14px; }
+  th, td { border:1px solid var(--line); padding: 8px 10px; text-align:left; vertical-align: top; }
+  th { background:#f3f6f3; font-weight:600; }
+  tbody tr:nth-child(even) { background:#fafbfa; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+  kbd { background:#f1f3f5; border:1px solid #c9d1d9; border-bottom-width:2px; border-radius:5px; padding:1px 6px; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size:12px; color:#24292f; }
+  code { background:#f1f3f5; padding:1px 5px; border-radius:4px; font-size:13px; font-family: ui-monospace, Consolas, monospace; }
+  pre { background:#0f1c14; color:#d6f5dc; padding:12px 14px; border-radius:8px; overflow:auto; font-size:13px; }
+  pre code { background:transparent; color:inherit; padding:0; }
+  .btn { display:inline-block; background:var(--brand); color:#fff; padding:8px 14px; border-radius:7px; text-decoration:none; font-size:14px; }
+  .btn:hover { background:#256628; }
+  .note { background:#f6f9f6; border-left:4px solid var(--brand); padding:10px 14px; border-radius:0 8px 8px 0; color:#37474f; margin:12px 0; }
+  .badge { display:inline-block; font-size:12px; padding:1px 7px; border-radius:999px; background:#eceff1; color:#455a64; }
+  footer { margin-top:50px; padding-top:14px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+  .anchor { scroll-margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>绿角犀看图 · 使用说明</h1>
+    <p class="sub">轻量、跨平台的图片查看与批量处理工具 · 本说明面向最终用户</p>
+  </header>
+
+  <nav class="toc">
+    <h2>目录</h2>
+    <ol>
+      <li><a href="#start">如何开始</a></li>
+      <li><a href="#open">打开图片</a></li>
+      <li><a href="#view">看图基础操作</a></li>
+      <li><a href="#nav">浏览与导航</a></li>
+      <li><a href="#wallpaper">设为壁纸</a></li>
+      <li><a href="#batch">批量处理</a></li>
+      <li><a href="#fav">收藏与历史</a></li>
+      <li><a href="#account">账户与云端同步</a></li>
+      <li><a href="#keys">快捷键自定义</a></li>
+      <li><a href="#settings">设置项详解</a></li>
+      <li><a href="#touch">触摸手势</a></li>
+      <li><a href="#pwa">PWA 安装</a></li>
+      <li><a href="#desktop">桌面客户端专属</a></li>
+      <li><a href="#faq">常见问题</a></li>
+    </ol>
+  </nav>
+
+  <section id="start" class="anchor">
+    <h2>一、如何开始</h2>
+    <h3>Web 原型版</h3>
+    <ul>
+      <li>直接用浏览器打开项目中的 <code>index.html</code>。</li>
+      <li>若需使用「云端账户」功能，请先在本机启动配套后端：<pre><code>node server/mock-server.js</code></pre>然后在「设置 → 高级」中确认「云端账户服务器地址」为 <code>http://localhost:8787</code>（留空即使用此默认值）。</li>
+      <li>建议通过本地静态服务器打开（<code>file://</code> 下部分浏览器会限制剪贴板 / Service Worker）：<pre><code>node serve.js   # 或任意静态服务器，指向本项目目录</code></pre></li>
+    </ul>
+    <h3>Windows 桌面客户端</h3>
+    <ul>
+      <li>安装后从开始菜单或桌面快捷方式启动。</li>
+      <li>支持<strong>双击图片文件</strong>直接打开（文件类型关联）。</li>
+      <li>支持右键图片 →「用绿角犀看图打开」（安装时写入系统右键菜单）。</li>
+      <li>支持命令行启动：<code>绿角犀看图.exe "图片路径"</code>。</li>
+    </ul>
+  </section>
+
+  <section id="open" class="anchor">
+    <h2>二、打开图片</h2>
+    <table>
+      <thead><tr><th>方式</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>按钮「图片」</td><td>选择一张或多张图片</td></tr>
+        <tr><td>按钮「文件夹」</td><td>选择整个文件夹（按设置可递归子文件夹）</td></tr>
+        <tr><td>拖放</td><td>将图片文件或文件夹拖入窗口</td></tr>
+        <tr><td>双击关联文件（桌面版）</td><td>直接打开</td></tr>
+        <tr><td>命令行（桌面版）</td><td><code>绿角犀看图.exe 路径</code></td></tr>
+      </tbody>
+    </table>
+    <p>打开后，窗口中央显示第一张图，底部为缩略图栏（可按工具栏「缩略图」按钮或 <kbd>Tab</kbd> 隐藏/显示），右上角显示「当前序号 / 总数」。</p>
+  </section>
+
+  <section id="view" class="anchor">
+    <h2>三、看图基础操作</h2>
+    <h3>最近打开</h3>
+    <ul>
+      <li>工具栏「🕘 最近」按钮（或空状态首页的「最近打开」区）记录最近打开过的<strong>文件夹</strong>与<strong>文件组</strong>，最多 12 条，按时间倒序。</li>
+      <li>点击任意记录即可重新打开：桌面客户端（Tauri）用存储的完整路径经后端 <code>load_paths</code> 直接打开——文件夹递归载入、文件组精确重开原文件；Web 原型无持久路径，会提示并由你重新选择该文件夹/文件。</li>
+      <li>每条记录右侧「✕」可单独移除；弹窗底部「清空记录」可一键清除。记录保存在本机 <code>localStorage</code>。</li>
+    </ul>
+    <h3>缩放与视图</h3>
+    <ul>
+      <li><strong>适应窗口 / 实际大小</strong>：工具栏「适应」按钮在两者间切换；<strong>双击图片</strong>同样在适应窗口与实际大小间切换。</li>
+      <li><strong>放大 / 缩小</strong>：工具栏 <code>+</code> / <code>−</code>，或快捷键 <kbd>=</kbd> / <kbd>-</kbd>，或鼠标滚轮（默认滚轮缩放，见设置）。</li>
+      <li><strong>滚轮行为</strong>：默认滚轮缩放、<kbd>Ctrl</kbd>+滚轮翻页；可在「设置 → 看图 → 滚轮行为」中互换为「翻页（Ctrl+滚轮缩放）」。</li>
+    </ul>
+    <h3>旋转与翻转</h3>
+    <ul>
+      <li><strong>左旋转 / 右旋转</strong>：工具栏按钮或快捷键 <kbd>L</kbd> / <kbd>R</kbd>。</li>
+      <li><strong>水平翻转 / 垂直翻转</strong>：快捷键 <kbd>H</kbd> / <kbd>V</kbd>。</li>
+      <li>「设置 → 看图 → 记住旋转状态」开启后，翻页时保留旋转/翻转状态。</li>
+    </ul>
+    <h3>信息面板（EXIF）</h3>
+    <ul>
+      <li>点击工具栏「信息」或按 <kbd>I</kbd>，右侧显示图片信息：尺寸、类型、大小、拍摄参数（EXIF，JPEG 自动读取方向并正向显示）等。</li>
+      <li>面板底部「复制信息」可复制文本；按 <kbd>Esc</kbd> 或点关闭按钮收起。</li>
+    </ul>
+    <h3>复制图片到剪贴板</h3>
+    <ul>
+      <li>快捷键 <kbd>Ctrl</kbd>+<kbd>C</kbd>（Mac 为 <kbd>Cmd</kbd>+<kbd>C</kbd>）将当前图片（含旋转/翻转状态）复制到系统剪贴板，可粘贴到聊天、文档等。</li>
+    </ul>
+    <h3>图片工具（滤镜 / 裁剪 / 导出）</h3>
+    <ul>
+      <li>点击工具栏「工具」或按 <kbd>E</kbd> 打开图片工具弹窗，提供亮度、对比度、饱和度、灰度等滤镜调整，可实时预览并「重置」。</li>
+      <li><strong>裁剪</strong>：在预览图上<strong>拖拽</strong>即可框选保留区域；拖动选框<strong>四角</strong>可调整大小，在框内拖动可移动位置（带三分网格辅助构图）。点击「重置裁剪（全图）」取消裁剪。导出时会包含当前裁剪区域。</li>
+      <li><strong>导出 / 另存为</strong>：选择格式（JPG / PNG / WebP / BMP）与质量，导出结果会烘焙当前的旋转、翻转、滤镜与裁剪效果，下载到本机。</li>
+    </ul>
+  </section>
+
+  <section id="nav" class="anchor">
+    <h2>四、浏览与导航</h2>
+    <table>
+      <thead><tr><th>操作</th><th>快捷键</th></tr></thead>
+      <tbody>
+        <tr><td>上一张</td><td><kbd>←</kbd> 或 <kbd>PageUp</kbd></td></tr>
+        <tr><td>下一张</td><td><kbd>→</kbd> 或 <kbd>PageDown</kbd></td></tr>
+        <tr><td>第一张</td><td><kbd>Home</kbd></td></tr>
+        <tr><td>最后一张</td><td><kbd>End</kbd></td></tr>
+        <tr><td>跳转指定序号</td><td><kbd>G</kbd>（弹出输入框填入序号）</td></tr>
+        <tr><td>显示 / 隐藏缩略图栏</td><td><kbd>Tab</kbd></td></tr>
+        <tr><td>全屏</td><td><kbd>F</kbd></td></tr>
+        <tr><td>幻灯片放映</td><td><kbd>S</kbd></td></tr>
+      </tbody>
+    </table>
+    <ul>
+      <li><strong>翻页循环</strong>：开启「设置 → 看图 → 翻页循环」后，到最后一张继续按「下一张」会回到第一张。</li>
+      <li><strong>缩略图栏</strong>：点击任意缩略图跳转；缩略图按格式着色便于区分。</li>
+    </ul>
+    <h3>幻灯片</h3>
+    <ul>
+      <li>按 <kbd>S</kbd> 进入放映；播放控制器可调整上一张/下一张、播放/暂停、进度与退出。</li>
+      <li>可在「设置 → 幻灯片」中预设：<strong>间隔（秒）</strong>、<strong>转场特效</strong>（淡入淡出 / 左滑 / 右滑 / 上滑 / 下滑 / 缩放 / 无）、<strong>播放顺序</strong>（正序 / 倒序 / 随机）。</li>
+    </ul>
+  </section>
+
+  <section id="wallpaper" class="anchor">
+    <h2>五、设为壁纸</h2>
+    <p>点击工具栏「壁纸」可把当前图片设为桌面壁纸，提供 4 种模式（「设置 → 看图 → 设为壁纸模式」可设默认）：</p>
+    <ul>
+      <li><strong>适应（留边）</strong>：等比缩放居中，留黑边。</li>
+      <li><strong>拉伸（铺满）</strong>：拉伸填满屏幕。</li>
+      <li><strong>居中</strong>：原始大小居中。</li>
+      <li><strong>平铺</strong>：以原图平铺。</li>
+    </ul>
+    <div class="note">Web 原型版无法写入系统壁纸，会按所选模式合成一张 1920×1080 图片并<strong>下载</strong>，用户手动设置；Windows 桌面客户端会<strong>直接设置</strong>真实系统壁纸。</div>
+  </section>
+
+  <section id="batch" class="anchor">
+    <h2>六、批量处理</h2>
+    <p>点击工具栏「批量」打开批量处理面板，对当前图片列表进行统一处理：</p>
+    <ol>
+      <li><strong>改尺寸</strong>：按宽度或百分比统一缩放。</li>
+      <li><strong>嵌入 DPI（分辨率）</strong>：下拉选择 72 / 96 / 150 / 300 / 600，导出时在文件内写入分辨率信息——
+        <ul>
+          <li>PNG 写入 <code>pHYs</code> 块</li>
+          <li>JPEG 写入 JFIF 密度</li>
+          <li>WebP 写入 EXIF 元数据</li>
+        </ul>
+      </li>
+      <li><strong>导出</strong>：打包为 ZIP 下载；也支持逐张下载。</li>
+      <li><strong>取消 / 报告</strong>：处理过程中可取消；完成后给出成功/失败报告。</li>
+    </ol>
+  </section>
+
+  <section id="fav" class="anchor">
+    <h2>七、收藏与浏览历史</h2>
+    <div class="note">这两项在云端账户模块中已建立本地存储，并可同步到云端（见第八节）。</div>
+    <h3>收藏</h3>
+    <ul>
+      <li>在图片上或工具栏点击「☆ 收藏」将当前图加入收藏；再次点击取消。</li>
+      <li>打开「云端面板」（工具栏「☁ 登录」→ 已登录后进入；或单独收藏入口）查看收藏列表。</li>
+      <li>登录状态下收藏会同步到云端；收藏列表中对已同步图片显示「☁ 已同步」徽标，并可<strong>下载</strong>该图片本体（跨设备还原）。</li>
+    </ul>
+    <h3>浏览历史</h3>
+    <ul>
+      <li>每次成功显示一张图，自动记录到浏览历史（最多保留 50 条：图片名、来源路径、时间）。</li>
+      <li>登录状态下历史同步到云端，多设备可续看。</li>
+    </ul>
+  </section>
+
+  <section id="account" class="anchor">
+    <h2>八、账户与云端同步</h2>
+    <p>绿角犀看图提供可选云端账户，登录后跨设备同步你的配置与数据。</p>
+    <h3>注册 / 登录</h3>
+    <ol>
+      <li>点击工具栏「☁ 登录」，在弹窗中<strong>切换「注册 / 登录」</strong>。</li>
+      <li>注册：填写用户名、密码（至少 8 位）、昵称；登录：填用户名与密码。</li>
+      <li>登录成功后，工具栏显示账户状态，可打开云端面板。</li>
+    </ol>
+    <h3>同步范围</h3>
+    <p>登录后自动同步以下四类数据（last-write-wins 冲突策略）：</p>
+    <ul>
+      <li><strong>应用设置</strong>：快捷键映射、主题、壁纸模式、DPI 默认等。</li>
+      <li><strong>收藏记录</strong>：收藏的图片名、路径、加入时间（登录态收藏还同步<strong>图片文件本体</strong>，跨设备可下载还原）。</li>
+      <li><strong>浏览历史</strong>：最近打开的图片列表与时间戳。</li>
+      <li><strong>账户资料</strong>：昵称、头像、修改密码。</li>
+    </ul>
+    <p>设置、收藏、历史的本地改动会在登录态下自动增量上传；登出前会做一次末次上传。未登录时所有本地行为<strong>完全不变、不触网</strong>。</p>
+    <h3>服务器地址</h3>
+    <ul>
+      <li>「设置 → 高级 → 云端账户服务器地址」：留空使用本地 mock（<code>http://localhost:8787</code>）。接你自己的真实后端时，填入其地址即可（接口契约见 <code>server/mock-server.js</code> 顶部注释：REST + JWT，端点含 <code>/api/register</code> <code>/api/login</code> <code>/api/me</code> <code>/api/settings</code> <code>/api/favorites</code> <code>/api/history</code> <code>/api/favorites/image</code> 等）。</li>
+    </ul>
+    <div class="note">安全提示：演示版 token 存于浏览器 <code>localStorage</code>；生产环境建议改用系统凭据保管（如桌面版的 keyring 插件）。</div>
+  </section>
+
+  <section id="keys" class="anchor">
+    <h2>九、快捷键自定义</h2>
+    <p>所有快捷键均可自定义（「设置 → 快捷键」或关于面板中的快捷键说明）：</p>
+    <ol>
+      <li>进入设置 → 快捷键分组。</li>
+      <li>点击某动作右侧的按键按钮，按下新组合即可重绑；冲突的按键会自动让出。</li>
+      <li>「恢复默认快捷键」一键还原。</li>
+    </ol>
+    <h3>默认快捷键速查表</h3>
+    <table>
+      <thead><tr><th>动作</th><th>默认快捷键</th></tr></thead>
+      <tbody>
+        <tr><td>上一张</td><td><kbd>←</kbd> / <kbd>PageUp</kbd></td></tr>
+        <tr><td>下一张</td><td><kbd>→</kbd> / <kbd>PageDown</kbd></td></tr>
+        <tr><td>第一张</td><td><kbd>Home</kbd></td></tr>
+        <tr><td>最后一张</td><td><kbd>End</kbd></td></tr>
+        <tr><td>放大</td><td><kbd>=</kbd></td></tr>
+        <tr><td>缩小</td><td><kbd>-</kbd></td></tr>
+        <tr><td>左旋转</td><td><kbd>L</kbd></td></tr>
+        <tr><td>右旋转</td><td><kbd>R</kbd></td></tr>
+        <tr><td>水平翻转</td><td><kbd>H</kbd></td></tr>
+        <tr><td>垂直翻转</td><td><kbd>V</kbd></td></tr>
+        <tr><td>信息面板</td><td><kbd>I</kbd></td></tr>
+        <tr><td>幻灯片</td><td><kbd>S</kbd></td></tr>
+        <tr><td>全屏</td><td><kbd>F</kbd></td></tr>
+        <tr><td>显示/隐藏缩略图</td><td><kbd>Tab</kbd></td></tr>
+        <tr><td>复制图片</td><td><kbd>Ctrl</kbd>+<kbd>C</kbd>（Mac <kbd>Cmd</kbd>+<kbd>C</kbd>）</td></tr>
+        <tr><td>图片工具</td><td><kbd>E</kbd></td></tr>
+        <tr><td>跳转序号</td><td><kbd>G</kbd></td></tr>
+        <tr><td>关闭信息面板</td><td><kbd>Esc</kbd></td></tr>
+      </tbody>
+    </table>
+    <p><span class="badge">提示</span> 双击图片：在「适应窗口」与「实际大小」间切换。滚轮：默认缩放（<kbd>Ctrl</kbd>+滚轮翻页），可在设置互换。</p>
+  </section>
+
+  <section id="settings" class="anchor">
+    <h2>十、设置项详解</h2>
+    <table>
+      <thead><tr><th>分组</th><th>设置</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>通用</td><td>启动时打开上次文件夹</td><td>桌面版生效</td></tr>
+        <tr><td>通用</td><td>关闭按钮行为</td><td>退出程序 / 最小化到托盘（桌面版）</td></tr>
+        <tr><td>通用</td><td>最小化到系统托盘</td><td>桌面版生效</td></tr>
+        <tr><td>通用</td><td>开机自启动</td><td>桌面版生效</td></tr>
+        <tr><td>看图</td><td>默认缩放模式</td><td>适应窗口 / 实际大小</td></tr>
+        <tr><td>看图</td><td>滚轮行为</td><td>缩放 / 翻页（含 Ctrl 互换）</td></tr>
+        <tr><td>看图</td><td>翻页循环</td><td>末张后回到首张</td></tr>
+        <tr><td>看图</td><td>记住旋转状态</td><td>翻页保留旋转/翻转</td></tr>
+        <tr><td>看图</td><td>放大渲染模式</td><td>平滑 / 像素化</td></tr>
+        <tr><td>看图</td><td>设为壁纸模式</td><td>适应 / 拉伸 / 居中 / 平铺</td></tr>
+        <tr><td>幻灯片</td><td>默认间隔</td><td>1–20 秒</td></tr>
+        <tr><td>幻灯片</td><td>转场特效</td><td>淡入/滑动/缩放/无</td></tr>
+        <tr><td>幻灯片</td><td>播放顺序</td><td>正序 / 倒序 / 随机</td></tr>
+        <tr><td>文件关联</td><td>递归子文件夹</td><td>打开文件夹时遍历子目录</td></tr>
+        <tr><td>文件关联</td><td>右键菜单文字</td><td>桌面版写入注册表的菜单文字（Web 仅记录）</td></tr>
+        <tr><td>高级</td><td>预加载缓存大小</td><td>5–50 张（内存预读）</td></tr>
+        <tr><td>高级</td><td>自动检查更新</td><td>桌面版生效</td></tr>
+        <tr><td>高级</td><td>云端账户服务器地址</td><td>留空用本地 mock</td></tr>
+        <tr><td>快捷键</td><td>——</td><td>见第九节自定义</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="touch" class="anchor">
+    <h2>十一、触摸手势（触屏 / 移动端）</h2>
+    <ul>
+      <li><strong>单指拖动</strong>：平移图片（放大时）。</li>
+      <li><strong>双指捏合</strong>：缩放。</li>
+      <li><strong>双指滑动</strong>：翻页。</li>
+      <li>其余操作与桌面一致（工具栏按钮同样可用）。</li>
+    </ul>
+  </section>
+
+  <section id="pwa" class="anchor">
+    <h2>十二、PWA（Web 版安装到桌面）</h2>
+    <p>Web 原型已启用 PWA：在支持的浏览器中，地址栏会出现「安装」图标，可将绿角犀看图安装为独立的桌面应用，离线可用、像原生程序一样从开始菜单/程序坞启动。</p>
+  </section>
+
+  <section id="desktop" class="anchor">
+    <h2>十三、Windows 桌面客户端专属能力</h2>
+    <p>以下功能仅在 Windows 桌面客户端（Tauri 封装）中完整生效，Web 原型以对应 Web 能力替代：</p>
+    <table>
+      <thead><tr><th>能力</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>文件类型关联</td><td>双击图片直接用绿角犀看图打开</td></tr>
+        <tr><td>右键菜单集成</td><td>右键图片 →「用绿角犀看图打开」</td></tr>
+        <tr><td>系统托盘</td><td>最小化到托盘、单实例（重复打开聚焦已运行窗口）</td></tr>
+        <tr><td>真实壁纸</td><td>「设为壁纸」直接写入系统桌面</td></tr>
+        <tr><td>资源管理器定位</td><td>在图片上右键「定位到文件」打开所在文件夹</td></tr>
+        <tr><td>系统剪贴板位图</td><td>复制图片为系统剪贴板位图，跨应用粘贴</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="faq" class="anchor">
+    <h2>十四、常见问题</h2>
+    <ul>
+      <li><strong>Web 版打不开/功能受限？</strong> 建议通过本地静态服务器（如 <code>node serve.js</code>）打开，避免 <code>file://</code> 下的剪贴板/Service Worker 限制。</li>
+      <li><strong>云端登录连不上？</strong> 确认后端已启动（<code>node server/mock-server.js</code>），且「设置 → 高级 → 云端账户服务器地址」正确。</li>
+      <li><strong>某些格式打不开？</strong> HEIC / RAW / TIFF / PSD 等需后端解码的格式，在桌面版由 Rust 解码后传入；Web 原型下浏览器原生不支持的格式会提示需桌面版。</li>
+      <li><strong>设置/收藏没同步？</strong> 检查是否已登录；未登录仅存本地。登录态改动自动上传，也可在云端面板手动确认。</li>
+      <li><strong>想换回默认快捷键？</strong> 设置 → 快捷键 →「恢复默认快捷键」。</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>本说明随软件版本更新。功能以当前代码实现为准。</p>
+    <p><a class="btn" href="index.html">返回绿角犀看图</a></p>
+  </footer>
+</div>
+</body>
+</html>
