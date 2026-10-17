@@ -941,6 +941,44 @@ test('EXIF GPS: parseTiff GPS IFD 读取方向（N/S/E/W）+ lat/lon 数值存�
   assert(appSrc.includes('result.gps'), 'GPS 显示格式含方向');
 });
 
+// ---- SD Prompt 查看（2026-10-17 · A1 竞品对标 BandiView v7.23+/v8.03）----
+test('SD Prompt: parsePngTextChunks 函数存在 + PNG signature 检测 + tEXt/iTXt chunk 支持 + parameters 串解析 + renderInfo SD 组', async () => {
+  const fs = require('fs');
+  const appSrc = fs.readFileSync('app.js', 'utf-8');
+  // 函数存在
+  assert(typeof window.__qj.parsePngTextChunks === 'function', 'parsePngTextChunks 暴露到 __qj');
+  // PNG signature 常量
+  assert(appSrc.includes('0x89'), 'PNG signature 首字节');
+  assert(appSrc.includes('0x4E'), 'PNG signature N');
+  // tEXt / iTXt chunk 类型处理
+  assert(appSrc.includes("type === 'tEXt'"), '处理 tEXt chunk');
+  assert(appSrc.includes("type === 'iTXt'"), '处理 iTXt chunk');
+  // SD keyword 搜索
+  assert(appSrc.includes('parameters'), '搜 parameters keyword');
+  assert(appSrc.includes('negative_prompt'), '搜 negative_prompt keyword');
+  assert(appSrc.includes('cfg'), '搜 CFG scale');
+  assert(appSrc.includes('Sampler'), '搜 Sampler');
+  assert(appSrc.includes('Seed'), '搜 Seed');
+  assert(appSrc.includes('Model'), '搜 Model');
+  // parameters 串正则解析
+  assert(appSrc.includes('Negative prompt:'), 'parameters 串解析 negative');
+  assert(appSrc.includes('Steps:'), 'parameters 串解析 Steps');
+  assert(appSrc.includes('CFG scale:'), 'parameters 串解析 CFG');
+  assert(appSrc.includes('Sampler:'), 'parameters 串解析 Sampler');
+  assert(appSrc.includes('Seed:'), 'parameters 串解析 Seed');
+  assert(appSrc.includes('Model:'), 'parameters 串解析 Model');
+  // result.sd 结构
+  assert(appSrc.includes('sd.prompt'), 'sd.prompt');
+  assert(appSrc.includes('sd.negative'), 'sd.negative');
+  assert(appSrc.includes('sd.steps'), 'sd.steps');
+  // readExif PNG 支持
+  assert(appSrc.includes("item.type === 'image/png'"), 'readExif 对 PNG 也调用');
+  // renderInfo SD 组
+  assert(appSrc.includes('🎨 SD 参数'), 'renderInfo 有 SD 参数组标题');
+  assert(appSrc.includes('正向提示词'), 'renderInfo 有正向提示词行');
+  assert(appSrc.includes('负向提示词'), 'renderInfo 有负向提示词行');
+});
+
 // ---- 穿透文件夹递归扫描（对标 XnView MP）----
 test('穿透文件夹：设置开关 files.recursive 存在 + recursive 参数语义（默认 false 穿透=关）', async () => {
   const qj = window.__qj;
