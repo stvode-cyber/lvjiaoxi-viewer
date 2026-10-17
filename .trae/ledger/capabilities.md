@@ -13,6 +13,7 @@
 - 压缩包内图片懒加载（ZIP/CBZ/RAR/7Z）
 - 穿透文件夹递归扫描
 - 左侧缩略图栏虚拟滚动窗口 ±3（最多 7 张 DOM + thumbUrl 永久缓存）
+- 长图滚轮翻页 + Webtoon 模式（ratio=h/w > 1.7 自动启用纵向 pan，触底翻下一张，触顶翻上一张，Ctrl+滚轮保留缩放）
 - 双击图片文件关联启动（Setup.exe ProgId 注册）
 - 最近访问历史
 
@@ -85,12 +86,13 @@
 
 #### ⭐ S 级（低投入高感知，1-3h/个，**建议 v1.1.0 前完成**）
 
-1. **长图滚轮翻页 + Webtoon 模式**
-   - 对标：BandiView v8.03（刚出）+ FastStone + Skill long-image-scroll（现成方案）
-   - 做什么：检测 height/width > 1.7 自动启用纵向 pan；滚到底自动翻页到下一张（Space/Shift+Space 快捷键）
-   - 改什么：现有 showImage + mouse wheel 处理，新增 `longPan` 模式；左侧缩略图栏在 Webtoon 模式下隐藏
-   - 依赖：零新依赖（纯 CSS flex + JS scroll）
-   - 风险：低（只是滚动行为优化，不碰核心渲染管线）
+1. **长图滚轮翻页 + Webtoon 模式** ✅ **已实现（Chg-031 2026-10-16 缩略图窗口迭代时顺手加入）**
+   - 对标：HoneyView v5.53 + FastStone + Skill long-image-scroll
+   - 代码位置：app.js L454 state.isLongImage / L883 detectLongImage / L5770 wheel 事件长图分支
+   - 实现参数：ratio=nh/nw > 1.7 启用 / panStep=max(40, stageH*0.12) / 触底→next() 触顶→prev() / Ctrl+滚轮保留缩放
+   - 测试：regression 12 条断言全绿（L842-896）
+   - 依赖：零新依赖
+   - 风险：低（纯滚动行为优化，不碰核心渲染管线）
 
 2. **EXIF GPS 显示 + 地图链接**
    - 对标：HoneyView / FastStone（已有 EXIF 面板但缺 GPS 可视化）

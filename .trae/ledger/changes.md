@@ -72,8 +72,10 @@ showImage 入口全量重置 filters/slim/deform/crop/ops/matting/texts/mosaic/e
 
 ## 性能优化（2026-10-16 ~ 10-17 · 3 次迭代 7x 提升）
 
-#### Chg-P1（2026-10-16 · 缩略图虚拟滚动窗口）
-左侧缩略图栏从"全量渲染+全量解码"改为"centerIdx±3 最多 7 张 DOM + thumbUrl 永久缓存"。搜索有内容时退化为全量渲染。CACHE v66→v67。
+#### Chg-P1（2026-10-16 · 缩略图虚拟滚动窗口 + 长图滚轮翻页）
+- **缩略图窗口**：从"全量渲染+全量解码"改为"centerIdx±3 最多 7 张 DOM + thumbUrl 永久缓存"。搜索有内容时退化为全量渲染。
+- **长图滚轮翻页（Webtoon 模式）**：app.js L883 detectLongImage + L5770 wheel 分支。ratio=nh/nw > 1.7 自动启用纵向 pan；触底→next() 触顶→prev()；Ctrl+滚轮保留缩放；fit 模式自动 offsetY=0 定位顶端；regression 12 条断言（L842-896）。对标 HoneyView v5.53。
+- CACHE v66→v67。
 
 #### Chg-P2（2026-10-17 · rayon 并行 load_paths 40x）
 lib.rs `for f in files` → `files.into_par_iter().filter_map()` + dbg_log 毫秒时间戳。53 张图 1500ms→37ms。
