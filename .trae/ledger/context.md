@@ -1,9 +1,9 @@
 # context.md · 当前状态快照
 
 > 这个文件记录项目的稳定状态。完成度变了、硬规则变了、关键配置变了 → 改这里。
-> 最近更新：2026-10-17（Chg-031~035 缩略图窗口 + rayon 并行 + IPC 懒加载 + Android Bug-A/B 三件套 + WebP）
+> 最近更新：2026-10-17（S/A 级 6 个功能全部落地）
 
-## 完成度快照（2026-10-17）
+## 完成度快照（2026-10-17 晚间）
 
 | 模块 | 百分比 | 状态 | 备注 |
 |------|--------|------|------|
@@ -16,11 +16,12 @@
 | 批量加水印 | 100% | ✅ | drawWatermarkOnCanvas 纯函数 + 9 宫格 + tile -30° |
 | 海报边框+emoji | 100% | ✅ | BORDER_PRESETS + emojiBar + 一键生成 |
 | 打包交付 | 100% | ✅ | NSIS SimpChinese；内嵌 WebView2；installer.nsh 三段 hook |
-| 回归测试 | 100% | ✅ | regression.cjs **414** 项全绿（Chg-022/029 各 +2） |
-| **启动性能** | **100%** | ✅ | **rayon 并行 + IPC 懒加载**（Chg-034/035）：load_paths 53 张 1500ms→37ms；冷启动 setup→showImage 5730ms→809ms（7x 提升） |
-| **缩略图渲染** | **100%** | ✅ | **虚拟滚动窗口 ±3**（Chg-031）：只渲染当前选中前后各 3 张最多 7 张 DOM，thumbUrl 永久缓存复用 |
+| 回归测试 | 100% | ✅ | regression.cjs **467** 项全绿（今天 +53：深色主题 +2 / EXIF GPS +1 / SD Prompt +24 / 双页漫画 +19 / 递归穿透已有 +其他） |
+| **启动性能** | **100%** | ✅ | **rayon 并行 + IPC 懒加载**：load_paths 53 张 1500ms→37ms；冷启动 setup→showImage 5730ms→809ms（7x 提升） |
+| **缩略图渲染** | **100%** | ✅ | **虚拟滚动窗口 ±3**：只渲染当前选中前后各 3 张最多 7 张 DOM，thumbUrl 永久缓存复用 |
+| **竞品功能（P2 S/A 级 6/6 全落地）** | **100%** | ✅ | S1 长图滚轮翻页 + S2 深色主题 + S3 EXIF GPS 高德链接 + A1 SD Prompt 查看 + A2 CBR/CBZ 双页漫画 + A3 递归穿透文件夹（全部零新依赖，5/6 零 Rust 改动） |
 | 鸿蒙主线 | — | ⏸ 暂缓 | 已移除 harmony/ + iOS 图标，后续再回归 |
-| **Android 主线** | **55%** | 🔄 | **完整构建管线闭环**（2026-10-16 Chg-030）：tauri android build --apk -t aarch64 armv7 一次跑通；Universal APK 35.38MB 双架构（arm64+armv7）release 签名；JNI 20 符号齐全；真机 PID 25696 存活零崩溃；Resolver priority ✅ intent onNewIntent ✅ content:// SAF ✅ release keystore ✅ styles.css 移动端适配 ✅；待 Android intent 真机测试（从 Gallery/Files 点图打开 content://）+ SAF Picker 完整授权 |
+| **Android 主线** | **55%** | 🔄 | **完整构建管线闭环**：tauri android build --apk -t aarch64 armv7 一次跑通；Universal APK 35.38MB 双架构；JNI 20 符号齐全；待 Android intent 真机测试（从 Gallery/Files 点图打开 content://）+ SAF Picker 完整授权 |
 | 后端服务 | 0% | ⬜ | server/mock-server.js 占位 |
 
 ## 版本号落点（2026-10-09 交接）
