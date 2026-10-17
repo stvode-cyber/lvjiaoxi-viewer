@@ -119,6 +119,27 @@
 
 ---
 
+
+#### Iss-013（活跃 · 踩 5 次 · 2026-10-18 P-006 第4批）渐进替换 sub-file + TDZ + replace 特殊序列
+
+- **问题**：app.js 渐进替换裸调 → window.__API__.xxx() 过程中，子文件（edit.js/batch.js）闭包访问不到 app.js IIFE 内部变量；Object.assign 之前调用 window.__API__.xxx() 触发 TDZ；Node.js str.replace 的 $$ 被解释成单个 $
+- **根因**：三重机制叠加——(1) IIFE 作用域隔离：子文件 IIFE 闭包看不到 app.js IIFE 内部顶层 const/let；(2) TDZ：Object.assign(__API, {...}) 之后才能安全调 __API.xxx()，之前调函数声明提升的裸调能跑但调 __API.xxx() 会炸；(3) Node.js String.prototype.replace 的 replaceValue 里 $$ 是特殊序列（代表单个 $），不是正则里的 $$ 匹配
+- **踩坑 5 次**：
+  - v1：子文件裸调 EMOJI_PRESETS/ORIENT_CSS/CRC_TABLE → TypeError：不是函数
+  - v2：app.js Object.assign 前 40 处 window.__API__.xxx() → TDZ ReferenceError（loadSettings/applyTheme/next/prev 等）
+  - v3：Node replace("$$('.x')", "window.__API__.$$('.x')") → $$ 被替换成单个 $ → window.__API__.$('.x')（单 $ 不是 $$）
+  - v4：子文件注册块误加嵌套函数（clearTimer 等）→ IIFE 尾部访问不到
+  - v5：app.js Object.assign 里注入子文件独占函数（readExif/editUndo 等）→ undefined → eval 炸
+- **沉淀铁律**：
+  1. Object.assign(__API, {...}) 之前的 window.__API__.xxx() 调用 **必须改回裸调**（函数声明提升安全）
+  2. 子文件引用 app.js 顶层 const/let **必须** window.__API__.XXX（子文件闭包看不到）
+  3. Node.js replace 涉及 $$/$ 时 **用函数形式 replaceValue**（() => 'xxx' + '$$' + 'yyy'）
+  4. 子文件注册块 **只注册顶层函数**（缩进最少的那些），跳过嵌套函数
+  5. regression.cjs eval 顺序：先单独 eval 所有子文件 IIFE，再 eval appJs 合并串
+- **关联 Chg**：Chg-033 / Chg-034
+- **关联路径**：app.js、js/edit.js、js/batch.js、test/regression.cjs
+
+---
 ## 归档区（已沉淀 / 已解决，只追加不准删）
 
 #### Iss-011（已解决 · 2026-10-17）Windows 资源管理器缩略图变程序图标

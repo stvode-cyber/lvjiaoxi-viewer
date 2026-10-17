@@ -196,3 +196,18 @@ rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信�
 2. regression 源码断言检查的函数调用 → 要么保留裸调，要么改正则兼容两种写法
 3. Object.assign(__API, {...}) 只注入 app.js IIFE 内部有 function 声明的标识符
 4. 替换后必须跑 regression，再扫 3 大禁区
+
+#### Chg-034（第4批 · edit/batch · 2026-10-18 · commit ae3d847）edit.js + batch.js 渐进替换 + TDZ 修复 + 闭包变量注入
+
+**regression**: 467/0 全绿 | **sw.js**: CACHE v80
+
+- app.js Object.assign 在 loadSettings/applyTheme/showImage 等 L26-519 区间 40 处 window.__API__.xxx() **改回裸调**（TDZ：函数声明提升安全，__API.xxx 在 Object.assign 赋值前引用会炸）
+- batch.js L161/L1078 EMOJI_PRESETS/CRC_TABLE → window.__API__
+- batch.js L429/L430/L715/L716 $$('.xxx') → window.__API__.$$ (Node replace $$ 特殊序列踩坑 v3)
+- edit.js L522 ORIENT_CSS → window.__API__
+- batch.js L733/L768/L770/L772/L847 stripExt + L735/L740 pad → window.__API__
+- edit.js 顶层 123 函数 + batch.js 顶层 45 函数注册 __API.xxx = xxx（跳过已有注册）
+- app.js Object.assign 补 $$/stripExt/pad 注入
+- regression.cjs appJs 合并 edit.js + batch.js + 独立 eval 块 + 删 DEBUG
+
+**踩坑沉淀 Iss-013**：TDZ 铁律 + Node $$ replace + 子文件闭包变量 + 嵌套函数注册陷阱
