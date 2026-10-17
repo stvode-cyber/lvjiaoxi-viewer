@@ -24,6 +24,37 @@
   --radius: 10px;
 }
 
+/* ===== 深色主题（2026-10-17 · S2 竞品对标 BandiView v7+/美图秀秀） =====
+   设计原则：主色 #3aa888 保持青绿体系，背景降饱和避免刺眼，文字对比度 WCAG AA */
+:root.dark {
+  --bg: #141416;
+  --bg2: #1e1e22;
+  --bg-2: #1e1e22;
+  --ink: #e8e8ea;
+  --muted: rgba(232,232,234,.55);
+  --rule: rgba(232,232,234,.10);
+  --accent: #3aa888;
+  --accent2: #3aa888;
+  --accent-soft: rgba(58,168,136,.22);
+  --accent2-soft: rgba(58,168,136,.22);
+  --success: #3aa888;
+  --warning: #c9c6b8;
+  --danger: #ff6b6b;
+  --text: #e8e8ea;
+  --text-2: rgba(232,232,234,.62);
+  --text-3: rgba(232,232,234,.42);
+  --border: rgba(232,232,234,.14);
+  --shadow: 0 6px 24px rgba(0,0,0,.5);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,.4);
+  --radius: 10px;
+}
+/* 深色主题特例：顶栏按钮 hover 白底改深灰 */
+:root.dark .nav-arrow:hover { background: #2a2a30; }
+:root.dark .btn:hover { background: var(--accent-soft); }
+:root.dark .thumb-bar { background: #1a1a1e; }
+:root.dark .thumb { background: #22222a; }
+:root.dark .thumb.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; }
 body {

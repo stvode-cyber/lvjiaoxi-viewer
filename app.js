@@ -251,6 +251,25 @@
   }
   function getSetting(group, key) { return settings[group] ? settings[group][key] : undefined; }
 
+  // ============ 深色主题（2026-10-17 · S2 竞品对标 BandiView v7+/美图秀秀） ============
+  const THEME_KEY = 'qjviewer_theme_v1';
+  function applyTheme(t) {
+    const isDark = t === 'dark';
+    document.documentElement.classList.toggle('dark', isDark);
+    const btn = els.btnTheme;
+    if (btn) btn.textContent = isDark ? '🌙' : '🌞';
+  }
+  function loadTheme() {
+    try { return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'; } catch { return 'light'; }
+  }
+  function toggleTheme() {
+    const next = loadTheme() === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem(THEME_KEY, next); } catch {}
+    applyTheme(next);
+  }
+  // 注意：applyTheme() 立即调用要等 els 初始化后，见 cacheDom 之后
+
+
   // ============ 快捷键（可自定义，PRD 5.1「快捷键自定义」的 Web 可行实现）============
   const KEYMAP_KEY = 'qjviewer_keymap_v1';
   const KEYMAP_SCHEMA = [
@@ -483,7 +502,7 @@
     [
       'btnOpenFiles', 'btnOpenDir', 'fileInput', 'dirInput',
       'btnZoomOut', 'btnZoomFit', 'btnZoomIn', 'btnRotL', 'btnRotR', 'btnFlipH', 'btnFlipV',
-      'btnCopy', 'btnEdit', 'btnBeauty', 'btnInfo', 'btnSlide', 'btnBatch', 'btnSettings', 'btnFull',
+      'btnCopy', 'btnEdit', 'btnBeauty', 'btnInfo', 'btnTheme', 'btnSlide', 'btnBatch', 'btnSettings', 'btnFull',
       'btnSnap', 'btnUndo', 'btnRedo',
       'viewer', 'stage', 'image', 'imgWrap', 'emptyHint', 'loading',
       'navPrev', 'navNext', 'edgeLeft', 'edgeRight', 'counter', 'jumpInput',
@@ -5275,6 +5294,7 @@
     els.btnEdit.addEventListener('click', openEdit);
     if (els.btnBeauty) els.btnBeauty.addEventListener('click', openEdit);
     els.btnInfo.addEventListener('click', toggleInfo);
+    els.btnTheme.addEventListener('click', toggleTheme);
     els.btnSlide.addEventListener('click', startSlideshow);
     els.btnBatch.addEventListener('click', openBatch);
     els.btnSettings.addEventListener('click', openSettings);
@@ -6495,6 +6515,7 @@
 
   function init() {
     cacheDom();
+    applyTheme(loadTheme());  // S2 深色主题：DOM 就绪后立即应用 localStorage 存的主题
     bindEvents();
     renderRecentInline();
     if (!state.items.length) els.emptyHint.hidden = false;
@@ -6511,7 +6532,7 @@
       window.__qj = {
       get state() { return state; },
       makeCanvasOfCurrent, bakeFullCanvas, exportCanvasOfCurrent, setPngDpi, setJpegDpi, setWebpDpi, buildExifTiff, embedDpi, crc32,
-      renderEditPreview, resetCrop, normToPx, detectLongImage,
+      renderEditPreview, resetCrop, normToPx, detectLongImage, toggleTheme,
       // 照片处理 测试钩子
       sharpenCanvas, autoEnhance, resetOps, applyPixelOpsAsync, filterCss, syncFilterUI,
       upscaleInterp, aiUpscale,

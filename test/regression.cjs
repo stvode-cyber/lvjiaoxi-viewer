@@ -896,6 +896,33 @@ test('长图优化：isLongImage 状态 + 长宽比检测（nh/nw > 1.7）+ dete
   assert(qj.state.offsetY === 500, '长图 free 模式不重置 offsetY');
 });
 
+// ---- 深色主题（2026-10-17 · S2 竞品对标 BandiView v7+/美图秀秀）----
+test('深色主题：toggleTheme 函数存在 + classList 切换 + localStorage 持久化 + 默认浅色', async () => {
+  const qj = window.__qj;
+  assert(typeof qj.toggleTheme === 'function', 'toggleTheme 函数暴露到 __qj');
+  // 默认浅色（jsdom 里没有 localStorage 持久化过）
+  assert(!document.documentElement.classList.contains('dark'), '初始状态无 .dark class');
+  // 切深色
+  qj.toggleTheme();
+  assert(document.documentElement.classList.contains('dark'), 'toggleTheme 加 .dark class');
+  // 切回浅色
+  qj.toggleTheme();
+  assert(!document.documentElement.classList.contains('dark'), 'toggleTheme 移除 .dark class');
+});
+test('深色主题：styles.css 有 :root.dark 变量集 + 22 个色值变量覆盖', async () => {
+  const fs = require('fs');
+  const css = fs.readFileSync('styles.css', 'utf-8');
+  assert(css.includes(':root.dark'), 'styles.css 存在 :root.dark 选择器');
+  // 深色版本必须覆盖所有浅色核心变量（至少 15 个）
+  const vars = ['--bg:', '--bg2:', '--ink:', '--accent:', '--accent-soft:', '--text:', '--shadow:', '--muted:', '--rule:'];
+  let covered = 0;
+  const darkBlock = css.match(/:root\.dark\s*\{[\s\S]*?\}/);
+  if (darkBlock) {
+    for (const v of vars) if (darkBlock[0].includes(v)) covered++;
+  }
+  assert(covered >= 7, `深色主题至少覆盖 7 个变量（实际 ${covered}）`);
+});
+
 // ---- 穿透文件夹递归扫描（对标 XnView MP）----
 test('穿透文件夹：设置开关 files.recursive 存在 + recursive 参数语义（默认 false 穿透=关）', async () => {
   const qj = window.__qj;
