@@ -90,6 +90,9 @@ rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信�
 #### Chg-P5（2026-10-17 · EXIF GPS S3 · commit 0aa51e3）
 对标 HoneyView / FastStone EXIF 面板 GPS 可视化。parseTiff GPS IFD (0x8825) 加 LatitudeRef(0x0001 N/S) + LongitudeRef(0x0003 E/W) 方向读取；result 新增 lat/lon 数值；显示格式从 '31.2345, 121.4567' → '31.2345°N, 121.4567°E'（带方向+度数符号）。renderInfo GPS 行改为高德地图 marker URL 可点击链接（`uri.amap.com/marker?position=lon,lat&name=文件名`）。发现 EXIF 全是前端 JS 解析，Rust 端完全没碰 GPS IFD——只需改 app.js。CACHE v69→v70。regression +1 条断言。
 
+#### Chg-P6（2026-10-17 · SD Prompt A1 · commit 240dec9）
+对标 BandiView v7.23+/v8.03 SD prompt 查看。纯前端 JS parsePngTextChunks：PNG signature 8 字节检测 + chunk 循环 + tEXt/iTXt 类型处理（keyword\0text 拆分 + iTXt 压缩标记跳过）+ SD keyword 搜索（parameters/prompt/negative_prompt/Steps/CFG scale/Sampler/Seed/Model）+ parameters 串正则二次解析。renderInfo 🎨 SD 参数组 7 行（模型/采样器/步数/CFG/Seed/正向/负向），copyInfoText 复制时也带 SD 参数。readExif slice 从 256KB 扩到 512KB 以防参数 chunk 大。零新依赖（DataView 原生）。regression +24 条断言。CACHE v70→v71。
+
 ---
 
 ## 桌面偶发 bug 修复
