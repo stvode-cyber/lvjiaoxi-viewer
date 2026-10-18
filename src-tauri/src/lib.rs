@@ -35,6 +35,7 @@ use tauri::{Emitter, Manager};
 use image::codecs::jpeg::JpegEncoder;
 use rayon::prelude::*;
 use zip::ZipArchive;
+use ag_psd::{read_psd, get_composite_image_data}; use ag_psd::psd::ReadOptions;
 
 // 启动参数缓存：setup 阶段 emit 的 open-file 事件会因 WebView 未加载完成而丢失，
 // 前端启动后主动 invoke get_pending_paths 拉取（取后清空）。
@@ -333,6 +334,9 @@ fn mime_of(ext: &str) -> &'static str {
         "svg" => "image/svg+xml",
         "tif" | "tiff" => "image/tiff",
         "tga" => "image/x-tga",
+        "psd" | "psb" => "image/vnd.adobe.photoshop",
+        "exr" => "image/x-exr",
+        "jxl" => "image/jxl",
         _ => "image/jpeg",
     }
 }
@@ -361,6 +365,24 @@ fn rgb_to_jpeg_data_url(img: image::RgbImage) -> Result<String, String> {
             .map_err(|e| format!("编码失败: {}", e))?;
     }
     Ok(format!("data:image/jpeg;base64,{}", B64.encode(&buf)))
+}
+
+// PSD/PSB 缩略图：ag-psd 展平合成 → RGBA → 转 RGB8 → JPEG data URL
+fn decode_psd_thumbnail(path: &Path) -> Result<String, String> {
+    let bytes = std::fs::read(path).map_err(|e| format!("读 PSD 失败: {}", e))?;
+    let psd = read_psd(&bytes, &ReadOptions::default())
+        .map_err(|e| format!("PSD 解析失败: {}", e))?;
+    // 展平合成图像（所有层叠加后的结果）
+    let (width, height) = (psd.width as usize, psd.height as usize);
+    let pixel_data = get_composite_image_data(&psd)
+        .map_err(|e| format!("PSD 合成图像提取失败: {}", e))?
+        .ok_or_else(|| "PSD 无合成图像数据".to_string())?;
+    let rgba_data = pixel_data.data;
+    // 转 image::RgbaImage → RgbImage
+    let rgba = image::RgbaImage::from_raw(width as u32, height as u32, rgba_data)
+        .ok_or_else(|| "PSD RGBA 数据构造失败".to_string())?;
+    let rgb = image::DynamicImage::ImageRgba8(rgba).to_rgb8();
+    rgb_to_jpeg_data_url(rgb)
 }
 
 // 打开单张图片：一并加载同文件夹的图片（仅当前目录，不递归），
@@ -419,7 +441,7 @@ async fn load_paths(paths: Vec<String>, recursive: Option<bool>) -> Result<Vec<I
             let mime = mime_of(&ext).to_string();
             // 必须支持的格式才进入列表（其他格式不进 entries）
             let is_native = NATIVE_EXTS.contains(&ext.as_str());
-            let is_decodeable = matches!(ext.as_str(), "tif" | "tiff" | "tga" | "heic" | "heif");
+            let is_decodeable = matches!(ext.as_str(), "tif" | "tiff" | "tga" | "heic" | "heif") | matches!(ext.as_str(), "psd" | "psb" | "exr" | "jxl");
             if !is_native && !is_decodeable { return None; }
             Some(ImageEntry {
                 name, size, last_modified, mime,
@@ -442,8 +464,10 @@ fn get_image_data(path: String) -> Result<String, String> {
     let url = if NATIVE_EXTS.contains(&ext.as_str()) {
         let bytes = std::fs::read(&f).map_err(|e| format!("read fail: {}", e))?;
         format!("data:{};base64,{}", mime, B64.encode(&bytes))
-    } else if matches!(ext.as_str(), "tif" | "tiff" | "tga") {
+    } else if matches!(ext.as_str(), "tif" | "tiff" | "tga" | "exr" | "jxl") {
         decode_to_rgb(&f).and_then(rgb_to_jpeg_data_url).map_err(|e| format!("decode fail: {}", e))?
+    } else if matches!(ext.as_str(), "psd" | "psb") {
+        decode_psd_thumbnail(&f).map_err(|e| format!("psd decode fail: {}", e))?
     } else if matches!(ext.as_str(), "heic" | "heif") {
         let bytes = std::fs::read(&f).map_err(|e| format!("read heic fail: {}", e))?;
         format!("data:image/heic;base64,{}", B64.encode(&bytes))
@@ -488,7 +512,7 @@ fn first_thumb(path: String) -> Result<Option<String>, String> {
     if NATIVE_EXTS.contains(&ext.as_str()) {
         let bytes = std::fs::read(&file).map_err(|e| e.to_string())?;
         Ok(Some(format!("data:{};base64,{}", mime, B64.encode(&bytes))))
-    } else if ext == "tif" || ext == "tiff" || ext == "tga" {
+    } else if ext == "tif" || ext == "tiff" || ext == "tga" || ext == "exr" || ext == "jxl" {
         let rgb = decode_to_rgb(&file)?;
         Ok(Some(rgb_to_jpeg_data_url(rgb)?))
     } else {
