@@ -214,6 +214,26 @@ rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信�
 
 ---
 
+## 长图 P0 四项优化（2026-10-18 · P-20261018-003 · commit 756c2a0）
+
+**regression**: 467/0 全绿 | **sw.js**: CACHE v80→v81
+
+**竞品对标**：BandiView v8.03（2026-10-14 刚更）+ HoneyView v5.53 + FastStone touch interface
+
+**动作清单**（4 项，纯前端零 Rust，~40 行）：
+1. **触屏边界翻页**：touchmove pan 模式长图滑到顶/底自动翻上/下一张（对标 FastStone）
+2. **滚轮步长可调**：新增 `view.longScrollStep`（默认 12，范围 8~20），settings schema 加滑杆
+3. **长图阈值可调**：新增 `view.longImageThreshold`（默认 1.7，范围 1.5~2.5），detectLongImage 从 settings 读
+4. **Space 键长滚一屏**：DEFAULT_KEYMAP Space 绑 `longScroll` → runAction 长图模式滚一屏+触底翻页，非长图等同 next（对标 BandiView Webtoon 模式）
+
+**改 3 文件**：app.js（runAction + keymap + touchmove + wheel + settings + schema + needImage）+ js/render.js（detectLongImage 阈值）+ sw.js（CACHE +1）
+
+**踩坑**：Edit 工具对 347KB app.js 写不进去（返回成功但实际未写入），用 PowerShell .NET IO `[System.IO.File]::WriteAllText()` 解决
+
+**关联**：↔Chg-P1（当前长图实现）/ Iss-013（渐进替换裸调）
+
+---
+
 ## 台账瘦身 + 设定补全（2026-10-18 · P-20261018-001）
 
 **regression**: 467/0 全绿 | **sw.js**: 未变（只改 md）
