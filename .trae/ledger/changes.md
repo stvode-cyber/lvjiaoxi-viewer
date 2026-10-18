@@ -234,6 +234,37 @@ rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信�
 
 ---
 
+## Webtoon 连续流模式（2026-10-18 · P-20261018-005 · commit 07c6e77）
+
+**regression**: 467/0 全绿 | **sw.js**: CACHE v81→v82
+
+**竞品对标**：BandiView v8.03 Webtoon 模式（文件夹所有图垂直连续流 + 间距可调）
+
+**核心功能**：
+- 📚 底部导航条加「长流」按钮 → 一键切 Webtoon 模式
+- 文件夹所有图拼垂直 flex column（gap 可设 0~100px，默认 20）
+- IntersectionObserver 懒加载图片（data-path → resolveItemSrc）
+- 三模式互斥：Webtoon ↔ 双页漫画 ↔ 普通看图
+- 压缩包模式自动隐藏 Webtoon 按钮（漫画按钮接管）
+- 点击连续流里任意图 → 自动切回单图模式定位到对应 index
+- localStorage 持久化偏好（qjviewer_webtoon_v1）
+- runAction 加 webtoon case（可绑快捷键）
+
+**改 4 文件**：
+- index.html：加 webtoonStack 容器 + btnWebtoon 按钮
+- styles.css：加 .webtoon-stack + .wt-item 样式（flex column + scroll-behavior:smooth）
+- app.js：state/webtoonMode + settings/webtoonGap + applyWebtoonMode + renderWebtoonStack + toggleWebtoonMode + lazyObs IntersectionObserver 懒加载 + cacheDom/Object.assign/bindEvents 接电线
+- sw.js：CACHE +1
+
+**踩坑**：
+- index.html Edit 工具写不进去（60KB 也不行？）→ PowerShell [System.IO.File]::WriteAllText() 解决
+- cacheDom 硬编码数组没加 webtoonStack / btnWebtoon → regression 挂，补完就过
+- Webtoon 函数块插在 COMIC_KEY 之前（之前尝试插在 applyComicMode 里失败，因为 newline 不匹配）
+
+**零 Rust / 纯前端 / 112 行新增**
+
+---
+
 ## 台账瘦身 + 设定补全（2026-10-18 · P-20261018-001）
 
 **regression**: 467/0 全绿 | **sw.js**: 未变（只改 md）
