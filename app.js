@@ -1,4 +1,4 @@
-﻿/* 绿角犀看图 · Web 原型 — 核心逻辑
+/* 绿角犀看图 · Web 原型 — 核心逻辑
  * 覆盖 PRD 5.2~5.6；5.1 系统集成层以 Web 能力替代并在「关于」中标注。
  * 纯前端、零依赖、离线可用（双击 index.html 即可运行）。
  */
@@ -194,6 +194,8 @@
       renderMode: 'smooth',
       wallpaperMode: 'fit',
       recursive: true,
+      longImageThreshold: 1.7,
+      longScrollStep: 12,
     },
     slideshow: {
       interval: 5,
@@ -225,6 +227,8 @@
     { group: 'view', key: 'rememberRotation', label: '记住旋转状态', type: 'toggle' },
     { group: 'view', key: 'renderMode', label: '放大渲染模式', type: 'select', options: [['smooth', '平滑'], ['pixelated', '像素化']] },
     { group: 'view', key: 'wallpaperMode', label: '设为壁纸模式（Web 下载）', desc: 'Web 原型无法设置系统壁纸，按所选模式合成后下载', type: 'select', options: [['fit', '适应（留边）'], ['fill', '拉伸（铺满）'], ['center', '居中'], ['tile', '平铺']] },
+    { group: 'view', key: 'longImageThreshold', label: '长图判定阈值 (height/width)', desc: '超过此值自动启用滚轮=纵向滚动模式', type: 'range', min: 1.5, max: 2.5, step: 0.1 },
+    { group: 'view', key: 'longScrollStep', label: '长图滚轮步长（屏高%）', desc: '长图模式下每次滚轮滚动屏高的百分之几', type: 'range', min: 8, max: 20, step: 2 },
 
     { group: 'slideshow', key: 'interval', label: '默认间隔（秒）', type: 'range', min: 1, max: 20, step: 1 },
     { group: 'slideshow', key: 'transition', label: '转场特效', type: 'select', options: [['fade', '淡入淡出'], ['left', '左滑'], ['right', '右滑'], ['up', '上滑'], ['down', '下滑'], ['zoom', '缩放'], ['none', '无']] },
@@ -349,6 +353,7 @@
     { action: 'edit', label: '图片工具' },
     { action: 'jump', label: '跳转序号' },
     { action: 'closeInfo', label: '关闭信息面板 (Esc)' },
+    { action: 'longScroll', label: '长图长滚一屏 (Space)' },
   ];
   const DEFAULT_KEYMAP = {
     prev: ['arrowleft', 'pageup'],
@@ -369,6 +374,7 @@
     edit: ['e'],
     jump: ['g'],
     closeInfo: ['escape'],
+    longScroll: ['space'],
   };
   let keymap = loadKeymap();
   function loadKeymap() {
@@ -494,7 +500,7 @@
     e.preventDefault();
     e.stopPropagation();
     // disabled 门禁
-    const needImage = ['prev', 'next', 'home', 'end', 'zoomIn', 'zoomOut', 'rotateL', 'rotateR', 'flipH', 'flipV', 'info', 'slideshow', 'fullscreen', 'copy', 'edit'].includes(action);
+    const needImage = ['prev', 'next', 'home', 'end', 'zoomIn', 'zoomOut', 'rotateL', 'rotateR', 'flipH', 'flipV', 'info', 'slideshow', 'fullscreen', 'copy', 'edit', 'longScroll'].includes(action);
     if (needImage && state.items.length === 0) { window.__API__.toast('请先打开图片'); return; }
     runAction(action);
   });
@@ -518,6 +524,19 @@
       case 'edit': openEdit(); break;
       case 'jump': window.__API__.openJump(); break;
       case 'closeInfo': els.infoPanel.hidden = true; break;
+      case 'longScroll': {
+        if (state.isLongImage) {
+          const stepPct = (window.__API__.settings?.view?.longScrollStep || 12) / 100;
+          const panStep = Math.max(40, Math.round(els.stage.clientHeight * stepPct));
+          state.offsetY -= panStep;
+          state.mode = 'free';
+          window.__API__.applyTransform(); window.__API__.clampOffset();
+          const { w, h } = window.__API__.displayDims();
+          const dh = h * state.scale; const sw = els.stage.clientHeight;
+          if (dh > sw) { const maxY = -(dh - sw) / 2; if (state.offsetY <= maxY + 1) window.__API__.next(); }
+        } else { window.__API__.next(); }
+        break;
+      }
     }
   }
 
@@ -5787,7 +5806,8 @@
       // ===== 长图优化（对标 HoneyView v5.53） =====
       // 长图默认滚轮 = 纵向 pan；Ctrl + 滚轮 = 缩放（不翻页）
       if (state.isLongImage && !e.ctrlKey) {
-        const panStep = Math.max(40, Math.round(els.stage.clientHeight * 0.12));
+        const stepPct = (window.__API__.settings?.view?.longScrollStep || 12) / 100;
+        const panStep = Math.max(40, Math.round(els.stage.clientHeight * stepPct));
         state.offsetY -= e.deltaY > 0 ? panStep : -panStep;
         state.mode = 'free';
         window.__API__.applyTransform(); window.__API__.clampOffset();
@@ -5869,6 +5889,16 @@
         state.offsetY = state.dragStart.oy + dy;
         state.mode = 'free';
         window.__API__.applyTransform(); window.__API__.clampOffset();
+        if (state.isLongImage) {
+          const { w, h } = window.__API__.displayDims();
+          const dh = h * state.scale;
+          const sw = stage.clientHeight;
+          if (dh > sw) {
+            const maxY = -(dh - sw) / 2;
+            if (dy > 0 && state.offsetY <= maxY + 2 && Math.abs(dy) > 20) { window.__API__.next(); }
+            else if (dy < 0 && state.offsetY >= -maxY - 2 && Math.abs(dy) > 20) { window.__API__.prev(); }
+          }
+        }
       } else if (state.touch.mode === 'pinch' && e.touches.length === 2) {
         const [a, b] = [e.touches[0], e.touches[1]];
         const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);

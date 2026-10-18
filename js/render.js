@@ -35,7 +35,8 @@
     const nw = item.natW || (item.img ? item.img.naturalWidth : 0);
     const nh = item.natH || (item.img ? item.img.naturalHeight : 0);
     if (!nw || !nh) { window.__API__.state.isLongImage = false; return; }
-    window.__API__.state.isLongImage = nh / nw > 1.7;
+    const thr = window.__API__.settings?.view?.longImageThreshold || 1.7;
+    window.__API__.state.isLongImage = nh / nw > thr;
     if (window.__API__.state.isLongImage && window.__API__.state.mode === 'fit') {
       window.__API__.state.offsetX = 0; window.__API__.state.offsetY = 0;
       applyTransform(); clampOffset();
