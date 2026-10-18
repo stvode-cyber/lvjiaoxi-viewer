@@ -196,6 +196,7 @@
       recursive: true,
       longImageThreshold: 1.7,
       longScrollStep: 12,
+      webtoonGap: 20,
     },
     slideshow: {
       interval: 5,
@@ -229,6 +230,7 @@
     { group: 'view', key: 'wallpaperMode', label: '设为壁纸模式（Web 下载）', desc: 'Web 原型无法设置系统壁纸，按所选模式合成后下载', type: 'select', options: [['fit', '适应（留边）'], ['fill', '拉伸（铺满）'], ['center', '居中'], ['tile', '平铺']] },
     { group: 'view', key: 'longImageThreshold', label: '长图判定阈值 (height/width)', desc: '超过此值自动启用滚轮=纵向滚动模式', type: 'range', min: 1.5, max: 2.5, step: 0.1 },
     { group: 'view', key: 'longScrollStep', label: '长图滚轮步长（屏高%）', desc: '长图模式下每次滚轮滚动屏高的百分之几', type: 'range', min: 8, max: 20, step: 2 },
+    { group: 'view', key: 'webtoonGap', label: 'Webtoon 图片间距（px）', desc: '连续流模式下两张图片之间的间距', type: 'range', min: 0, max: 100, step: 5 },
 
     { group: 'slideshow', key: 'interval', label: '默认间隔（秒）', type: 'range', min: 1, max: 20, step: 1 },
     { group: 'slideshow', key: 'transition', label: '转场特效', type: 'select', options: [['fade', '淡入淡出'], ['left', '左滑'], ['right', '右滑'], ['up', '上滑'], ['down', '下滑'], ['zoom', '缩放'], ['none', '无']] },
@@ -282,6 +284,60 @@
   // 注意：window.__API__.applyTheme() / window.__API__.applyComicMode() 立即调用要等 els 初始化后，见 window.__API__.init() window.__API__.cacheDom() 之后
 
   // ============ 双页漫画模式（2026-10-17 · A2 对标 HoneyView） ============
+  // ============ Webtoon 连续流模式（2026-10-18 · P1 对标 BandiView v8.03） ============
+  const WEBTOON_KEY = 'qjviewer_webtoon_v1';
+  function applyWebtoonMode(on) {
+    state.webtoonMode = !!on;
+    if (on) {
+      state.comicMode = false;
+      els.webtoonStack.hidden = false;
+      els.dualStage.hidden = true;
+      els.imgWrap.hidden = true;
+      renderWebtoonStack();
+    } else {
+      els.webtoonStack.hidden = true;
+      if (state.archivePath && state.comicMode) {
+        els.dualStage.hidden = false; els.imgWrap.hidden = true;
+      } else {
+        els.dualStage.hidden = true; els.imgWrap.hidden = false;
+        if (state.items.length && state.index >= 0) window.__API__.showImage(state.index);
+      }
+    }
+    if (els.btnWebtoon) { els.btnWebtoon.hidden = !!state.archivePath; els.btnWebtoon.classList.toggle('active', !!on); }
+    if (els.btnComicMode && on) els.btnComicMode.hidden = true;
+  }
+  function renderWebtoonStack() {
+    const stack = els.webtoonStack;
+    if (!stack) return;
+    const gap = window.__API__.settings?.view?.webtoonGap ?? 20;
+    stack.style.gap = gap + 'px';
+    stack.innerHTML = '';
+    if (!state.items.length) return;
+    state.items.forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = 'wt-item';
+      const img = document.createElement('img');
+      img.alt = item.name || ('image-' + i);
+      img.loading = 'lazy';
+      const src = item.url || item.thumbUrl;
+      if (src) { img.src = src; }
+      else { img.setAttribute('data-path', item.path || ''); lazyObs.observe(img); }
+      div.appendChild(img);
+      div.addEventListener('click', () => {
+        state.webtoonMode = false; window.__API__.applyWebtoonMode(false); window.__API__.showImage(i);
+      });
+      stack.appendChild(div);
+    });
+    if (state.index >= 0 && stack.children[state.index]) {
+      stack.children[state.index].scrollIntoView({ behavior: 'auto', block: 'center' });
+    }
+  }
+  function toggleWebtoonMode() {
+    const next = !state.webtoonMode;
+    window.__API__.applyWebtoonMode(next);
+    try { localStorage.setItem(WEBTOON_KEY, next ? '1' : '0'); } catch {}
+  }
+
   const COMIC_KEY = 'qjviewer_comic_v1';
   function applyComicMode(on) {
     state.comicMode = !!on;
@@ -354,6 +410,7 @@
     { action: 'jump', label: '跳转序号' },
     { action: 'closeInfo', label: '关闭信息面板 (Esc)' },
     { action: 'longScroll', label: '长图长滚一屏 (Space)' },
+    { action: 'webtoon', label: '切换 Webtoon 连续流' },
   ];
   const DEFAULT_KEYMAP = {
     prev: ['arrowleft', 'pageup'],
@@ -375,6 +432,7 @@
     jump: ['g'],
     closeInfo: ['escape'],
     longScroll: ['space'],
+    webtoon: [],
   };
   let keymap = loadKeymap();
   function loadKeymap() {
@@ -524,6 +582,7 @@
       case 'edit': openEdit(); break;
       case 'jump': window.__API__.openJump(); break;
       case 'closeInfo': els.infoPanel.hidden = true; break;
+      case 'webtoon': window.__API__.toggleWebtoonMode(); break;
       case 'longScroll': {
         if (state.isLongImage) {
           const stepPct = (window.__API__.settings?.view?.longScrollStep || 12) / 100;
@@ -545,6 +604,7 @@
     items: [],            // {file,name,url,size,lastModified,type,img,thumbUrl,natW,natH,exif}
     index: -1,
     comicMode: false,     // 📖 双页漫画模式（A2 2026-10-17）
+    webtoonMode: false,   // 📚 Webtoon 连续流模式（P1 2026-10-18 · BandiView v8.03）
     scale: 1, fitScale: 1,
     offsetX: 0, offsetY: 0,
     rotation: 0, flipH: false, flipV: false,
@@ -578,7 +638,26 @@
   const els = {};
 
   // ============ 依赖注入：把主文件核心对象暴露给子文件 IIFE ============
-  Object.assign(__API, {
+    // ============ Webtoon 图片懒加载（IntersectionObserver） ============
+  const lazyObs = (typeof IntersectionObserver !== 'undefined')
+    ? new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const img = e.target;
+          const item = window.__API__.state.items.find((it) => it.path === img.getAttribute('data-path'));
+          if (item) {
+            const load = window.__API__.resolveItemSrc(item);
+            if (load && typeof load.then === 'function') {
+              load.then((src) => { if (src) img.src = src; });
+            } else if (load) {
+              img.src = load;
+            }
+          }
+          lazyObs.unobserve(img);
+        }
+      }, { rootMargin: '200px' })
+    : { observe() {}, unobserve() {} };
+Object.assign(__API, {
     state,
     els,
     desktop,
@@ -671,9 +750,9 @@
     [
       'btnOpenFiles', 'btnOpenDir', 'fileInput', 'dirInput',
       'btnZoomOut', 'btnZoomFit', 'btnZoomIn', 'btnRotL', 'btnRotR', 'btnFlipH', 'btnFlipV',
-      'btnCopy', 'btnEdit', 'btnBeauty', 'btnInfo', 'btnTheme', 'btnSlide', 'btnBatch', 'btnComicMode', 'btnSettings', 'btnFull',
+      'btnCopy', 'btnEdit', 'btnBeauty', 'btnInfo', 'btnTheme', 'btnSlide', 'btnBatch', 'btnComicMode', 'btnWebtoon', 'btnSettings', 'btnFull',
       'btnSnap', 'btnUndo', 'btnRedo',
-      'viewer', 'stage', 'image', 'imgWrap', 'dualStage', 'imageLeft', 'imgWrapLeft', 'imageRight', 'imgWrapRight', 'emptyHint', 'loading',
+      'viewer', 'stage', 'image', 'imgWrap', 'dualStage', 'webtoonStack', 'imageLeft', 'imgWrapLeft', 'imageRight', 'imgWrapRight', 'emptyHint', 'loading',
       'navPrev', 'navNext', 'edgeLeft', 'edgeRight', 'counter', 'jumpInput',
       'thumbBar', 'thumbs', 'thumbSearch', 'thumbCount',
       'beautyBar', 'bottomNav',
@@ -5311,6 +5390,7 @@
     els.btnInfo.addEventListener('click', toggleInfo);
     els.btnTheme.addEventListener('click', toggleTheme);
     els.btnComicMode.addEventListener('click', toggleComicMode);
+    els.btnWebtoon.addEventListener('click', () => { toggleWebtoonMode(); });
     els.btnSlide.addEventListener('click', startSlideshow);
     els.btnBatch.addEventListener('click', openBatch);
     els.btnSettings.addEventListener('click', openSettings);
