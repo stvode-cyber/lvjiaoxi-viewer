@@ -265,6 +265,31 @@ rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信�
 
 ---
 
+## PSD/PSB + EXR 格式支持（2026-10-18 · P-20261018-007 · commit ddec2d1）
+
+**regression**: 467/0 全绿 | **cargo check**: ✅ 编译零 error | **tauri build**: ✅ Setup.exe 212.89MB
+
+**竞品对标**：BandiView v8.03（Photoshop PSD/PSB + EXR 原生预览）
+
+**核心功能**：
+- ✅ **PSD/PSB**：ag-psd crate 纯 Rust 解码 → 展平合成（所有层叠加结果）→ RGBA → JPEG dataURL
+- ✅ **EXR**：image crate `exr` feature 开关加一行，ImageReader 自动解码
+- ⏸ **JXL**：image 0.25 无 jxl feature，后续加独立 crate
+- 三链路全通：load_paths / get_image_data / first_thumb + mime_of 白名单
+
+**改 2 Rust 文件 · +31/-5 行**：
+- Cargo.toml：加 ag-psd = "0.3" + image feature exr
+- lib.rs：加 decode_psd_thumbnail helper + get_composite_image_data（独立函数不是 Psd 方法！）+ 4 处分支白名单
+
+**踩坑**：
+- image 0.25 没有 jxl feature（`jxl` 是独立 image-jxl crate）
+- ag-psd `get_composite_image_data` 是**独立函数**（`ag_psd::get_composite_image_data(&psd)`），不是 Psd 方法；返回 `Option<PixelData>` → `.ok_or()` 再取 `.data`
+- PowerShell `` `n `` 反引号转义进 Rust 文件 → Rust 编译器报 `unknown start of token` → 改用 Edit 工具或 here-string 实际换行
+
+**Android 能编译**：ag-psd 纯 Rust 无系统依赖 ✅
+
+---
+
 ## 台账瘦身 + 设定补全（2026-10-18 · P-20261018-001）
 
 **regression**: 467/0 全绿 | **sw.js**: 未变（只改 md）
