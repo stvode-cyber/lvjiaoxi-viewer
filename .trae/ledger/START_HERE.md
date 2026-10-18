@@ -75,9 +75,17 @@
 4. **Iss-010**（踩 1 次 · 2026-10-16 新坑）Tauri CLI 硬调 4 架构 + gradle.properties targetList 不生效 → **必须用 `-t aarch64 armv7` 参数**；NDK 版本不一致
 5. **Iss-001**（踩 2 次）jsdom Uint8Array 是 window realm，`instanceof` 要用 `window.Uint8Array`
 
-## 最近 3 周大事（2026-09-20 ~ 2026-10-16）
+## 最近 3 周大事（2026-09-20 ~ 2026-10-18）
 
-### 2026-10-16（Android 完整构建管线闭环 · Chg-030）
+### 2026-10-18（BandiView 竞品差异化 · 7 个 P 进程落地）
+- **P-001 台账瘦身**：活跃坑 10→9（Iss-004 归档）+ 测试断言数 224→467
+- **P-002/006 竞品扫描**：BandiView v8.03 三大差异化 → 长图 P0 四项 + Webtoon + PSD/EXR
+- **P-003 长图 P0 四项优化**：触屏边界翻页 + 滚轮步长可调 + 长图阈值可调 + Space 长滚一屏
+- **P-005 Webtoon 连续流模式**：📚 底部导航条新增「长流」按钮；文件夹所有图垂直 stack + IntersectionObserver 懒加载（纯前端零 Rust）
+- **P-007 PSD/PSB + EXR 原生预览**：ag-psd crate 纯 Rust 解码（展平合成缩略图）+ image crate exr feature；Android 也能编译
+- **Setup.exe 212.89MB**（+0.13MB 新增），regression 467/0 全绿
+
+### 2026-10-17（模块化拆分 + 性能优化 + Android 闭环）
 - **还原 rust 插件**：Chg-029 后有人注释了 `build.gradle.kts` 里的 `id("rust")`，本次还原
 - **管线验证**：`npm run tauri -- android build --apk -t aarch64 armv7` 一次跑通完整管线
   - Rust 双架构 release profile 编译（2 warnings：unused_mut + unused 变量）
