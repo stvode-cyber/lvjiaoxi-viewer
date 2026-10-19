@@ -18,16 +18,17 @@
 桌面图片浏览器 + 内嵌底部栏美图编辑器。零框架原生 JS 单文件 app.js（252KB）+ Rust Tauri v2 + WebView2 离线运行时。核心卖点：合并位移场变形（导出 = 预览同公式）、AI 超分 ONNX 推理失败自动降级 Lanczos、抠图高斯似然比 + 双边羽化、压缩包直看（ZIP/CBZ 懒加载）。
 
 ## 当前版本
-`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v68**）
-- **2026-10-17 最新提交**：Chg-031~035 + commit 3f1b36f
-- **桌面 build**：Setup.exe 223MB（Chg-034 rayon + Chg-035 IPC 懒加载，冷启动 5.7s→0.8s）
-- **Android APK**：Universal 35.38MB（Chg-030，双架构 arm64+armv7 release 签名）
+`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v82**）
+- **2026-10-18 最新提交**：Chg-P7 PSD/PSB+EXR + Chg-034 渐进替换第4批
+- **桌面 build**：Setup.exe 212.89MB（Chg-P7 ag-psd + Chg-P5/P6/P7 竞品功能 + Chg-P4 深色主题）
+- **Android APK**：Universal 35.38MB（arm64+armv7 release 签名）
 
-## 完成度（2026-10-17 下午）
+## 完成度（2026-10-19 下午）
 
 | 模块 | 状态 | 备注 |
 |------|------|------|
 | 图片浏览核心 | ✅ 100% | 打开/缩放/翻页/最近访问/穿透文件夹；**虚拟滚动窗口 ±3**（Chg-031） |
+| **新增格式** | ✅ 100% | **PSD/PSB（ag-psd 0.3 + 展平合成缩略图）+ EXR（image exr feature）+ WebP（桌面原生 + Android）**（Chg-P7 / P-20261018-007） |
 | GIF 解码兜底 | ✅ 100% | 正常 GIF 原生播动画；坏 GIF decode_fallback；压缩包内/缩略图 Rust 端 image crate → JPEG（Iss-005 7 次踩坑全闭环） |
 | 美图编辑器 | ✅ 100% | 内嵌底部栏（border-top），edit-panel 紧贴 bottom-nav 上方；slim/deform 合并位移场 |
 | AI 超分 | ✅ 100% | ONNX + ort.wasm，失败降级 Lanczos |
@@ -35,11 +36,14 @@
 | 压缩包直看 | ✅ 100% | ZIP/CBZ/RAR/7Z 懒加载 |
 | 批量加水印 | ✅ 100% | drawWatermarkOnCanvas 纯函数 + 9 宫格 + tile -30° |
 | 海报边框+emoji | ✅ 100% | BORDER_PRESETS + emojiBar + 一键生成 |
+| **长图 + Webtoon** | ✅ 100% | **长图滚轮翻页（ratio>1.7 自动启用 + 触屏边界 + Space 长滚）+ 📚 长流按钮连续流模式（IntersectionObserver 懒加载 + gap 0~100px 可调）**（P-20261018-003/005） |
+| **竞品功能 P2 6/6** | ✅ 100% | 深色主题 + EXIF GPS 高德 + SD Prompt 查看 + 双页漫画 + 递归穿透文件夹 + Webtoon（全部零新依赖） |
 | 打包交付 | ✅ 100% | NSIS 全中文 SimpChinese；installer.nsh PreInstall 仅留 taskkill |
-| 回归测试 | ✅ 100% | regression.cjs **414** 项全绿 |
-| **启动性能** | **✅ 100%** | **rayon 并行 + IPC 懒加载**（Chg-034/035）：load_paths 53 张 1500ms→37ms；冷启动 setup→showImage 5730ms→809ms（7x 提升） |
-| **缩略图渲染** | **✅ 100%** | **虚拟滚动窗口 ±3**（Chg-031）：最多 7 张 DOM 同时存活，thumbUrl 永久缓存复用 |
-| **Android 主线** | **🔄 55%** | **完整构建管线 + Bug-A/B 已修**（Chg-032）：pendingIntent 暂存 + allowContentAccess + Manifest 合并；通用 APK 35.38MB 双架构 release 签名；待 intent 真机测试（手机连好后 Gallery/Files 点图）+ SAF Picker 完整授权 |
+| 回归测试 | ✅ 100% | regression.cjs **467** 项全绿 |
+| **启动性能** | ✅ 100% | rayon 并行 + IPC 懒加载：load_paths 53 张 1500ms→37ms；冷启动 5.7s→0.8s（7x 提升） |
+| **缩略图渲染** | ✅ 100% | 虚拟滚动窗口 ±3：最多 7 张 DOM 同时存活，thumbUrl 永久缓存复用 |
+| **模块化拆分** | **95%** | **6 子文件落地 + 渐进替换第4批完成**：exif/archive/render/init/edit/batch 全部 IIFE；裸调→__API__ 替换完成 archive(21)+render(115)+init(231)=367 + edit/batch TDZ 修复（Chg-034 / Iss-013） |
+| **Android 主线** | **🔄 55%** | **完整构建管线闭环**：tauri android build --apk -t aarch64 armv7 一次跑通；Universal APK 35.38MB 双架构；JNI 20 符号齐全；**待 Android intent 真机测试 + SAF Picker 完整授权** |
 | 鸿蒙/iOS 线 | ⏸ 暂缓 | 已移除，后续再回归 |
 | 后端服务 | ⬜ 待接入 | |
 
@@ -70,12 +74,17 @@
 
 ## 活跃坑 top 5（踩过 ≥1 次，新 AI 必扫）
 1. **Iss-005**（踩 7 次 · 已修复）WebView2 GIF 变种原生解码失败 → Rust 端 image crate 兜底
-2. **Iss-008**（踩 2 次 · 2026-10-16 又踩）armv7 交叉编译缺 C 编译器 → 构建前 PATH + CC_armv7 环境变量
-3. **Iss-007**（踩 1 次）手动 cargo build Android 缺 mobile_entry_point JNI 桥 → **铁律：tauri android build 是唯一入口**
-4. **Iss-010**（踩 1 次 · 2026-10-16 新坑）Tauri CLI 硬调 4 架构 + gradle.properties targetList 不生效 → **必须用 `-t aarch64 armv7` 参数**；NDK 版本不一致
-5. **Iss-001**（踩 2 次）jsdom Uint8Array 是 window realm，`instanceof` 要用 `window.Uint8Array`
+2. **Iss-013**（踩 5 次 · 2026-10-18 P-006 第4批）渐进替换 TDZ + $$ replace + 子文件闭包变量
+3. **Iss-014**（踩 2 次 · 2026-10-19 新坑）Setup.exe /S 被 Registry 缓存骗过 → 文件关联飘到旧 EXE 路径
+4. **Iss-008**（踩 2 次 · 2026-10-16 又踩）armv7 交叉编译缺 C 编译器 → 构建前 PATH + CC_armv7 环境变量
+5. **Iss-001/002**（各踩 2 次）jsdom Uint8Array / PowerShell 5 GBK 中文注释
 
-## 最近 3 周大事（2026-09-20 ~ 2026-10-18）
+## 最近 3 周大事（2026-09-30 ~ 2026-10-19）
+
+### 2026-10-19（Setup.exe /S 缺陷确认 + PSD 打开修复）
+- **P-002 文件关联修复**：注册表飘到 C:\LVJX_VERIFY 旧 EXE → 手动修正 HKCU ProgId + 删除旧目录
+- **P-003 PSD 打不开修复**：AppData EXE 是 10-17 旧 build（没 ag-psd 依赖）→ 手动覆盖 release EXE（10-18 最新）
+- **新坑 Iss-014**：Setup.exe /S 静默安装 Registry 缓存 + AppData EXE 不自动更新（踩 2 次）
 
 ### 2026-10-18（BandiView 竞品差异化 · 7 个 P 进程落地）
 - **P-001 台账瘦身**：活跃坑 10→9（Iss-004 归档）+ 测试断言数 224→467
@@ -138,7 +147,7 @@ cd lvjiaoxi-viewer
 npm install
 rustup default stable
 cargo check src-tauri/
-node test/regression.cjs   # 必须 412/0 全绿
+node test/regression.cjs   # 必须 467/0 全绿
 node scripts/sync-dist.cjs
 ```
 

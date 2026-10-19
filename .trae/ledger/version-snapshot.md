@@ -5,7 +5,7 @@
 
 ---
 
-## 当前版本：**v0.1.0**（2026-10-17 11:55:37 构建）
+## 当前版本：**v0.1.0**（2026-10-18 21:16:59 构建）
 
 ### 6 落点版本号（必须全同，发版前自检）
 
@@ -17,16 +17,15 @@
 | 4 | EXE ProductVersion (自动) | `0.1.0` | 从 tauri.conf.json 同步 |
 | 5 | manifest.webmanifest version | `0.1.0` | `manifest.webmanifest` L14 |
 | 6 | app.js aboutContent 标题 | `v0.1.0` | `app.js` L5052 |
-| — | sw.js CACHE 常量（前端缓存版本） | `v80` | `sw.js` L4（改前端必须 +1） |
+| — | sw.js CACHE 常量（前端缓存版本） | `v82` | `sw.js` L4（改前端必须 +1） |
 
 ### 构建产物
 
 | 产物 | 路径 | 大小 | 构建时间 |
 |------|------|------|----------|
-| Setup.exe (NSIS) | `nsis_x/绿角犀看图_0.1.0_x64-setup.exe` | 223MB | 2026/10/17 11:55:37 |
-| MSI | `D:\tauri-build\target\release\bundle\msi\绿角犀看图_0.1.0_x64_zh-CN.msi` | — | 2026/10/17 |
-| release EXE | `D:\tauri-build\target\release\lvjiaoxi-viewer.exe` | 16.2MB | 2026/10/17 11:55:52 |
-| 安装目标 | `C:\Users\Administrator\AppData\Local\com.lvjiaoxi.viewer\` | — | Setup.exe 默认 |
+| Setup.exe (NSIS) | `nsis_x/绿角犀看图_0.1.0_x64-setup.exe` | 212.89MB | 2026/10/18 21:16:59 |
+| release EXE | `D:\tauri-build\target\release\lvjiaoxi-viewer.exe` | 16.02MB | 2026/10/18 21:17:15 |
+| 安装目标 | `C:\Users\Administrator\AppData\Local\com.lvjiaoxi.viewer\` | — | Setup.exe 默认（⚠️ Setup.exe /S 有 Registry 缓存缺陷，见 Iss-014） |
 
 ### 核心依赖版本
 

@@ -306,3 +306,51 @@ rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信�
 
 **台账状态**：活跃坑 9 个（硬限 ≤10 ✓），6 文件体系完整，无重复条目
 **关联**：↔AGENTS §6 台帐系统 / §10 进程追踪铁律
+
+---
+
+## 文件关联失效 + PSD 打不开修复（2026-10-19 · P-20261019-002/003）
+
+**regression**: 467/0 全绿 | **sw.js**: 未变（只改注册表 + 覆盖 EXE）
+
+**P-002 文件关联失效**（双击图片只开软件不显示）：
+- 根因：Setup.exe /S 静默安装被 Registry 缓存骗过，HKCU ProgId 指到 C:\LVJX_VERIFY 临时验证目录的旧 EXE（10-17 build）
+- 修复：手动 Set-ItemProperty 修正 HKCU\LvJiaoXiImage 指回 AppData 正式路径 + 删除 C:\LVJX_VERIFY
+- 验证：debug log `[setup] raw args = [AppData EXE, 图片路径]` + `showImage finish hidden=false` ✅
+- 新坑：Iss-014（Setup.exe /S Registry 缓存 + AppData EXE 不自动更新，踩 2 次）
+
+**P-003 PSD/PSB 格式打不开**：
+- 根因：AppData 正式路径的 EXE 是 10-17 旧 build（15.53MB），没包含 10-18 才加的 ag-psd 0.3 依赖（代码在 Chg-P7 写好了但没装进 AppData）
+- 修复：Copy-Item 把 10-18 release EXE（16.02MB）覆盖到 AppData
+- 代码链路全通：lib.rs decode_psd_thumbnail + ag_psd 0.3 + Cargo.toml image exr feature
+
+**教训**：Setup.exe /S 被 Tauri NSIS 模板缺陷（Iss-004 归档已记录）+ Iss-014 新坑双重夹击。构建新功能后**必须手动覆盖 AppData EXE + 手动修正注册表**，不能只靠 Setup.exe /S。
+
+---
+
+## 台账数据统一刷新（2026-10-19 · P-20261019-004 · 12 文件）
+
+**regression**: 467/0 全绿 | **sw.js**: 未变（只改 md）
+
+**第一类：台账版本号统一（6 文件）**
+1. context.md：CACHE v68→v82 + 完成度表补 PSD/EXR/Webtoon + 最近 build 日期→10-18
+2. START_HERE.md：CACHE v68→v82 + 活跃坑 top5 重排（加 Iss-013/014）+ 新电脑初始化 412→467 + 最近3周大事补 10-19
+3. .session.md：CACHE v80→v82
+4. version-snapshot.md：CACHE v80→v82 + 产物大小 223→212.89MB + 日期→10-18
+5. issues.md：Iss-014 新坑 + 活跃坑 9→10（合规硬限 ≤10）
+6. capabilities.md：重复编号修复（两个 #5 → #5/#6）
+
+**第二类：设定修正（2 文件）**
+7. AGENTS.md：章节编号顺排（两个 §7→§7/§8，§8→§9，§10→§11 进程追踪）
+8. user-preferences.md：补 Skill 维护/资质独立/新 AI 接手/进度确认/台账瘦身 5 条新偏好
+
+**第三类：Skill 新建（2 个）**
+9. skills/build-environment.md：环境变量铁律 + Android 构建命令模板 + 真机验证步骤
+10. skills/project-key-files.md：关键文件路径速查 + 版本号落点表 + 调试工具速查
+
+**第四类：收尾（2 文件）**
+11. weekly/2026-10-19.md：新建今日周报
+12. Iss-014 新坑已录入 issues.md 活跃区
+
+**台账状态**：活跃坑 10 个（硬限 ≤10 ✓），版本号 6 文件全统一 v82，Skill 体系从 1→3 个
+**关联**：↔Iss-004（归档）/ Iss-011（归档）/ Iss-014（新活跃坑）

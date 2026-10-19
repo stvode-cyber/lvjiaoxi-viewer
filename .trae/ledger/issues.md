@@ -6,7 +6,22 @@
 
 ---
 
-## 活跃坑（当前 ≤10 个，硬限）
+## 活跃坑（当前 10 个，硬限 ≤10）
+
+#### Iss-014 🟠 TOP2（活跃 · 踩 2 次 · 2026-10-19）Setup.exe /S 静默安装 Registry 缓存 + AppData EXE 不自动更新
+
+- **问题**：Setup.exe /S 静默安装被 Registry 缓存骗过——HKCU\LvJiaoXiImage 指回旧路径（如 C:\LVJX_VERIFY），导致双击图片只开软件不显示；且 AppData 正式路径的 EXE 不自动更新到最新 build
+- **根因**：Tauri NSIS 模板 /S 静默安装有已知缺陷（Iss-004 归档已记录），不读取现有 InstallLocation Registry 值，默认 installDir 有问题；多次不同路径安装后文件关联飘向最近那台的 EXE
+- **解决（临时 Workaround · 2026-10-19 已验证）**：
+  1. 手动修正注册表：`Set-ItemProperty HKCU:\Software\Classes\LvJiaoXiImage\shell\open\command` → AppData 正式路径
+  2. 手动覆盖 EXE：`Copy-Item D:\tauri-build\target\release\lvjiaoxi-viewer.exe` → AppData 正式路径
+  3. 清理旧安装目录
+- **预防规则**：
+  - 构建新功能后必须手动覆盖 AppData EXE，不能只靠 Setup.exe /S
+  - 本机验证双击文件关联时先查注册表指向：`Get-ItemProperty HKCU:\Software\Classes\LvJiaoXiImage\shell\open\command`
+  - 发版 Setup.exe 时建议用户交互式安装（不用 /S）
+- **关联 Chg**：Chg-B1 / P-20261019-002 / P-20261019-003
+- **重现次数**：2（2026-10-17 Chg-B1 + 2026-10-19）
 
 #### Iss-001 🟠 TOP2（活跃 · 踩 2 次）jsdom Uint8Array 跨 realm 检测失败
 

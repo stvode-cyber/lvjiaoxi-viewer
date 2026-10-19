@@ -132,7 +132,7 @@
    - 风险：中（UI 布局改动，已验证非 archive 模式自动隐藏）
    - 踩坑：L274 applyTheme(loadTheme()) 立即调用在 els 初始化前 crash —— 删掉（init() cacheDom 后已有）
 
-5. **压缩包内 CBR/CBZ 双页视图**
+6. **递归穿透文件夹**
    - 对标：HoneyView 核心功能 + Skill honeyview-archive-browse（现成方案）
    - 做什么：现有 read_archive_entry 单页浏览 → 加一个"漫画模式"按钮：双页并排（奇数左/偶数右）+ 最后一张空白页填充 + 翻页方向控制
    - 改什么：lib.rs 新增 `read_archive_double_entry`（一次传两张 data URL）+ 前端加双页布局
