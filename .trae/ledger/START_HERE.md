@@ -18,9 +18,9 @@
 桌面图片浏览器 + 内嵌底部栏美图编辑器。零框架原生 JS 单文件 app.js（252KB）+ Rust Tauri v2 + WebView2 离线运行时。核心卖点：合并位移场变形（导出 = 预览同公式）、AI 超分 ONNX 推理失败自动降级 Lanczos、抠图高斯似然比 + 双边羽化、压缩包直看（ZIP/CBZ 懒加载）。
 
 ## 当前版本
-`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v82**）
-- **2026-10-18 最新提交**：Chg-P7 PSD/PSB+EXR + Chg-034 渐进替换第4批
-- **桌面 build**：Setup.exe 212.89MB（Chg-P7 ag-psd + Chg-P5/P6/P7 竞品功能 + Chg-P4 深色主题）
+`0.1.0`（tauri.conf.json / Cargo.toml / manifest.webmanifest 三处一致；sw.js CACHE **v83**）
+- **2026-10-19 最新提交**：`338feef` P-005 sync-dist 补 js/ + CACHE v83（PSD 修复核心）
+- **桌面 build**：Setup.exe 212.94MB（10-19 18:37）/ EXE 16.08MB（P-005 重构建）
 - **Android APK**：Universal 35.38MB（arm64+armv7 release 签名）
 
 ## 完成度（2026-10-19 下午）
@@ -75,16 +75,19 @@
 ## 活跃坑 top 5（踩过 ≥1 次，新 AI 必扫）
 1. **Iss-005**（踩 7 次 · 已修复）WebView2 GIF 变种原生解码失败 → Rust 端 image crate 兜底
 2. **Iss-013**（踩 5 次 · 2026-10-18 P-006 第4批）渐进替换 TDZ + $$ replace + 子文件闭包变量
-3. **Iss-014**（踩 2 次 · 2026-10-19 新坑）Setup.exe /S 被 Registry 缓存骗过 → 文件关联飘到旧 EXE 路径
+3. **Iss-015**（踩 1 次 · 2026-10-19 P-005 新坑）sync-dist.cjs 漏拷 js/ 子目录 → PSD 解码链路全失效
 4. **Iss-008**（踩 2 次 · 2026-10-16 又踩）armv7 交叉编译缺 C 编译器 → 构建前 PATH + CC_armv7 环境变量
 5. **Iss-001/002**（各踩 2 次）jsdom Uint8Array / PowerShell 5 GBK 中文注释
 
 ## 最近 3 周大事（2026-09-30 ~ 2026-10-19）
 
-### 2026-10-19（Setup.exe /S 缺陷确认 + PSD 打开修复）
+### 2026-10-19（Setup.exe /S 缺陷确认 + PSD 打开修复 + sync-dist 补 js/）
 - **P-002 文件关联修复**：注册表飘到 C:\LVJX_VERIFY 旧 EXE → 手动修正 HKCU ProgId + 删除旧目录
 - **P-003 PSD 打不开修复**：AppData EXE 是 10-17 旧 build（没 ag-psd 依赖）→ 手动覆盖 release EXE（10-18 最新）
-- **新坑 Iss-014**：Setup.exe /S 静默安装 Registry 缓存 + AppData EXE 不自动更新（踩 2 次）
+- **P-005 sync-dist 补 js/ + 重构建（核心）**：index.html 改成模块化拆分后 sync-dist.cjs 没拷 js/ 子目录 → dist/ 全 404 → app.js 第一行崩 → pullPending L6200+ 永远跑不到 → PSD + 文件关联全失效
+- **commit 338feef**：sw.js CACHE v82→v83 + sync-dist 新增 js/ copyTree
+- **新坑 Iss-015**：sync-dist.cjs 漏拷 js/ 子目录（踩 1 次）
+- **Iss-014 归档**：Setup.exe /S Registry 缓存（踩够 3 次）
 
 ### 2026-10-18（BandiView 竞品差异化 · 7 个 P 进程落地）
 - **P-001 台账瘦身**：活跃坑 10→9（Iss-004 归档）+ 测试断言数 224→467

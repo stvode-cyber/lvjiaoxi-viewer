@@ -354,3 +354,33 @@ rayon 压完 Rust 端发现 36MB JSON IPC 是瓶颈 → load_paths 只传元信�
 
 **台账状态**：活跃坑 10 个（硬限 ≤10 ✓），版本号 6 文件全统一 v82，Skill 体系从 1→3 个
 **关联**：↔Iss-004（归档）/ Iss-011（归档）/ Iss-014（新活跃坑）
+
+---
+
+## sync-dist 补 js/ + PSD 修复（2026-10-19 · P-20261019-005 · commit 338feef）
+
+**regression**: 467/0 全绿 | **sw.js**: CACHE v82→v83 | **tauri build**: ✅ 59s → Setup.exe 212.94MB / EXE 16.08MB
+
+**核心修复**：
+- index.html 10/18 改成模块化拆分（加了 js/init.js/exif.js/render.js/edit.js/batch.js/archive.js 引用）
+- sync-dist.cjs FILES 数组只有 8 文件 + assets/，没拷 js/ 子目录 → dist/ 全 404
+- app.js 第一行就调 `window.__API__.xxx()` → __API__ 是 init.js 注册的 → 第一行崩
+- pullPending 在 L6200+ → 永远执行不到 → PSD 解码链路 + 文件关联双击全失效
+
+**修复（2 文件 + 1 重构建）**：
+- sync-dist.cjs 新增 js/ 子目录 copyTree 拷贝（6 文件）
+- sw.js CACHE v82→v83
+- 重构建 release EXE 16.08MB（比旧版 16.02MB 多 0.06MB = js/ 资源内嵌）
+
+**完整链路验证（命令行）**：
+```
+setup raw args → get_pending_paths return 1 → load_paths collected 5 → get_image_data ext=psd → showImage
+```
+
+**踩坑沉淀 Iss-015**：sync-dist.cjs 手动维护资源列表，index.html 引用变更后必须同步更新 sync-dist
+
+**Iss-014 归档**：Setup.exe /S Registry 缓存 + AppData EXE 不自动更新（踩够 3 次自动归档）
+
+**教训**：构建管线审计（grep index.html 所有 script/link → 对照 sync-dist FILES + copyTree）应该成为 `tauri build` 前的铁律检查项
+
+---

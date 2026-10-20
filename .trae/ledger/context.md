@@ -1,4 +1,4 @@
-﻿> 📂 角色索引：▶ 必读：改代码前扫版本号落点；跳过：纯台账编辑时
+﻿﻿> 📂 角色索引：▶ 必读：改代码前扫版本号落点；跳过：纯台账编辑时
 # context.md · 当前状态快照
 
 > 这个文件记录项目的稳定状态。完成度变了、硬规则变了、关键配置变了 → 改这里。
@@ -33,9 +33,9 @@
 | Tauri bundle.version | 0.1.0 | src-tauri/tauri.conf.json |
 | Cargo package.version | 0.1.0 | src-tauri/Cargo.toml |
 | manifest webmanifest version | 0.1.0 | manifest.webmanifest |
-| **sw.js CACHE** | **lvjiaoxi-viewer-v68** | sw.js ← **改 app.js/styles.css 必须再 +1** |
+| **sw.js CACHE** | **lvjiaoxi-viewer-v83** | sw.js ← **改 app.js/styles.js/js/*.js 必须再 +1** |
 | 显示版本 (app.js about) | v0.1.0 | app.js |
-| 最近 build | 2026-10-17 | Chg-034 rayon 并行 + Chg-035 IPC 懒加载（冷启动 5.7s→0.8s）；Chg-032 Android Bug-A/B + Manifest 合并；桌面 Setup.exe 223MB |
+| 最近 build | 2026-10-19 18:37 | P-20261019-005 sync-dist 补 js/ + CACHE v83；Setup.exe 212.94MB / EXE 16.08MB |
 
 ## UI 布局快照（2026-10-09 Dc-011 定稿）
 
@@ -101,7 +101,7 @@
 - `src-tauri/src/lib.rs` — Tauri 命令层，文件/剪贴板/壁纸/load_paths/压缩包
 - `src-tauri/installer.nsh` — NSIS 自定义 hook：PreInstall 定点删 3 应用文件（不是 RMDir /r）；PostInstall 注册右键菜单；PostUnInstall 清理
 - `test/regression.cjs` — 回归测试入口，每次改代码后必须全绿
-- `scripts/sync-dist.cjs` — 打包前资源同步，复制 8 文件 + assets
+- `scripts/sync-dist.cjs` — 打包前资源同步，复制 8 文件 + assets/ + **js/**（⚠️ index.html 引用变更后必须同步更新，见 Iss-015）
 - `.trae/ledger/` — 本台账目录
 
 ## Tauri 命令层（lib.rs .invoke_handler 注册的命令）

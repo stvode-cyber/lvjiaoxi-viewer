@@ -5,7 +5,7 @@
 
 ---
 
-## 当前版本：**v0.1.0**（2026-10-18 21:16:59 构建）
+## 当前版本：**v0.1.0**（2026-10-19 18:37 构建）
 
 ### 6 落点版本号（必须全同，发版前自检）
 
@@ -17,15 +17,16 @@
 | 4 | EXE ProductVersion (自动) | `0.1.0` | 从 tauri.conf.json 同步 |
 | 5 | manifest.webmanifest version | `0.1.0` | `manifest.webmanifest` L14 |
 | 6 | app.js aboutContent 标题 | `v0.1.0` | `app.js` L5052 |
-| — | sw.js CACHE 常量（前端缓存版本） | `v82` | `sw.js` L4（改前端必须 +1） |
+| — | sw.js CACHE 常量（前端缓存版本） | `v83` | `sw.js` L4（改前端必须 +1） |
 
 ### 构建产物
 
 | 产物 | 路径 | 大小 | 构建时间 |
 |------|------|------|----------|
-| Setup.exe (NSIS) | `nsis_x/绿角犀看图_0.1.0_x64-setup.exe` | 212.89MB | 2026/10/18 21:16:59 |
-| release EXE | `D:\tauri-build\target\release\lvjiaoxi-viewer.exe` | 16.02MB | 2026/10/18 21:17:15 |
-| 安装目标 | `C:\Users\Administrator\AppData\Local\com.lvjiaoxi.viewer\` | — | Setup.exe 默认（⚠️ Setup.exe /S 有 Registry 缓存缺陷，见 Iss-014） |
+| Setup.exe (NSIS) | `nsis_x/绿角犀看图_0.1.0_x64-setup.exe` | 212.94MB | 2026/10/19 18:37:25 |
+| MSI (WiX) | `nsis_x/绿角犀看图_0.1.0_x64_zh-CN.msi` | 211.93MB | 2026/10/19 18:37:35 |
+| release EXE | `D:\tauri-build\target\release\lvjiaoxi-viewer.exe` | 16.08MB | 2026/10/19 18:37:38 |
+| 安装目标 | `C:\Users\Administrator\AppData\Local\com.lvjiaoxi.viewer\` | — | Setup.exe 默认 + **手动 Copy-Item 覆盖（Iss-014 铁律）** |
 
 ### 核心依赖版本
 
@@ -55,13 +56,15 @@
 ```
 1. 改版本号：同步 6 落点（tauri.conf.json / Cargo.toml / manifest.webmanifest / app.js 标题 / EXE 自动 / sw.js CACHE+1）
 2. cargo check && node test/regression.cjs （全绿才继续）
-3. node scripts/sync-dist.cjs （同步前端资源到 dist/）
-4. npm run tauri build → Setup.exe + MSI
-5. 复制产物到 nsis_x/
-6. Setup.exe /S 覆盖安装到 AppData
-7. 验证：双击图片 → 主图显示 → 日志全链路通
-8. git add -A && git commit -m "chore: bump to vX.X.X" && git push
-9. 更新本文件 version-snapshot.md
+3. node scripts/sync-dist.cjs （同步 8 文件 + assets/ + js/ 到 dist/）
+4. **⚠️ grep dist/ 确认 index.html 所有引用的资源都在（Iss-015）**
+5. npm run tauri build → Setup.exe + MSI
+6. 复制产物到 nsis_x/
+7. **⚠️ 手动 Copy-Item release EXE → AppData 正式路径（Iss-014 铁律）**
+8. **⚠️ 手动修正注册表：Set-ItemProperty HKCU:\Software\Classes\LvJiaoXiImage\shell\open\command（Iss-014）**
+9. 验证：双击 PSD → 主图显示 → debug log 全链路通（setup→get_pending_paths→load_paths→get_image_data→showImage）
+10. git add -A && git commit -m "fix: xxx" && git push
+11. 更新本文件 version-snapshot.md + 台账同步
 ```
 
 ### 调试工具快速查

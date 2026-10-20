@@ -8,20 +8,17 @@
 
 ## 活跃坑（当前 10 个，硬限 ≤10）
 
-#### Iss-014 🟠 TOP2（活跃 · 踩 2 次 · 2026-10-19）Setup.exe /S 静默安装 Registry 缓存 + AppData EXE 不自动更新
+#### Iss-015 🟠 TOP2（活跃 · 踩 1 次 · 2026-10-19 P-005）sync-dist.cjs 漏拷 js/ 子目录
 
-- **问题**：Setup.exe /S 静默安装被 Registry 缓存骗过——HKCU\LvJiaoXiImage 指回旧路径（如 C:\LVJX_VERIFY），导致双击图片只开软件不显示；且 AppData 正式路径的 EXE 不自动更新到最新 build
-- **根因**：Tauri NSIS 模板 /S 静默安装有已知缺陷（Iss-004 归档已记录），不读取现有 InstallLocation Registry 值，默认 installDir 有问题；多次不同路径安装后文件关联飘向最近那台的 EXE
-- **解决（临时 Workaround · 2026-10-19 已验证）**：
-  1. 手动修正注册表：`Set-ItemProperty HKCU:\Software\Classes\LvJiaoXiImage\shell\open\command` → AppData 正式路径
-  2. 手动覆盖 EXE：`Copy-Item D:\tauri-build\target\release\lvjiaoxi-viewer.exe` → AppData 正式路径
-  3. 清理旧安装目录
+- **问题**：index.html 改成模块化拆分（加了 js/init.js/exif.js/render.js/edit.js/batch.js/archive.js 引用），但 sync-dist.cjs FILES 数组只有 8 文件 + assets/，没拷 js/ → dist/ 全 404 → app.js 第一行 `window.__API__.xxx()` 就崩 → pullPending 在 L6200+ 永远执行不到 → PSD 解码链路 + 文件关联双击全失效
+- **根因**：sync-dist.cjs 是手动维护的文件列表，index.html 改了 script 引用后忘记同步更新 sync-dist 的拷贝逻辑
+- **解决（正式 · 2026-10-19 commit 338feef）**：sync-dist.cjs 新增 js/ 子目录 copyTree 拷贝（6 文件），同时构建管线审计确认 index.html 所有外部引用全覆盖
 - **预防规则**：
-  - 构建新功能后必须手动覆盖 AppData EXE，不能只靠 Setup.exe /S
-  - 本机验证双击文件关联时先查注册表指向：`Get-ItemProperty HKCU:\Software\Classes\LvJiaoXiImage\shell\open\command`
-  - 发版 Setup.exe 时建议用户交互式安装（不用 /S）
-- **关联 Chg**：Chg-B1 / P-20261019-002 / P-20261019-003
-- **重现次数**：2（2026-10-17 Chg-B1 + 2026-10-19）
+  - index.html 任何 script/link 引用变更后，必须同步更新 sync-dist.cjs 的 FILES 数组或 copyTree 目录列表
+  - `tauri build` 前先 grep dist/ 确认所有 index.html 引用的资源都在
+- **关联 Chg**：P-20261019-005 / commit 338feef
+- **关联路径**：`scripts/sync-dist.cjs`、`index.html`、`dist/` 目录
+- **重现次数**：1（2026-10-19）
 
 #### Iss-001 🟠 TOP2（活跃 · 踩 2 次）jsdom Uint8Array 跨 realm 检测失败
 
@@ -150,6 +147,21 @@
 - **关联 Chg**：Chg-023 / Chg-024 / Chg-S1
 - **关联路径**：`src-tauri/installer.nsh`
 - **归档原因**：根因锁定 + Workaround 确立 + 代码已简化
+
+#### Iss-014（已沉淀 · 踩 3 次归档 · 2026-10-19）Setup.exe /S 静默安装 Registry 缓存 + AppData EXE 不自动更新
+
+- **问题**：Setup.exe /S 静默安装被 Registry 缓存骗过——HKCU ProgId 飘到旧 EXE 路径（如 C:\LVJX_VERIFY），导致双击图片只开软件不显示；且 AppData 正式路径的 EXE 不自动更新到最新 build
+- **根因**：Tauri NSIS 模板 /S 缺陷（Iss-004 归档已记录）+ 多次不同路径安装后 Registry 飘 + Setup.exe 不自动覆盖 AppData 已安装 EXE
+- **踩坑 3 次**：
+  - v1（Chg-B1 2026-10-17）：飘到 C:\LVJX_A_TEST → 手动删目录 + 注册表
+  - v2（P-002 2026-10-19 上午）：飘到 C:\LVJX_VERIFY → 手动 Set-ItemProperty 修正 HKCU + 删除旧目录
+  - v3（P-003 2026-10-19 下午）：AppData EXE 是 10-17 旧 build（15.53MB）→ PSD 解码代码在 10-18 build 里 → 手动 Copy-Item release EXE 覆盖（16.02MB）
+- **沉淀铁律**：
+  1. 构建新功能后**必须手动 Copy-Item** release EXE → AppData 正式路径，不能只靠 Setup.exe /S
+  2. 本机验证双击文件关联前先查注册表：`Get-ItemProperty HKCU:\Software\Classes\LvJiaoXiImage\shell\open\command`
+  3. Setup.exe 只做用户交互式发布，本机自动化验证走 release EXE 直跑
+- **关联 Chg**：Chg-B1 / P-002 / P-003 / P-005
+- **归档原因**：踩够 3 次 + 沉淀铁律确立
 
 #### Iss-011（已解决 · 2026-10-17）Windows 资源管理器缩略图变程序图标
 
