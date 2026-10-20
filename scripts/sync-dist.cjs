@@ -21,4 +21,9 @@ function copyTree(src, dst) {
 const srcAssets = path.join(root, 'assets');
 const distAssets = path.join(dist, 'assets');
 if (fs.existsSync(srcAssets)) copyTree(srcAssets, distAssets);
-console.log('[sync-dist] 已同步 ' + FILES.length + ' 个文件 + assets/ 到 dist/');
+// 同步 js/（模块化拆分：init/exif/archive/render/edit/batch）
+const srcJs = path.join(root, 'js');
+const distJs = path.join(dist, 'js');
+let jsCount = 0;
+if (fs.existsSync(srcJs)) { copyTree(srcJs, distJs); jsCount = fs.readdirSync(srcJs).length; }
+console.log('[sync-dist] 已同步 ' + FILES.length + ' 个文件 + assets/ + js/(' + jsCount + ') 到 dist/');
