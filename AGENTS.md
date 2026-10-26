@@ -284,9 +284,11 @@ P-YYYYMMDD-NNN   例：P-20261017-001
 
 | 项目 | 仓库 | 复用比例 | 用途 |
 |------|------|---------|------|
-| **oculante** | github.com/woelper/oculante | 30% | 🚀 **fork 起点**：egui + wgpu 看图器底座，MIT 协议，硬件加速，跨 6 平台 |
+| **eframe android-example** | github.com/emilk/eframe/tree/master/examples | 100% | 🚀 **Phase 0 fork 起点**：`android_native_activity` 子目录，完整的 Android 原生 Activity + eframe + wgpu（已支持 Android 触摸 + 原生窗口） |
+| **oculante** | github.com/woelper/oculante | 30% | Phase 4 Windows 桌面 fork 参考（egui 布局/渲染管线/格式探测） |
 | GNOME Loupe | gitlab.gnome.org/GNOME/loupe | 参考 | Rust + GTK4 官方看图器（学习格式解码管线设计） |
 | RapidRAW | getrapidraw.com | 参考 | Tauri + wgpu 混合架构验证（证明 Rust 直接 GPU 路线可行） |
+| **Gio→Java JNI 桥接** | aabiji.github.io/articles/Calling-Java | 参考 | SAF bridge 实现：Go 调 Java ContentResolver 的流程翻 Rust 版（AttachCurrentThread + CallStaticMethod） |
 
 ### 12.4 v1 项目处理规则
 
@@ -295,6 +297,28 @@ P-YYYYMMDD-NNN   例：P-20261017-001
 - **v1 代码归档**：v2 上线后，v1 整个 src-tauri + app.js 目录 → git tag `archive/v1-legacy`，保留 git 历史
 - **v2 独立目录**：建议新建 `lvjiaoxi-viewer-v2/` 或 `viewer_v2/` 同级目录，**不覆盖 v1**
 - **双轨并行**：v1 继续维护（修 bug），v2 独立开发（不影响 v1 稳定性）
+
+#### 12.4.1 v1 Android 资产可复用清单（挖自 src-tauri/gen/android/）
+
+| 资产 | 位置 | 复用度 | 说明 |
+|------|------|--------|------|
+| **AndroidManifest.xml** | `gen/android/app/src/main/AndroidManifest.xml` | ⭐⭐⭐ **全搬** | ① intent-filter 合并为 1 个 + `android:priority="100"` 根治 ResolverActivity 弹多个同名选项（踩坑 Iss-010）；② mime 清单 14 种图片类型；③ pathPattern 扩展名列表；④ FileProvider 配置 |
+| **release.keystore** | `gen/android/app/release.keystore` | ⭐⭐⭐ **全搬** | 发布签名 RSA 2048，storePassword/keyAlias 见 credentials.md（.gitignore 排除） |
+| **app/build.gradle.kts** | `gen/android/app/build.gradle.kts` | ⭐⭐ **搬配置** | compileSdk 35 / minSdk 24 / targetSdk 35 / namespace com.lvjiaoxi.viewer；dependencies 里 appcompat/material/webkit 可删（v2 零 WebView），activity-ktx + lifecycle-process 留（Android Activity 管理） |
+| **gradle.properties** | `gen/android/gradle.properties` | ⭐⭐ **搬配置** | Iss-010 经验：gradle.properties 设 targetList 不生效，必须命令行 `-t aarch64 armv7`；AGP 8.x 中文路径需 `android.overridePathCheck=true` |
+| **Android NDK r27** | `C:\Users\Administrator\.android-sdk\ndk\27.0.12077973` | ⭐⭐⭐ **直接用** | Iss-008 经验：交叉编译必须先 `$env:PATH = "$env:NDK_BIN;$env:PATH"` + `CC_armv7` 环境变量 |
+| **Java 构建环境** | JDK 17 + ANDROID_HOME/NDK_HOME 环境变量 | ⭐⭐⭐ **直接用** | v1 已打通完整构建管线，环境变量直接复用 |
+
+**完整环境变量清单**（Windows 构建一次配好）：
+```powershell
+$env:ANDROID_HOME = "C:\Users\Administrator\.android-sdk"
+$env:ANDROID_NDK_HOME = "$env:ANDROID_HOME\ndk\27.0.12077973"
+$env:NDK_BIN = "$env:ANDROID_NDK_HOME\toolchains\llvm\prebuilt\windows-x86_64\bin"
+$env:PATH = "$env:NDK_BIN;$env:PATH"
+$env:CC_armv7_linux_androideabi = "$env:NDK_BIN\armv7a-linux-androideabi35-clang.cmd"
+$env:CC_aarch64_linux_android = "$env:NDK_BIN\aarch64-linux-android35-clang.cmd"
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
+```
 
 ### 12.5 平台优先级
 
