@@ -296,12 +296,14 @@ P-YYYYMMDD-NNN   例：P-20261017-001
 - **v2 独立目录**：建议新建 `lvjiaoxi-viewer-v2/` 或 `viewer_v2/` 同级目录，**不覆盖 v1**
 - **双轨并行**：v1 继续维护（修 bug），v2 独立开发（不影响 v1 稳定性）
 
-### 12.5 Android 线决策
+### 12.5 平台优先级
 
-🛑 **暂停 Android 线**（v2 只重写 Windows 桌面端）
+🔴 **Android 手机版第一目标，Windows 桌面版延后**（一套代码跨两端，eframe 多 target）
 
-- Android 线当前 55%（Tauri + WebView + SAF Picker）**继续在 v1 路线上迭代**
-- v2 桌面稳定后再决策 Android 路线（同 egui + wgpu 或保持 v1 Tauri）
+- Phase 0~3 全部面向 Android（手机触摸 + SAF + 沉浸式全屏）
+- Phase 4 起 Windows 桌面同步适配（同一套 App 逻辑，换 eframe 入口 + rfd 文件对话框）
+- v1 Android 线（55%）**停止迭代**，等 v2 Android 稳定后 v1 Android 一并归档
+- v1 桌面端（100%）**只修 bug**，等 v2 Windows 稳定后 v1 桌面归档
 
 ### 12.6 v2 硬约束（从 v1 迁移）
 
@@ -309,7 +311,7 @@ P-YYYYMMDD-NNN   例：P-20261017-001
 |------|------|------|
 | 美图面板内嵌底部栏 | ✅ **保持** | egui 用 TopBottomPanel::bottom 实现 |
 | 批量面板遮罩弹窗 | ✅ **保持** | 自绘 Modal Area（半透明 + 点击遮罩关闭） |
-| 导航条 6 按钮不可增删 | ✅ **保持** | button_group 写死 |
+| 导航条 6 按钮不可增删 | ✅ **保持** | button_group 写死（Android 上适配触摸尺寸） |
 | 合并位移场一次双线性采样 | 🔀 **升级** | 搬进 GPU shader，一次 draw call |
 | AI 超分失败降级 Lanczos | ✅ **保持** | Phase 2 实现 |
 | 抠图高斯似然比 + 双边羽化 | 🔀 **迁移** | Rust imageproc + 手写数学 |
@@ -322,49 +324,88 @@ P-YYYYMMDD-NNN   例：P-20261017-001
 | sync-dist.cjs | 🛑 **废弃** | v2 没有前端 dist 要同步 |
 | EXIF escapeHtml | 🛑 **废弃** | v2 没有 HTML 输出面 |
 
-### 12.7 分阶段实施计划
+### 12.7 Android 专属硬约束（新增）
+
+| 约束 | 说明 |
+|------|------|
+| **SAF 文件选择** | rfd crate 在 Android 上不工作，必须写 Rust ↔ Java 桥接调 SAF PickIntent（返回 content:// URI → Rust 侧 InputStream） |
+| **双指缩放** | egui 原生不处理双指 pinch，需自己把 `secondary_touch.delta` 翻译成 scale factor（参考 eframe 的 Android example） |
+| **沉浸式全屏 + edge-to-edge** | Android 11+ 强制 edge-to-edge，需处理 WindowInsets safe area（状态栏/导航栏避让） |
+| **Activity 生命周期** | eframe App trait 没有 on_pause()，需通过 android-activity 的回调 → 通知 Rust 层暂停渲染，节省电量 |
+| **运行时权限** | READ_MEDIA_IMAGES + MANAGE_EXTERNAL_STORAGE（Android 13+）必须动态请求 |
+| **屏幕方向** | 默认纵向，允许自动旋转 |
+| **状态栏颜色** | 跟随主题（浅色/深色），沉浸式下状态栏透明 |
+
+### 12.8 分阶段实施计划（Android 优先）
 
 | Phase | 内容 | 预估 | 交付标准 |
 |-------|------|------|---------|
-| **Phase 0** | 🔨 oculante fork + 改造 | 8h | cargo build 能启动、能打开 JPG/PNG/GIF |
-| **Phase 1** | 📂 浏览核心（格式全家桶 + 缩略图栏 + 压缩包直看 + EXIF） | 48h | 可替代 v1 浏览功能 |
-| **Phase 2** | 🎨 美图编辑器（22 配方 + 合并位移场 + 抠图 + 裁剪 + 历史） | 80h | 美图面板完整功能 |
-| **Phase 3** | 🧰 批量 + 系统（托盘/单实例/壁纸/剪贴板/自动更新/崩溃上报） | 40h | 可替代 v1 全部系统功能 |
-| **Phase 4** | 📦 打包 + 迁移 + 收尾 | 24h | MSI/NSIS + CI/CD + 集成测试 + v1 归档 |
-| **合计** | | **~200h（约 25 天）** | |
+| **Phase 0** | 🔨 eframe Android 脚手架 + 打包链路 | 12h | `cargo-apk build` 出 APK，能启动空窗口 + 能读一张 JPG |
+| **Phase 1** | 📂 浏览核心（格式全家桶 + 网格缩略图 + 文件夹递归 + EXIF） | 48h | Android 手机可替代 v1 浏览功能 |
+| **Phase 2** | 🎨 美图编辑器（22 配方 + 合并位移场 GPU shader + 抠图 + 裁剪 + 历史） | 80h | 美图面板完整功能（内嵌底部栏） |
+| **Phase 3** | 🧰 系统功能 + 触摸打磨（壁纸/剪贴板/单实例/崩溃上报/沉浸式全屏/手势） | 40h | Android v2 完整功能点 |
+| **Phase 4** | 📦 Windows 桌面适配 + 打包 + CI/CD + v1 归档 | 40h | 一套代码双 target（APK + MSI）+ GitHub Actions + git tag archive/v1-legacy |
+| **合计** | | **~220h（约 28 天）** | |
 
-### 12.8 版本号重置
+### 12.9 版本号重置
 
-v1 版本号是 `0.1.0`，v2 重写后建议从 **1.0.0** 重新开始（语义化版本重置）。Cargo.toml 改一处 → 全同步。
+v1 版本号是 `0.1.0`，v2 重写后从 **1.0.0** 重新开始（语义化版本重置）。Cargo.toml 改一处 → 全同步（APK versionCode + MSI FileVersion 自动）。
 
-### 12.9 关键 crate 依赖清单
+### 12.10 关键 crate 依赖清单（跨平台）
 
 ```toml
-[lib]  # v2 入口（替代 src-tauri/src/lib.rs 的 Tauri Builder）
-# eframe 作为入口：eframe::run_native("绿角犀看图", ..., Box::new(|cc| Box::new(App::new(cc))))
+# ========== 桌面入口（Phase 4 起用）==========
+[lib]
+# eframe::run_native("绿角犀看图", ...)
+
+# ========== Android 入口（Phase 0 起用）==========
+# 构建时自动切换：桌面用 [lib]，Android 用 cdylib + android-activity
+# android-activity::ANativeActivity_onCreate 宏生成 JNI 导出
 
 [dependencies]
-egui = "0.31"          # UI 立即模式
-eframe = "0.31"         # egui 应用框架（wgpu 后端）
-image = "0.25"          # JPG/PNG/GIF/TIFF/TGA/WebP/EXR/AVIF/JXL/DDS（15+ 格式）
-ag-psd = "0.3"          # PSD/PSB 展平合成
-rawler = "1"            # RAW：DNG/CR2/CRW/NEF/NRW/ARW/ORF/RW2/PEF/SR2/RAF
-heic = "0.1"            # HEIC/HEIF（纯 Rust，无 C 依赖）
-jxl-oxide = "0.8"       # JPEG XL（纯 Rust）
-resvg = "0.36"          # SVG 栅格化
-kamadak-exif = "0.6"    # EXIF 解析（GPS IFD + 十进制度换算）
-zip = "2"               # 压缩包直看（ZIP/CBZ）
-rayon = "1"             # 并行处理（image crate 已用）
-arboard = "3"           # 剪贴板位图
-clap = { version = "4", features = ["derive"] }  # 命令行参数
-rfd = "0.15"            # Rust 文件对话框（跨平台）
-single-instance = "0.7" # 单实例锁
-dirs = "5"              # AppData / 缓存目录
-# sentry-rust = "0.35" # 崩溃上报（Phase 3 接入）
-# ort = "2"             # ONNX runtime（Phase 2 接入 AI 超分）
+# ===== UI 框架（跨平台）=====
+egui = "0.31"
+eframe = { version = "0.31", default-features = false, features = ["default_fonts", "glow", "wayland", "x11"] }
+# Android 构建时额外加：features = ["android"]
+# 桌面构建时额外加：features = ["wgpu"]
+
+# ===== 格式解码（跨平台）=====
+image = "0.25"
+ag-psd = "0.3"
+rawler = "1"
+heic = "0.1"
+jxl-oxide = "0.8"
+resvg = "0.36"
+kamadak-exif = "0.6"
+zip = "2"
+rayon = "1"
+
+# ===== 系统层（跨平台）=====
+arboard = "3"
+single-instance = "0.7"
+dirs = "5"
+
+# ===== 桌面专属（Phase 4 启用）=====
+[target.'cfg(not(target_os = "android"))'.dependencies]
+clap = { version = "4", features = ["derive"] }
+rfd = "0.15"
+
+# ===== Android 专属（Phase 0 启用）=====
+[target.'cfg(target_os = "android")'.dependencies]
+android-activity = "0.7"    # Activity 生命周期回调
+jni = "0.21"                # Rust ↔ Java 桥接
+# SAF 封装：调 ContentResolver.openInputStream → Rust Read trait
+# 实现 fn read_uri_content(uri: &str) -> Result<Vec<u8>>
+
+# ===== 可选延迟接入 =====
+# sentry-rust = "0.35"     # 崩溃上报（Phase 3）
+# ort = "2"                # ONNX runtime（Phase 2 接入 AI 超分）
+
+# ===== Android 打包工具 =====
+# dev-dependencies: cargo-apk（APK 打包，Phase 0 安装）
 ```
 
-### 12.10 v2 开始后的会话启动行为
+### 12.11 v2 开始后的会话启动行为
 
 新会话启动时：
 1. **台账速读继续**（§6 流程不变）
@@ -372,12 +413,13 @@ dirs = "5"              # AppData / 缓存目录
    ```
    📋 台账速读：
    ├─ v1 桌面端 100%（停止新增功能，只修 bug）
-   ├─ v2 全 Rust 重写 Phase X/Y（执行到哪一步）
-   ├─ Android 线暂停（v1 继续迭代）
+   ├─ v1 Android 线 55%（停止迭代，等 v2 替代）
+   ├─ v2 全 Rust 重写 Phase X/4（Android 优先，Windows Phase 4 同步）
    ├─ 硬约束：v2 保持美图内嵌底部栏 + 批量遮罩弹窗
+   ├─ Android 硬约束：SAF + 双指缩放 + 沉浸式全屏 + 运行时权限
    └─ 活跃坑：Iss-XXX
    ```
-3. AI 接手时**第一时间判断**：用户当前需求是修 v1 bug？还是推 v2 Phase？分轨处理
+3. AI 接手时**第一时间判断**：用户当前需求是修 v1 bug？还是推 v2 Android Phase？分轨处理
 
 ---
 
