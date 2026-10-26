@@ -253,3 +253,132 @@ P-YYYYMMDD-NNN   例：P-20261017-001
 ### 11.5 写入位置
 - **当前进行中**：会话内 AI 每轮开头复述
 - **已消结**：changes.md 最后追加一行（P-XXX + 动作清单 + commit）
+
+---
+
+## 12. 项目重构目标：v2 全 Rust 重写（⚡ 最高优先级）
+
+> 📅 决策日期：2026-10-26 · 🔖 方案：B · 🎯 稳定度优先，不考虑工作量
+> 
+> **本章节是项目当前工作目标，所有 AI 接手必须第一时间理解。**
+
+### 12.1 拍板决策
+
+**方案 B · 全量 Rust 重写 · 丢弃 WebView2**
+
+| 项 | 旧架构（v1 · 运行中） | 新架构（v2 · 目标） |
+|----|----------------------|-------------------|
+| UI 框架 | WebView2 + HTML/CSS/原生 JS | **egui + eframe**（立即模式，纯 Rust） |
+| 渲染引擎 | Canvas 2D（WebView2 内） | **wgpu**（直接 GPU，零绕路） |
+| 后端 | Rust Tauri v2 IPC 层 | **eframe 直接起，无 Tauri** |
+| 格式解码 | image crate + 部分依赖 WebView2 原生 | **Rust image 全家桶**：image + heic + rawer + jxl-oxide + ag-psd + resvg |
+| 二进制依赖 | WebView2 离线安装包 (~200MB) | **零外部运行时**（一个 MSI 20~30MB） |
+| 版本号落点 | 6 落点铁律（一次漏改全崩） | **1 落点**（Cargo.toml 改一处全同步） |
+| 测试 | regression.cjs 467 条 jsdom | **cargo test 嵌进编译期**（Rust 单元 + 集成 + GPU 数值验证） |
+
+### 12.2 详细设计文档
+
+> 完整设计见 `v2-rewrite-design/v2-rewrite-design.html`（10 章节 + Mermaid 架构图 + 算法迁移清单）
+
+### 12.3 参考项目（可 fork/借鉴）
+
+| 项目 | 仓库 | 复用比例 | 用途 |
+|------|------|---------|------|
+| **oculante** | github.com/woelper/oculante | 30% | 🚀 **fork 起点**：egui + wgpu 看图器底座，MIT 协议，硬件加速，跨 6 平台 |
+| GNOME Loupe | gitlab.gnome.org/GNOME/loupe | 参考 | Rust + GTK4 官方看图器（学习格式解码管线设计） |
+| RapidRAW | getrapidraw.com | 参考 | Tauri + wgpu 混合架构验证（证明 Rust 直接 GPU 路线可行） |
+
+### 12.4 v1 项目处理规则
+
+- **v1 停止新增功能**：不再给 app.js / lib.rs 加新功能（不再加滤镜、不再加格式、不再加面板）
+- **v1 只修 bug**：线上崩溃、安全漏洞、用户反馈的硬 bug（影响使用的）可以修，但**不再改架构**
+- **v1 代码归档**：v2 上线后，v1 整个 src-tauri + app.js 目录 → git tag `archive/v1-legacy`，保留 git 历史
+- **v2 独立目录**：建议新建 `lvjiaoxi-viewer-v2/` 或 `viewer_v2/` 同级目录，**不覆盖 v1**
+- **双轨并行**：v1 继续维护（修 bug），v2 独立开发（不影响 v1 稳定性）
+
+### 12.5 Android 线决策
+
+🛑 **暂停 Android 线**（v2 只重写 Windows 桌面端）
+
+- Android 线当前 55%（Tauri + WebView + SAF Picker）**继续在 v1 路线上迭代**
+- v2 桌面稳定后再决策 Android 路线（同 egui + wgpu 或保持 v1 Tauri）
+
+### 12.6 v2 硬约束（从 v1 迁移）
+
+| 约束 | 去向 | 说明 |
+|------|------|------|
+| 美图面板内嵌底部栏 | ✅ **保持** | egui 用 TopBottomPanel::bottom 实现 |
+| 批量面板遮罩弹窗 | ✅ **保持** | 自绘 Modal Area（半透明 + 点击遮罩关闭） |
+| 导航条 6 按钮不可增删 | ✅ **保持** | button_group 写死 |
+| 合并位移场一次双线性采样 | 🔀 **升级** | 搬进 GPU shader，一次 draw call |
+| AI 超分失败降级 Lanczos | ✅ **保持** | Phase 2 实现 |
+| 抠图高斯似然比 + 双边羽化 | 🔀 **迁移** | Rust imageproc + 手写数学 |
+| GIF 四路径闭环 | ✅ **保持** | image crate 帧序列解码 |
+| 切图编辑态归零 | ✅ **保持** | App::update() 检查 prev_path |
+| 自然排序（img2 < img10） | ✅ **直接搬 Rust** | natural_cmp 函数已在 lib.rs 里 |
+| 路径 token 重组 | ✅ **直接搬 Rust** | rejoin_existing 已在 lib.rs 里 |
+| 版本号 6 落点 | 🔀 **简化为 1 落点** | Cargo.toml 改一处，cargo-packager 自动同步 |
+| sw.js CACHE +1 | 🛑 **废弃** | v2 没有 Service Worker |
+| sync-dist.cjs | 🛑 **废弃** | v2 没有前端 dist 要同步 |
+| EXIF escapeHtml | 🛑 **废弃** | v2 没有 HTML 输出面 |
+
+### 12.7 分阶段实施计划
+
+| Phase | 内容 | 预估 | 交付标准 |
+|-------|------|------|---------|
+| **Phase 0** | 🔨 oculante fork + 改造 | 8h | cargo build 能启动、能打开 JPG/PNG/GIF |
+| **Phase 1** | 📂 浏览核心（格式全家桶 + 缩略图栏 + 压缩包直看 + EXIF） | 48h | 可替代 v1 浏览功能 |
+| **Phase 2** | 🎨 美图编辑器（22 配方 + 合并位移场 + 抠图 + 裁剪 + 历史） | 80h | 美图面板完整功能 |
+| **Phase 3** | 🧰 批量 + 系统（托盘/单实例/壁纸/剪贴板/自动更新/崩溃上报） | 40h | 可替代 v1 全部系统功能 |
+| **Phase 4** | 📦 打包 + 迁移 + 收尾 | 24h | MSI/NSIS + CI/CD + 集成测试 + v1 归档 |
+| **合计** | | **~200h（约 25 天）** | |
+
+### 12.8 版本号重置
+
+v1 版本号是 `0.1.0`，v2 重写后建议从 **1.0.0** 重新开始（语义化版本重置）。Cargo.toml 改一处 → 全同步。
+
+### 12.9 关键 crate 依赖清单
+
+```toml
+[lib]  # v2 入口（替代 src-tauri/src/lib.rs 的 Tauri Builder）
+# eframe 作为入口：eframe::run_native("绿角犀看图", ..., Box::new(|cc| Box::new(App::new(cc))))
+
+[dependencies]
+egui = "0.31"          # UI 立即模式
+eframe = "0.31"         # egui 应用框架（wgpu 后端）
+image = "0.25"          # JPG/PNG/GIF/TIFF/TGA/WebP/EXR/AVIF/JXL/DDS（15+ 格式）
+ag-psd = "0.3"          # PSD/PSB 展平合成
+rawler = "1"            # RAW：DNG/CR2/CRW/NEF/NRW/ARW/ORF/RW2/PEF/SR2/RAF
+heic = "0.1"            # HEIC/HEIF（纯 Rust，无 C 依赖）
+jxl-oxide = "0.8"       # JPEG XL（纯 Rust）
+resvg = "0.36"          # SVG 栅格化
+kamadak-exif = "0.6"    # EXIF 解析（GPS IFD + 十进制度换算）
+zip = "2"               # 压缩包直看（ZIP/CBZ）
+rayon = "1"             # 并行处理（image crate 已用）
+arboard = "3"           # 剪贴板位图
+clap = { version = "4", features = ["derive"] }  # 命令行参数
+rfd = "0.15"            # Rust 文件对话框（跨平台）
+single-instance = "0.7" # 单实例锁
+dirs = "5"              # AppData / 缓存目录
+# sentry-rust = "0.35" # 崩溃上报（Phase 3 接入）
+# ort = "2"             # ONNX runtime（Phase 2 接入 AI 超分）
+```
+
+### 12.10 v2 开始后的会话启动行为
+
+新会话启动时：
+1. **台账速读继续**（§6 流程不变）
+2. **追加 v2 状态**：
+   ```
+   📋 台账速读：
+   ├─ v1 桌面端 100%（停止新增功能，只修 bug）
+   ├─ v2 全 Rust 重写 Phase X/Y（执行到哪一步）
+   ├─ Android 线暂停（v1 继续迭代）
+   ├─ 硬约束：v2 保持美图内嵌底部栏 + 批量遮罩弹窗
+   └─ 活跃坑：Iss-XXX
+   ```
+3. AI 接手时**第一时间判断**：用户当前需求是修 v1 bug？还是推 v2 Phase？分轨处理
+
+---
+
+## (v1 原 §11 结束 · §12 v2 重构目标 · 所有后续章节以 v2 为工作目标)

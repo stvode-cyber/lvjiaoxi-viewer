@@ -70,7 +70,6 @@
 - 无 GIF 逐帧编辑（gifuct-js 方案未采纳）
 - 无批量格式导出（Chg-032 风格配方已加，但还没 batchConvert 扩展）
 - 无 OCR 文字识别
-- Rust 2 个 Android 专属 warning 未清零（需真机构建加 cfg）
 
 ---
 
@@ -80,7 +79,6 @@
 1. ✅ Bug-A/B 代码已写 → 手机连好后 adb 验证 Gallery/Files 点图 + content://
 2. SAF Picker 完整授权（ACTION_OPEN_DOCUMENT → 真实路径）
 3. Android APK 整理到 nsis_x/ 做交付物
-4. Rust Android warning 清零
 
 ### P1（性能/质量）
 5. 桌面双击图片 0.8s 验证后 → 考虑 Android 端 load_paths 同样用 rayon + 懒加载

@@ -166,7 +166,6 @@ node scripts/sync-dist.cjs
 2. **🔴 Android SAF Picker 完整授权**：Android 13+ 文件打开按钮调 SAF Picker（ACTION_OPEN_DOCUMENT），拿到 URI → 解析真实路径 → 加载显示
 3. **🟡 Android release APK 分发**：把 `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk`（35.38MB，release 签名）整理到 `nsis_x/` 下做 Android 版交付物
 4. **🟡 Android UI 优化**：美图面板触控区域再加大 / 顶栏精简版布局优化 / 长按图片上下文菜单
-5. **🟢 Rust 2 个 warning 清掉**：`let mut builder` 加桌面 cfg；`.setup(|app|)` → `_app` 前缀
 
 ### Android 构建铁律模板（复制粘贴即可用）
 ```powershell
