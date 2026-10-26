@@ -120,3 +120,44 @@
 - **Dc-003 最终对齐**：edit-panel 内嵌底部栏（border-top，body flex column 内），与 beauty-bar 互斥，符合硬约束 §1
 - **测试**：regression.cjs 410/0 全绿；els.beautyBar 之前未注册导致 TypeError（踩了 1 次）
 - **关联**：↔Dc-003（内嵌底栏硬约束，本决策最终对齐） ↔Chg-016（本次迭代） ↔Chg-015（上一次迭代 position:fixed 方案）
+
+---
+
+#### Dc-012（2026-10-26 · 项目重构）v2 全 Rust 重写 · egui + wgpu · 放弃 WebView2 + Tauri
+
+- **选型**：全量 Rust 重写。UI 用 egui + eframe（立即模式，跨平台），渲染用 wgpu（直接 GPU，零绕路），丢弃 WebView2 和 Tauri v2 IPC 层
+- **备选**：
+  - A) 混合架构（Tauri + 透明 WebView2 + Rust wgpu 直接 GPU）——RapidRAW 已跑通，但混合架构复杂度略高
+  - B) 渐进加固（保持当前架构，补 updater + sentry + CSP + image feature）——工时最短，但 WebView2 Canvas 2D 性能瓶颈没碰
+  - C) 全量 Rust 重写（选定）——彻底甩掉 WebView2 的所有包袱
+- **原因**：
+  1. 用户要求"稳定度优先，不考虑工作量"——WebView2 是最大不确定因素（GPU compositing 被迫关闭、格式依赖 WebView2 原生、安全边界模糊、版本号 6 落点铁律）
+  2. egui + wgpu 架构已被 oculante（MIT 协议，13K SLoC，跨 6 平台）和 GNOME Loupe（Rust + GTK4，GNOME 官方）验证
+  3. 格式支持直接解耦——用 Rust image 全家桶（heic 纯 Rust、rawler RAW、jxl-oxide 纯 Rust、ag-psd PSD），不再绕 WebView2 原生解码
+  4. 二进制零外部运行时依赖——MSI 20~30MB vs 原 Setup.exe 212.94MB（内嵌 WebView2 离线包）
+  5. 版本号简化——Cargo.toml 改一处全同步，不再有 6 落点铁律
+- **参考项目**：oculante（fork 底座约 30% 复用）、GNOME Loupe（格式解码管线设计）、RapidRAW（证明 Rust 直接 GPU 路线可行）
+- **影响文件**：新建同级目录 `lvjiaoxi-viewer-v2/`，**不覆盖 v1**；v1 停止新增功能，只修 bug
+- **关联**：↔Dc-002（Tauri 选型，v1 遗留） ↔Chg-036（v2 设计文档 + AGENTS §12）
+
+#### Dc-013（2026-10-26 · v2 Android）Android 优先 + SAF 桥接方式
+
+- **选型**：① **平台优先级**——Phase 0~3 全做 Android 手机版，Phase 4 起 Windows 桌面同步适配（一套代码多 target）；② **SAF 桥接**——手写 Rust ↔ Java JNI 桥接（用 `jni = "0.21"` + `android-activity = "0.7"`）
+- **备选**：
+  - A) Windows 先做，Android 暂停（原方案）——用户拍板反转
+  - B) 用 tauri-plugin-android-fs 现成 SAF——Tauri 专属，eframe 项目用不了
+  - C) 用 content-uri crate 或 jni-min-helper——前者不存在，后者是权限/广播 helper 不是文件读取
+  - D) 手写 JNI 桥接（选定）——参考《Calling Java from a Gio UI Android App》的 Go→Java 流程翻 Rust 版
+- **原因**：
+  1. 用户明确"先做手机版再做 Win"——Android 是 v2 第一目标
+  2. eframe + android-activity 已支持 Android native activity，SAF 是 Android 打开文件的唯一合法路径
+  3. v1 Android 线上已有的 AndroidManifest.xml + gradle + SAF Java 桥接代码 → v2 可直接搬资产
+  4. v1 Android 踩过的坑（Iss-007/008/010/014）→ v2 纯 Rust 架构天然规避（不需要 Tauri CLI、不需要双架构 .so）
+- **SAF 桥接实现**：
+  - Java 侧 `FileBridge.java`：3 静态方法 `pickSafFile()` / `readContent(uri)` / `grantPermission(uri)`
+  - Rust 侧 `android::bridge` 模块：`get_jni_env()` / `read_content_uri()` / `grant_permission()`
+  - jni crate + AttachCurrentThread + CallStaticMethod → `ContentResolver.openInputStream(uri)` → Rust `Read` trait
+  - 约 80 行 Rust + 30 行 Java
+- **Android 专属硬约束**（已写入 AGENTS §12.7）：SAF 桥接 + 双指缩放 + edge-to-edge 沉浸式全屏 + Activity 生命周期 + 运行时权限
+- **影响文件**：v2 新项目 Cargo.toml（条件编译 cfg(target_os="android")）+ Java 侧 FileBridge.java
+- **关联**：↔Dc-012（v2 重写） ↔Chg-A2（v1 SAF Picker 现有实现可搬）

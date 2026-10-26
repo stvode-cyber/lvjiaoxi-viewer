@@ -79,7 +79,14 @@
 4. **Iss-008**（踩 2 次 · 2026-10-16 又踩）armv7 交叉编译缺 C 编译器 → 构建前 PATH + CC_armv7 环境变量
 5. **Iss-001/002**（各踩 2 次）jsdom Uint8Array / PowerShell 5 GBK 中文注释
 
-## 最近 3 周大事（2026-09-30 ~ 2026-10-19）
+## 最近 3 周大事（2026-10-07 ~ 2026-10-26）
+
+### 2026-10-26（v2 全 Rust 重写决策落地 · AGENTS §12 新增）
+- **核心决策链**：用户"不管成本要最稳定"→ 4 套方案对比 → 选定全 Rust 重写 → 用户拍板"先 Android 再 Win"
+- **AGENTS.md §12 新增**：§12.5 平台优先级（Android 第一目标）+ §12.7 Android 专属硬约束 7 条 + §12.8 Phase 0~4（Android 优先 220h）
+- **v2-rewrite-design.html**（44KB）：10 章节设计文档（架构 / 渲染管线 / 格式矩阵 / UI 映射 / 算法迁移 / oculante 复用 / 分阶段）
+- **decisions.md Dc-012/Dc-013**：v2 重写决策 + Android 优先 + SAF JNI 桥接方式（手写，jni crate + ~80Rust + ~30Java）
+- **P0 补漏清单**：① 设计文档未同步 Android 优先（🔴 待补）② oculante fork 起点 Android 下不成立（🟡 待改）③ v1 Android 资产可复用清单（🟡 待补）
 
 ### 2026-10-19（Setup.exe /S 缺陷确认 + PSD 打开修复 + sync-dist 补 js/）
 - **P-002 文件关联修复**：注册表飘到 C:\LVJX_VERIFY 旧 EXE → 手动修正 HKCU ProgId + 删除旧目录

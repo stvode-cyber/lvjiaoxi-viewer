@@ -384,3 +384,29 @@ setup raw args → get_pending_paths return 1 → load_paths collected 5 → get
 **教训**：构建管线审计（grep index.html 所有 script/link → 对照 sync-dist FILES + copyTree）应该成为 `tauri build` 前的铁律检查项
 
 ---
+
+## v2 全 Rust 重写设计 + AGENTS §12 + P0 补漏（2026-10-26 · P-20261026-001 · commit a376601 + ba359c8）
+
+**regression**: 未跑（只改 md，零源码改动）| **sw.js**: 未变
+
+**核心决策链**：用户要求"不管成本，要最稳定"→ 4 套方案对比（渐进加固 / 混合架构 / 全 Rust / GTK4）→ 选定方案 B 全 Rust → 用户拍板"先做 Android 再做 Win"→ AGENTS §12.5 从"暂停 Android"反转成"Android 第一目标"
+
+**产出**：
+1. **v2-rewrite-design/v2-rewrite-design.html**（44KB）：10 章节设计文档，覆盖架构依赖图 / 渲染管线 / 格式支持矩阵 / UI 交互映射表 / 算法迁移清单（9 项核心）/ oculante 复用 vs 自研 / 分阶段计划 Phase 0~4（原 Android 优先版）/ 版本号简化 / crate 清单
+2. **AGENTS.md §12 新增 + 反转平台优先级**（commit a376601 + ba359c8）：
+   - §12.5 平台优先级：🔴 Android 第一目标，Windows Phase 4 同步适配
+   - §12.7 🆕 Android 专属硬约束 7 条（SAF + 双指缩放 + edge-to-edge + Activity 生命周期 + 运行时权限 + 方向 + 状态栏）
+   - §12.8 Phase 0~3 全 Android，Phase 4 Windows 同步（+20h → 220h / 28 天）
+   - §12.9 版本号追加 APK versionCode 自动同步
+   - §12.10 crate 清单补 cfg(target_os="android") 条件编译 + android-activity + jni
+3. **SAF 桥接决策**（Dc-013）：手写 Rust ↔ Java JNI 桥接（jni crate + 参考 Gio→Java 流程翻 Rust 版），约 80 行 Rust + 30 行 Java
+
+**漏项 P0 补漏（本轮）**：
+- 🔴 v2-rewrite-design.html **没有同步更新 Android 优先**（HTML 还是旧版"Windows 优先 + oculante fork"）→ 待补
+- 🔴 台账补全 Dc-012/Dc-013 → **本轮已补**
+- 🟡 AGENTS §12.3 oculante fork 起点在 Android 下不成立 → 待改（换成 eframe android-example）
+- 🟡 v1 Android 资产可复用清单 + 完整环境变量清单 → 待补
+
+**关联**：↔Dc-012（v2 重写决策）/ Dc-013（Android 优先 + SAF 桥接）/ Iss-015（v1 活跃坑继续）
+
+---
