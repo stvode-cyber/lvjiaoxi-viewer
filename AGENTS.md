@@ -73,6 +73,7 @@ sw.js 缓存            → CACHE 常量（改 app.js 必须升）
 #### 6.2 启动时先看台帐（每次新会话必做，没商量）
 
 1. **按序加载**：START_HERE.md → **user-preferences.md（了解用户沟通偏好+硬约束）** → context.md → issues.md 活跃坑 → decisions.md → **capabilities.md（了解项目能/不能做什么）** → .session.md
+   - **🔴 v2 重构关联加载**：如果项目根目录存在 `v2-rewrite-design/v2-rewrite-design.html`，**读 AGENTS §12 时必须同步加载该 HTML**。HTML 里有 SAF JNI 桥接完整代码块、Mermaid 架构图、每 Phase 详细子步骤——AGENTS §12 是摘要，HTML 是完整设计，两者必须一起看，缺一不可。
 2. **第一轮回复开头必出**：用 3-5 行大白话给台账速读，别等用户问：
    ```
    📋 台账速读：
