@@ -410,3 +410,56 @@ setup raw args → get_pending_paths return 1 → load_paths collected 5 → get
 **关联**：↔Dc-012（v2 重写决策）/ Dc-013（Android 优先 + SAF 桥接）/ Iss-015（v1 活跃坑继续）
 
 ---
+
+## v2 Phase 0 Android 脚手架跑通（2026-10-27 · P-20261027-001）
+
+**regression**: 未跑（v2 独立项目，零 v1 影响）| **sw.js**: 未变（只改 md）
+
+**核心里程碑**：v2 全新独立项目 `lvjiaoxi-viewer-v2/`（同级目录，不碰 v1）→ cargo-apk build APK → adb install → 真机启动 → **android_main() 被调用**（logcat `lvjiaoxi-debug: >>> android_main() REACHED <<<`）→ 进程稳定存活（pid 27501）
+
+**关键文件**：
+- 新建 `d:\源码存档\lvjiaoxi-viewer-v2\` 项目根
+- `Cargo.toml`：eframe 0.37 + egui 0.37 + image 0.25（png/jpeg）+ android-activity 0.6 + android_logger 0.11（全局依赖先写，后加 cfg 条件编译依赖）
+- `src/lib.rs`：极简调试版——android_log_err() 直写 logcat + android_main() 首行打 log + 无限 loop sleep 等进程不挂
+- cargo-apk patch：`C:\...\cargo-apk-0.10.0\src\apk.rs:117` categories 加 DEFAULT
+
+**踩坑沉淀 Iss-016**：cargo-apk 0.10.0 硬编码 manifest 缺 CATEGORY_DEFAULT → ResolverActivity 弹窗；多用户设备 adb install 默认全用户装 → 加剧选择器。修复 + 预防规则见 Iss-016
+
+**环境铁律**：
+- NDK r27 + PATH 加 `$env:NDK_BIN` + `CC_armv7` / `CC_aarch64` 环境变量
+- JDK 在 `C:\greenrhino-tools\jdk17`（不是 `C:\Program Files\Java\jdk-17`）
+- cargo-apk 构建前设 `$env:CARGO_NET_OFFLINE = "true"`（网络不通时）
+- adb install 后用 `--user 0 -r` 只装主用户
+
+**下一个目标 P1**：把极简调试版换成完整 eframe 渲染管线（OnceLock<AndroidApp> + NativeOptions 手动 set + egui 窗口文字渲染）→ 空窗口显示成功 → adb push JPG 到 external_data_path → 显示第一张图
+
+**关联**：↔Iss-016 / Iss-017 / AGENTS §12 / Dc-012 / Dc-013
+
+### Phase 0 完整收尾（2026-10-27 下午 · commit 5d24807）
+
+**里程碑**：黑屏彻底修复 + 中文字体正常显示 + eframe 0.37 渲染管线完整可用
+
+**关键修复**：
+1. **Iss-017 黑屏根因锁定**：`eframe::run_native()` 在 Android NativeActivity 下是**非阻塞回调式**（立即返回），android_main 一旦 return → Activity 销毁 → 黑屏。修复：`android_main` 尾部加 `loop { thread::sleep(100ms); }` 阻塞
+2. **中文字体加载**：`/system/fonts/NotoSansCJK-Regular.ttc`（32MB TTC）→ `FontData::from_owned(bytes).into()`（eframe 0.37 要 `Arc<FontData>`）→ `egui_ctx.set_fonts(fonts)` 注入
+
+**eframe 0.37 API 巨变踩坑**：
+| 旧（eframe 0.31） | 新（eframe 0.37） |
+|---|---|
+| `App::update(ctx, frame)` | `App::ui(&mut self, ui, frame)` **必须实现** |
+| `cc.loader.load(ColorImage.into())` | `cc.egui_ctx.load_texture("name", color_image, TextureOptions::default())` |
+| `ColorImage::from_rgba(...)` | `ColorImage::from_rgba_unmultiplied(...)` |
+| `FontData::from_owned(bytes)` 直接用 | `.from_owned(bytes).into()` 转 Arc |
+| `TopBottomPanel::top(...).show(ctx, ...)` | 可能已不存在，Phase 1 再确认 |
+
+**真机验证**（Motorola XT2401）：
+- ✅ APK 启动不再黑屏，egui 文字清晰
+- ✅ 中文正常（"绿角犀看图 v2 — Phase 0"），不是 tofu 方块
+- ✅ Vulkan backend 在 Adreno GPU 初始化成功
+- ✅ 进程稳定存活（阻塞循环不退出）
+
+**差的最后一步**：把诊断版（纯文字）恢复成完整图片加载版（`image::open()?.to_rgba8()` → `ColorImage::from_rgba_unmultiplied` → `load_texture` → `ui.image()`），就能显示第一张 JPG 了
+
+**下一个目标 P1**：Phase 0 收尾 → Phase 1 浏览核心
+
+---

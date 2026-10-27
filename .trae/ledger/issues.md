@@ -8,6 +8,34 @@
 
 ## 活跃坑（当前 10 个，硬限 ≤10）
 
+#### Iss-017（活跃 · 踩 1 次 · 2026-10-27 v2 Phase 0）Android NativeActivity android_main 不能退出 → 黑屏
+
+- **问题**：v2 eframe + android-activity 脚手架，APK 能启动但黑屏
+- **根因**：`eframe::run_native()` 在 Android NativeActivity 模式下是**非阻塞回调式**（立即返回），不是桌面端的阻塞事件循环。如果 `android_main()` 函数返回 → Android 立即销毁 Activity → 黑屏
+- **解决**：`android_main` 尾部加 `loop { std::thread::sleep(Duration::from_millis(100)); }` 阻塞
+- **预防规则**：
+  - Android NativeActivity 入口函数**必须阻塞**，不能正常 return
+  - run_native 在 Android 上是注册事件监听器后立即返回，不是跑事件循环
+  - eframe 0.37 的 android-native-activity feature 下，渲染由 wgpu surface 回调驱动
+- **关联 Chg**：v2 Phase 0 / commit 5d24807
+- **关联路径**：`lvjiaoxi-viewer-v2/src/lib.rs`
+- **重现次数**：1（2026-10-27 Phase 0 首次渲染踩坑）
+
+#### Iss-016（活跃 · 踩 1 次 · 2026-10-26 v2 Phase 0）cargo-apk manifest 缺 DEFAULT + 多用户安装导致 ResolverActivity
+
+- **问题**：v2 Android NativeActivity 启动弹 ResolverActivity 选择器（"选择要打开的应用"），android_main 永远不执行，进程完全不起来
+- **根因双因素**：
+  1. cargo-apk 0.10.0 硬编码 manifest intent-filter 只写 `android.intent.category.LAUNCHER`，**缺 `android.intent.category.DEFAULT`** → Android 无法隐式匹配 intent → 弹选择器
+  2. adb install 默认给所有用户安装（Motorola 有 user 0 + 工作资料 900/901/902/903/904）→ 每个用户都有一份 App → 更加剧 ResolverActivity 弹多个选项
+- **解决**：patch cargo-apk apk.rs L117 categories vec! 加 `DEFAULT` + 重装 cargo-apk；`adb install --user 0 -r` 只装给主用户；先 `adb shell pm uninstall --user <id>` 卸干净所有用户
+- **预防规则**：
+  - v2 Android 构建好后必须 `adb install --user 0 -r`，别直接 `adb install -r`
+  - cargo-apk 0.10.0 有此 bug，升级到新版本后需验证 intent-filter categories
+  - 多用户设备上 `pm path com.xxx` 能看到多份，属正常
+- **关联 Chg**：Chg-V1 / P-20261026-001
+- **关联路径**：`C:\Users\Administrator\.cargo\registry\src\...\cargo-apk-0.10.0\src\apk.rs:117`
+- **重现次数**：1（2026-10-26 Phase 0 首次启动踩坑）
+
 #### Iss-015 🟠 TOP2（活跃 · 踩 1 次 · 2026-10-19 P-005）sync-dist.cjs 漏拷 js/ 子目录
 
 - **问题**：index.html 改成模块化拆分（加了 js/init.js/exif.js/render.js/edit.js/batch.js/archive.js 引用），但 sync-dist.cjs FILES 数组只有 8 文件 + assets/，没拷 js/ → dist/ 全 404 → app.js 第一行 `window.__API__.xxx()` 就崩 → pullPending 在 L6200+ 永远执行不到 → PSD 解码链路 + 文件关联双击全失效
@@ -49,15 +77,6 @@
 - **关联路径**：`src-tauri/src/lib.rs` / load_paths / read_archive_entry / first_thumb / decode_to_rgb；`app.js` / genThumb
 - **重现次数**：7（2026-10-10 v2 压缩包内 GIF + 2026-10-15 v3 first_thumb/genThumb 遗漏）
 
-#### Iss-006（活跃 · 踩 1 次）decor pane 空 div + section 裸在 edit-body 外
-
-- **问题**：编辑面板「特效」tab（data-pane="decor"）内容丢失 → 边框/贴纸/海报/证件照/Logo/文字/马赛克/消除笔 11 个 section 在**所有 tab 下**都永远显示，严重干扰其他 tab 的使用
-- **根因**：`index.html` L593 `<div class="edit-pane" data-pane="decor">` 后 L594 立即 `</div>` 闭合 → 空容器；L596-L773 的 11 个 section 裸在 `.edit-body` 直接子级。`.edit-pane { display:none }` 只对 pane 生效，裸 section 不受控
-- **解决**：Dc-010 重构时顺便修了 —— 把 11 个裸 section 收回 decor pane，同时加 sub-tab 导航
-- **预防规则**：写 edit-pane HTML 后必须确认所有 section 被对应 data-pane 容器包裹；用 `rg -n 'data-pane'` 检查闭合
-- **关联路径**：`index.html` editMask 部分（L472-L887）
-- **重现次数**：首次发现（2026-10-09 晚）
-
 #### Iss-007（活跃 · 踩 1 次 · 2026-10-13 Android 真机验证发现）手动拷贝 .so 构建 APK 缺 mobile_entry_point JNI 符号
 
 - **问题**：手动编译 Rust `cargo build --target aarch64-linux-android --release` + 手动拷 `.so` 到 `gen/android/app/src/main/jniLibs/` 再 `gradle assembleRelease` → APK 安装后启动立即崩溃 `java.lang.UnsatisfiedLinkError: No implementation found for void com.lvjiaoxi.viewer.Rust_create()`
@@ -85,14 +104,6 @@
 - **验证状态**：arm64 ✅ armv7 ✅ | x86_64/i686 ⏸（模拟器用，暂跳过；未来需配 AR_*）
 - **关联路径**：`src-tauri/gen/android/buildSrc/.../RustPlugin.kt`（4 架构默认配置）
 - **重现次数**：2（2026-10-14 全管线验证 + 2026-10-16 Chg-030 第二次踩，忘设环境变量直接报）
-
-#### Iss-009（活跃 · 踩 1 次 · 2026-10-14 Android 12+）force-stop 后 App 进入 stopped=true 状态
-
-- **问题**：`am force-stop com.lvjiaoxi.viewer` 之后，`am start -n com.lvjiaoxi.viewer/.MainActivity` 返回 `Warning: Activity not started, intent has been delivered to currently running top-most instance`，但 `ps -A | grep lvjiaoxi` 无进程，`pidof` 也找不到
-- **根因**：Android 12+（targetSdk >= 31）安全机制：App 被 force-stop 后进入 `stopped=true` 状态，**只有用户手动点击桌面图标/通知/快捷方式才能清除 stopped 状态**。`am start` 被认为是自动化启动，不清除 stopped
-- **解决**：force-stop 后让用户手动点击 App 图标启动一次，之后 adb 自动化测试才能正常工作
-- **预防规则**：adb 自动化测试前先检查 `dumpsys package | grep stopped=`，如 stopped=true 先让用户手动启动
-- **重现次数**：1（2026-10-14 intent 测试时 force-stop 踩坑）
 
 #### Iss-010（活跃 · 踩 1 次 · 2026-10-16 Chg-030）Tauri CLI android build 的 target 限制 + NDK 版本不一致
 
@@ -190,6 +201,13 @@
 
 > Iss-000 / Iss-001 / Iss-002 活跃区仍在；Iss-003 踩够 3 次自动归档
 
+#### Iss-006（已解决归档 · 踩 1 次）decor pane 空 div + section 裸在 edit-body 外
+
+- **问题**：编辑面板「特效」tab（data-pane="decor"）内容丢失 → 11 个 section 裸在 `.edit-body` 下，所有 tab 都显示
+- **根因**：`index.html` `<div class="edit-pane" data-pane="decor">` 后立即 `</div>` → 空容器，11 个 section 变成裸 div
+- **解决（Chg-U3 Dc-010）**：editMask 大重构时把 11 个裸 section 收回 decor pane + 加 sub-tab 导航
+- **归档原因**：问题已修复，零复现（踩 1 次）
+
 #### Iss-000（已沉淀）初始化占位
 
 - **备注**：首个条目，方便后续归档追加时有参照格式
@@ -202,4 +220,10 @@
 - **预防规则**：写 `// TODO: [jsdom-document] 预防：断言前显式设目标值，别依赖上一个测试的残留` 到 regression.cjs 头部
 - **关联路径**：`test/regression.cjs`
 - **归档原因**：踩够 3 次，预防规则已注入 regression.cjs 头部
-- **活跃区位置**：见上（已从活跃区移出）
+
+#### Iss-009（已沉淀 · 踩 1 次归档 · 2026-10-14）Android 12+ force-stop 后 App 进入 stopped=true 状态
+
+- **问题**：`am force-stop com.lvjiaoxi.viewer` 之后，`am start -n com.lvjiaoxi.viewer/.MainActivity` 返回 `Warning: Activity not started, intent has been delivered to currently running top-most instance`，但进程不存在
+- **根因**：Android 12+（targetSdk >= 31）安全机制：App 被 force-stop 后进入 `stopped=true` 状态，**只有用户手动点击桌面图标才能清除**。`am start` 被认为是自动化启动，不清除 stopped
+- **解决**：force-stop 后让用户手动点击 App 图标启动一次，之后 adb 自动化才能正常工作
+- **归档原因**：问题罕见（一般不会 force-stop 后立刻 am start），已记录预防规则，活跃坑硬限挤位归档

@@ -79,7 +79,14 @@
 4. **Iss-008**（踩 2 次 · 2026-10-16 又踩）armv7 交叉编译缺 C 编译器 → 构建前 PATH + CC_armv7 环境变量
 5. **Iss-001/002**（各踩 2 次）jsdom Uint8Array / PowerShell 5 GBK 中文注释
 
-## 最近 3 周大事（2026-10-07 ~ 2026-10-26）
+## 最近 3 周大事（2026-10-07 ~ 2026-10-27）
+
+### 2026-10-27（v2 Phase 0 完整跑通 · 黑屏修复 + 中文字体 + eframe 0.37）
+- **commit 5d24807**（v2 repo）：android_main 阻塞循环防 NativeActivity 退出黑屏（Iss-017）
+- **真机验证**（Motorola XT2401）：✅ 不再黑屏 ✅ 中文正常 ✅ Vulkan Adreno GPU 初始化成功 ✅ 进程稳定存活
+- **中文字体**：加载 `/system/fonts/NotoSansCJK-Regular.ttc`（32MB TTC）→ tofu 消除
+- **eframe 0.37 API 全变**：`App::update` → `App::ui`；`cc.loader` → `cc.egui_ctx.load_texture`；`ColorImage::from_rgba` → `from_rgba_unmultiplied`
+- **活跃坑更替**：Iss-017（新活跃）+ Iss-009（force-stop，踩 1 次挤位归档）
 
 ### 2026-10-26（v2 全 Rust 重写决策落地 · AGENTS §12 新增）
 - **核心决策链**：用户"不管成本要最稳定"→ 4 套方案对比 → 选定全 Rust 重写 → 用户拍板"先 Android 再 Win"
