@@ -2,7 +2,7 @@
 # context.md · 当前状态快照
 
 > 这个文件记录项目的稳定状态。完成度变了、硬规则变了、关键配置变了 → 改这里。
-> 最近更新：2026-10-27（v2 Phase 0 Android 脚手架跑通 + Iss-016 新坑 + Chg-V1）
+> 最近更新：2026-10-30（v2 Phase 0 Android 真机闭环成功 · pidof=3232 + Rust 日志链完整 + 图片解码 2240x1680）
 
 ## 完成度快照（2026-10-17 晚间）
 
@@ -24,7 +24,7 @@
 | **竞品功能（P2 S/A 级 6/6 全落地）** | **100%** | ✅ | S1 长图滚轮翻页 + S2 深色主题 + S3 EXIF GPS 高德链接 + A1 SD Prompt 查看 + A2 CBR/CBZ 双页漫画 + A3 递归穿透文件夹（全部零新依赖，5/6 零 Rust 改动） |
 | 鸿蒙主线 | — | ⏸ 暂缓 | 已移除 harmony/ + iOS 图标，后续再回归 |
 | **Android 主线** | **55%** | 🔄 | **完整构建管线闭环**：tauri android build --apk -t aarch64 armv7 一次跑通；Universal APK 35.38MB 双架构；JNI 20 符号齐全；待 Android intent 真机测试（从 Gallery/Files 点图打开 content://）+ SAF Picker 完整授权 |
-| **v2 Phase 0** | **90%** | 🔄 | **独立项目 lvjiaoxi-viewer-v2/（不碰 v1）**：eframe 0.37 + wgpu + egui + android-activity 0.6；cargo-apk patch CATEGORY_DEFAULT；adb install --user 0 -r；android_main 阻塞循环防黑屏（Iss-017）；中文字体 NotoSansCJK-Regular.ttc；Vulkan Adreno GPU 初始化成功；**差最后一步**：恢复 image loading 显示第一张 JPG |
+| **v2 Phase 0** | **100%** | ✅ | **Android 真机闭环成功**：独立项目 lvjiaoxi-viewer-v2/；eframe 0.37 + wgpu + egui + android-activity 0.6；Cargo.toml application/activity 段精简（删 theme/has_code/extract_native_libs，对齐 10-27 成功配置）；cargo apk build + adb install -r；adb shell input tap 绕过 ResolverActivity 多用户残留（Iss-025）；pidof=3232 进程存活；7 条 Rust 日志链完整输出（android_main START → include_bytes OK 726477 bytes → AppCreator called → Font OK 32MB → Font injected → ✅ 图片解码 2240x1680）；cargo test 3/3 全绿；截图 4.3MB 已保存。Phase 0 脚手架闭环达成 → Phase 1 浏览核心 next |
 | 后端服务 | 0% | ⬜ | server/mock-server.js 占位 |
 
 ## 版本号落点（2026-10-09 交接）

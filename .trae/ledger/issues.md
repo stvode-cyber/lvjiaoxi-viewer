@@ -8,6 +8,80 @@
 
 ## 活跃坑（当前 10 个，硬限 ≤10）
 
+> 💡 **2026-10-30 · v2 Phase 0 真机闭环成功**：Iss-022/023/024 已澄清（不是真正死因），Iss-025 是新真凶
+> 💡 **活跃坑 TOP 重排**：🔴 TOP1 Iss-005（踩 7 次） / 🟠 TOP2 Iss-025（踩 3 次并列第二）+ Iss-017/019/020/021 各踩 1 次
+
+#### 🟠 TOP2 Iss-025（活跃 · 踩 3 次 · 2026-10-30 v2 Phase 0）Android 15 ResolverActivity 多用户残留 → 同一包被列 3 次 → 强制弹选择器
+
+- **问题**：`adb shell am start -n com.lvjiaoxi.viewer.v2/android.app.NativeActivity` 被 Android 15 强制跳 ResolverActivity（"选择要使用的应用程序"），且同一包被列 3 次 → 无论 `am start` 加不加 `-n` 都被截胡 → 进程永远起不来
+- **根因**：Android 15 多用户环境（User 0 + User 900/901/902/903 等）。v2 APK 安装时被 PackageManager 分配了多个 user 状态（pm dump 里 User 0/900/901/902/903 全显示 installed=true），导致 ResolverActivity 把同一 package + activity 匹配了多次 → 弹选择器强制用户选。`am start -n pkg/activity` 虽然指定了 component，但 PackageManager 内部解析还是触发了多匹配
+- **解决**：`adb shell input tap 250 2250`（直接点 ResolverActivity 第一个选项）→ NativeActivity 成功启动 → pidof=3232 → 进程存活 ✅
+- **预防规则**：
+  - Android 15 真机首次验证 NativeActivity，不能只靠 `am start -n`，必须准备好"点 Resolver 选项"的 fallback
+  - `cmd package resolve-activity` 返回单一结果不代表 `am start` 不会触发 ResolverActivity（多用户缓存可能干扰）
+  - ResolverActivity 持久存在时：先 `am force-stop android`（不是 v2 包），再重试
+  - 长期解法：Phase 1 正式加 AndroidManifest.xml 手动写 intent-filter + priority="100"（参考 Iss-010 v1 Android 已踩过的套路）
+- **关联 Chg**：Chg-P20261030 / P-20261030-001
+- **关联路径**：v2 Cargo.toml application/activity 配置
+- **重现次数**：3（2026-10-30 整个上午反复踩，每次 `am start` 都被 Resolver 截胡）
+- **已沉淀**：下次真机启动 NativeActivity 先 `adb logcat -c` + `am start` + 等 3 秒 + 检查 ResolverActivity 是否在 topResumedActivity + 是就 tap 选项
+
+#### 🔴 TOP1 Iss-005（活跃 · 踩 7 次）WebView2 对某些 GIF 变种原生解码失败
+
+- **问题**：v2 cargo apk build 出的 APK，启动后 ~1.5 秒 Activity 被系统强制 finish（白屏）
+- **根因**：Manifest 里 activity/application **没有显式指定 theme** → Android 默认 translucent Activity（Task 属性 `translucent=true`）。华为 ROM（HarmonyOS/EMUI）对半透明 Activity 有特殊处理——检测不到活跃渲染就自动 finish，即使进程还活着也会杀 Activity
+- **证据**（logcat 关键行）：
+  - `Stopping ActivityRecord{... finishing=true}` ← 系统强制 finish
+  - `makeWindowLayoutParams mAttrs.flags=0x1020100 FULLSCREEN translucent=true` ← 默认半透明
+  - `RunAppOnDemand 非阻塞立即 return` ← run_and_return=true 的副因（已修复为 false）
+- **解决**：Cargo.toml `[package.metadata.android.application]` 加 `theme = "@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"` → 重新 `cargo apk build` 后 Manifest 带 theme 属性
+- **预防规则**：
+  - Android NativeActivity（无 Java setContentView）必须显式指定不透明 theme，不能依赖默认
+  - cargo-apk 0.10.0 **不认识** activity 级别的 theme 字段，只认 application 级别
+  - 构建完先 grep 生成的 AndroidManifest.xml 确认 theme 属性在 application 上
+- **关联 Chg**：Chg-V2 后半段 / P-20261029-001
+- **关联路径**：`lvjiaoxi-viewer-v2/Cargo.toml`、`lvjiaoxi-viewer-v2/src/lib.rs`
+- **重现次数**：1（2026-10-29 Phase 0 image loading 闭环后真机启动踩坑）
+
+#### Iss-021（活跃 · 踩 1 次 · 2026-10-29 v2 Phase 0）run_and_return=true → run_native 立即 return → glue 自动调 finish → 白屏
+
+- **问题**：android_main 里 eframe::run_native() 调用完立即返回 → android_main 正常 return → Android glue 层自动调 ANativeActivity_finish() → Activity 被销毁 → 白屏
+- **根因**：eframe 0.37 NativeOptions 默认 `run_and_return=true`。Android NativeActivity 模式下 run_app_on_demand 是非阻塞回调式——注册事件监听器后立即 return（不像桌面端阻塞跑事件循环）。android_main return 就等于 Activity 生命周期结束
+- **解决**：`native_options.run_and_return = false` → run_app 阻塞一直跑到窗口被关闭 → android_main 不 return → glue 不调 finish → Activity 存活
+- **预防规则**：
+  - v2 Android NativeActivity 入口：run_and_return 必须显式设 false
+  - android_main 尾部必须有阻塞（`loop { sleep }`）作为二次保险，防止 run_native 意外 return
+  - eframe 0.37 的 android-native-activity feature 下，渲染由 wgpu surface 回调驱动，run_native 本身不驱动事件循环
+- **关联 Chg**：Chg-V2 后半段 / Iss-017（同一个根因链上的不同阶段）
+- **关联路径**：`lvjiaoxi-viewer-v2/src/lib.rs` android_main 函数
+- **重现次数**：1（2026-10-29）
+
+#### Iss-020（活跃 · 踩 1 次 · 2026-10-29 v2 Phase 0）Android Activity 重建 → 第二次调 run_native → EVENT_LOOP_CREATED 全局锁撞车 → RecreationAttempt
+
+- **问题**：Android 可能因配置变更（如旋转）重建 Activity → android_main 被第二次调用 → winit EVENT_LOOP_CREATED 全局 AtomicBool 已设 true → `RecreationAttempt` error → run_native 失败
+- **根因**：winit EVENT_LOOP_CREATED 是全局 `OnceLock<()>` / `AtomicBool`，整个进程只允许创建一个 event loop。Android Activity 重建在同一进程内第二次调 android_main → 撞车。且 winit 没有 web_platform feature 时没有 reset 这个锁的接口
+- **解决**：android_main 外层包 `static FIRST_RUN: OnceLock<()>` → 只有第一次真正调 run_native，后续 Activity 重建直接跳过
+- **预防规则**：
+  - Android NativeActivity 的 android_main 必须用 OnceLock 包 run_native 调用
+  - 被 OnceLock 挡住后，android_main 尾部 `loop { sleep }` 继续阻塞
+  - winit 0.30.13 没有 reset EVENT_LOOP_CREATED 的接口
+- **关联 Chg**：Chg-V2 后半段 / P-20261029-001
+- **关联路径**：`lvjiaoxi-viewer-v2/src/lib.rs` android_main 函数
+- **重现次数**：1（2026-10-29）
+
+#### Iss-019（活跃 · 踩 1 次 · 2026-10-29 v2 Phase 0）android_log msg.as_ptr() 没 null 终止 → Android 日志静默丢弃
+
+- **问题**：v2 用 android-activity ndk_sys::__android_log_write 打日志，logcat 完全没有我们 tag 的输出 → 看起来像 run_native 没被调
+- **根因**：C 字符串函数 `__android_log_write(int prio, const char *tag, const char *text)` 要求 tag 和 text **必须 null 终止**。直接传 Rust str 的 `.as_ptr()` 没 null 终止字节 → Android 读垃圾直到遇到随机 0 → 超长或非法 tag → 日志被 logd 静默丢弃
+- **解决**：整个 android_log 模块重写——所有 msg 先用 `CString::new()` 包一层，确保 null 终止再传 FFI 指针
+- **预防规则**：
+  - Rust 调任何 C 字符串函数（ndk_sys / jni）前，**必须**用 CString::new() 包装
+  - 禁止裸传 `str.as_ptr()` 给需要 null 终止的 C 函数
+  - 写 android_log 模块时 info/error/fatal 三个函数都要 CString 包装
+- **关联 Chg**：Chg-V2 后半段 / P-20261029-001
+- **关联路径**：`lvjiaoxi-viewer-v2/src/lib.rs` 顶部 android_log 模块
+- **重现次数**：1（2026-10-29，耗时 1 小时才锁定根因）
+
 #### Iss-017（活跃 · 踩 1 次 · 2026-10-27 v2 Phase 0）Android NativeActivity android_main 不能退出 → 黑屏
 
 - **问题**：v2 eframe + android-activity 脚手架，APK 能启动但黑屏
@@ -21,7 +95,7 @@
 - **关联路径**：`lvjiaoxi-viewer-v2/src/lib.rs`
 - **重现次数**：1（2026-10-27 Phase 0 首次渲染踩坑）
 
-#### Iss-016（活跃 · 踩 1 次 · 2026-10-26 v2 Phase 0）cargo-apk manifest 缺 DEFAULT + 多用户安装导致 ResolverActivity
+#### Iss-016（已沉淀 · 踩 1 次归档 · 2026-10-26 v2 Phase 0）cargo-apk manifest 缺 DEFAULT + 多用户安装导致 ResolverActivity
 
 - **问题**：v2 Android NativeActivity 启动弹 ResolverActivity 选择器（"选择要打开的应用"），android_main 永远不执行，进程完全不起来
 - **根因双因素**：
@@ -36,7 +110,7 @@
 - **关联路径**：`C:\Users\Administrator\.cargo\registry\src\...\cargo-apk-0.10.0\src\apk.rs:117`
 - **重现次数**：1（2026-10-26 Phase 0 首次启动踩坑）
 
-#### Iss-015 🟠 TOP2（活跃 · 踩 1 次 · 2026-10-19 P-005）sync-dist.cjs 漏拷 js/ 子目录
+#### Iss-015 🟠 TOP2（已沉淀 · 踩 1 次归档 · 2026-10-19 P-005）sync-dist.cjs 漏拷 js/ 子目录
 
 - **问题**：index.html 改成模块化拆分（加了 js/init.js/exif.js/render.js/edit.js/batch.js/archive.js 引用），但 sync-dist.cjs FILES 数组只有 8 文件 + assets/，没拷 js/ → dist/ 全 404 → app.js 第一行 `window.__API__.xxx()` 就崩 → pullPending 在 L6200+ 永远执行不到 → PSD 解码链路 + 文件关联双击全失效
 - **根因**：sync-dist.cjs 是手动维护的文件列表，index.html 改了 script 引用后忘记同步更新 sync-dist 的拷贝逻辑
@@ -77,7 +151,7 @@
 - **关联路径**：`src-tauri/src/lib.rs` / load_paths / read_archive_entry / first_thumb / decode_to_rgb；`app.js` / genThumb
 - **重现次数**：7（2026-10-10 v2 压缩包内 GIF + 2026-10-15 v3 first_thumb/genThumb 遗漏）
 
-#### Iss-007（活跃 · 踩 1 次 · 2026-10-13 Android 真机验证发现）手动拷贝 .so 构建 APK 缺 mobile_entry_point JNI 符号
+#### Iss-007（已沉淀 · 踩 1 次归档 · 2026-10-13 Android 真机验证发现）手动拷贝 .so 构建 APK 缺 mobile_entry_point JNI 符号
 
 - **问题**：手动编译 Rust `cargo build --target aarch64-linux-android --release` + 手动拷 `.so` 到 `gen/android/app/src/main/jniLibs/` 再 `gradle assembleRelease` → APK 安装后启动立即崩溃 `java.lang.UnsatisfiedLinkError: No implementation found for void com.lvjiaoxi.viewer.Rust_create()`
 - **根因**：`#[cfg_attr(mobile, tauri::mobile_entry_point)]` 宏在**手动 cargo build** 时不会触发 JNI 桥生成流程——只有 `tauri android build` 会执行 Rust 编译 + JNI 符号生成 + Kotlin 文件生成 + APK 组装的完整管线
@@ -105,7 +179,7 @@
 - **关联路径**：`src-tauri/gen/android/buildSrc/.../RustPlugin.kt`（4 架构默认配置）
 - **重现次数**：2（2026-10-14 全管线验证 + 2026-10-16 Chg-030 第二次踩，忘设环境变量直接报）
 
-#### Iss-010（活跃 · 踩 1 次 · 2026-10-16 Chg-030）Tauri CLI android build 的 target 限制 + NDK 版本不一致
+#### Iss-010（已沉淀 · 踩 2 次归档 · 2026-10-16 Chg-030）Tauri CLI android build 的 target 限制 + NDK 版本不一致
 
 - **问题**：
   1. `tauri android build --apk` 默认硬调 i686 + x86_64 + arm64 + armv7 四个架构，不看 `gradle.properties` 里的 `targetList`（RustPlugin.kt 读 `findProperty("targetList")` 但 Tauri CLI 内部调 `android-studio-script --target i686` 是硬编码）

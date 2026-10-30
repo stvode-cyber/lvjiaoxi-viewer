@@ -6,6 +6,101 @@
 
 ---
 
+## 2026-10-30 · v2 Phase 0 Android 真机闭环（P-20261030-001 · commit v2 repo 待推送）
+
+**regression**: 未跑（v2 独立项目，零 v1 影响）| **cargo test**: ✅ 3/3 全绿 | **真机验证**: ✅ pidof=3232 + 7 条 Rust 日志链 + 图片解码 2240x1680 + 截图 4.3MB
+
+**核心里程碑**：v2 Cargo.toml application/activity 段精简（删 theme/has_code/extract_native_libs/activity.theme 共 12 行，对齐 10-27 成功版本）→ cargo apk build → adb install -r → ResolverActivity 多用户残留拦截（Iss-025）→ `adb shell input tap 250 2250` 直接点选项绕过 → NativeActivity 成功启动 → pidof=3232 进程存活 → Rust 日志链完整输出
+
+**验证清单**（全绿）：
+| # | 步骤 | 结果 |
+|---|------|------|
+| 1 | v1 regression.cjs 467 项 | ✅ 467/0（基线未破） |
+| 2 | v2 cargo apk build | ✅ 编译零 error，APK 签名成功 |
+| 3 | adb install -r | ✅ Success |
+| 4 | adb shell am start -n → 被 Resolver 截胡 | ⚠️ 新坑 Iss-025 |
+| 5 | adb shell input tap 250 2250 | ✅ 强制启动成功 |
+| 6 | pidof com.lvjiaoxi.viewer.v2 | ✅ 3232 持续存活 |
+| 7 | logcat -s lvjiaoxi-diag | ✅ 7 条完整日志链 |
+| 8 | cargo test | ✅ 3/3 全绿 |
+
+**Rust 日志链原文**：
+```
+>>> android_main() START <<<
+>>> FIRST_RUN: building native_options... <<<
+include_bytes OK: 726477 bytes
+>>> AppCreator called <<<
+Font OK: 32355424 bytes
+>>> Font injected OK <<<
+✅ 图片解码: 2240x1680
+```
+
+**踩坑闭环**：
+- Iss-022 theme 强制 finish → 复现 1 次（现在澄清：theme 不是直接死因）
+- Iss-023 has_code → 已澄清：cargo-apk 默认 hasCode=false，不需手写
+- Iss-024 PackageManager 拒绝 → 根因转移到 Iss-025
+- 🆕 Iss-025 ResolverActivity 多用户残留 → 踩 3 次（今天反复被截胡）
+
+**Phase 0 脚手架闭环达成** 🎯 → Phase 1 浏览核心 next
+
+**关联**：↔Iss-025 / Chg-V2 / AGENTS §12 / Dc-012 / Dc-013
+
+---
+
+## 2026-10-29 · v2 Phase 0 image loading 闭环（Chg-V2）
+
+**commit**: （v2 repo，未推送）| **涉及**: 2 files | **状态**: 编译全过 ✅，真机验证待手机连接
+
+### 改了啥
+
+| # | 文件 | 位置 | 改前 | 改后 |
+|---|------|------|------|------|
+| 1 | `lvjiaoxi-viewer-v2/src/lib.rs` | 整个文件 | 纯文字诊断版（ViewerApp 无纹理） | 完整 ViewerApp 结构体（TextureHandle 字段）+ load_from_path/load_from_memory 双加载函数 + 桌面端 eframe::run_native + Android 端 include_bytes!("sample-photo.jpg") + 中文字体加载 + ui 里自适应显示纹理 |
+| 2 | `lvjiaoxi-viewer-v2/sample-photo.jpg` | 新增 | （无） | 726KB 2240x1680 测试图（从 v1 根目录复制） |
+
+### 技术链（eframe 0.37 image loading 完整路径）
+
+```
+image::open(path) / image::load_from_memory(bytes)
+  → .to_rgba8() → .as_flat_samples()
+  → egui::ColorImage::from_rgba_unmultiplied(size, pixels)
+  → cc.egui_ctx.load_texture("name", color_image, TextureOptions::default())
+  → 返回 TextureHandle
+  → ui.add(egui::Image::from_texture(&texture).max_size(...))
+```
+
+### 踩坑（egui 0.37 API 坑）
+
+1. `ImageSource::Texture` 要 `SizedTexture` 不是 `TextureHandle`
+2. `TextureHandle` 没有 `Into<SizedTexture>`，但 `&TextureHandle` 有（`impl<'a> From<&'a TextureHandle> for SizedTexture`）
+3. 所以正确写法：`egui::Image::from_texture(&t)` 或 `from_texture(t)` 其中 t 本身就是 `&TextureHandle`
+
+### 验证
+
+| # | 命令 | 结果 |
+|---|------|------|
+| 1 | `cargo check`（桌面 target） | ✅ 3 warnings（dead_code）/ 0 errors |
+| 2 | `cargo check --target aarch64-linux-android` | ✅ 1 warning / 0 errors |
+| 3 | `cargo test` | ✅ **3/3 全绿**（test_load_from_path / test_load_from_memory_via_include_bytes / test_load_from_path_missing） |
+| 4 | `cargo apk build`（debug APK） | ✅ 424MB APK 构建成功 + debug keystore 签名 |
+| 5 | `adb devices` | ⏸ 等手机连接 |
+
+### 测试矩阵（纯 CPU，不碰 GPU）
+
+| 测试 | 内容 | 关键断言 | 状态 |
+|------|------|---------|------|
+| test_load_from_path | image::open 读本地文件 | 2240x1680, 像素=3,763,200 | ✅ |
+| test_load_from_memory_via_include_bytes | Android 真实路径：include_bytes! + load_from_memory | 同上 + 首像素 alpha≠0 | ✅ |
+| test_load_from_path_missing | 不存在的文件 | 返回 Err，不 panic | ✅ |
+
+### 下一步
+
+- [ ] 手机 USB 连接 → 开发者模式 → USB 调试 → `adb install -r LvJiaoXiViewerV2.apk`
+- [ ] `adb shell pidof com.lvjiaoxi.viewer.v2` → 确认进程存活
+- [ ] `adb logcat -d -t 50 | findstr lvjiaoxi-diag` → 确认 image loading 日志
+
+---
+
 ## 2026-10-17 · app.js 模块化拆分（Chg-029 + Chg-P8）
 
 **commit**: `7842128` + `c734fb7`（P-004）| **涉及**: 32 files | **regression**: 467/0 全绿
